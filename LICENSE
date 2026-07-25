@@ -1,4 +1,26 @@
-                    GNU GENERAL PUBLIC LICENSE
+# Terms and Licensing
+
+## 1. Core Code (GPLv3)
+Unless explicitly stated otherwise, all source code contained directly in this repository is licensed under the **GNU General Public License v3.0 (GPLv3)**. You can find the full text of the GPLv3 license below.
+
+---
+
+## 2. Optional Features & Remote Modules
+Optional features and standalone modules that are downloaded dynamically from a remote server (subject to eligibility or specific requirements) are completely independent of the core GPLv3 codebase. 
+
+Because these components are hosted separately, distributed on-demand, and carry no technical compile-time dependency on the core repository, they are **NOT** subject to the GPLv3 license. They are provided under their respective proprietary terms or custom licenses.
+
+---
+
+## 3. Custom Skins & Visual Assets (All Rights Reserved)
+All custom skin designs, artwork, and media files located within the repository (specifically in `Resources/image/hat/` and related directories) are created by and remain the exclusive intellectual property of the author.
+
+* **Copyright (c) 2026 GianniBart. All Rights Reserved.**
+* These visual assets are **NOT** open source and are **NOT** covered by the GPLv3 license.
+* You may **NOT** copy, modify, redistribute, sublicense, or sell these assets without explicit prior written consent from the copyright holder.
+
+---           
+                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
  Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
