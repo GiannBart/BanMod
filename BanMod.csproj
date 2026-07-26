@@ -1,0 +1,113 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<DebugType>none</DebugType>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Il2CppInteropVerbose>true</Il2CppInteropVerbose>
+		<Optimize>True</Optimize>
+		<VersionPrefix>3.6.1</VersionPrefix>
+		<Description>Ban automatico</Description>
+		<Authors>Gianni</Authors>
+		<AssemblyName>BanMod</AssemblyName>
+		<BuildActivationCodeFile>$(MSBuildProjectDirectory)\BanMod.BuildCode.txt</BuildActivationCodeFile>
+		<GeneratedSecretFile>$(MSBuildProjectDirectory)\Generated\BanModBuildSecret.g.cs</GeneratedSecretFile>
+
+	</PropertyGroup>
+
+
+	<PropertyGroup Condition="Exists('$(BuildActivationCodeFile)')">
+		<BuildActivationCode>$([System.IO.File]::ReadAllText('$(BuildActivationCodeFile)').Trim())</BuildActivationCode>
+		<BuildCodeWasMissing>false</BuildCodeWasMissing>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="!Exists('$(BuildActivationCodeFile)')">
+		<BuildActivationCode>$([System.Guid]::NewGuid().ToString('N'))</BuildActivationCode>
+		<BuildCodeWasMissing>true</BuildCodeWasMissing>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<BuildId>$([System.Guid]::NewGuid().ToString('N'))</BuildId>
+	</PropertyGroup>
+
+	<UsingTask TaskName="GenerateBanModBuildSecretTask" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<ActivationCode ParameterType="System.String" Required="true" />
+			<BuildId ParameterType="System.String" Required="true" />
+			<BuildCodeWasMissing ParameterType="System.String" Required="true" />
+			<OutputFile ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System" />
+			<Using Namespace="System.IO" />
+			<Using Namespace="System.Linq" />
+			<Using Namespace="System.Text" />
+			<Using Namespace="System.Security.Cryptography" />
+			<Code Type="Fragment" Language="cs"><![CDATA[
+				Directory.CreateDirectory(Path.GetDirectoryName(OutputFile));
+				byte[] key = new byte[16];
+				using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(key);
+				byte[] clear = Encoding.UTF8.GetBytes(ActivationCode ?? "");
+				byte[] enc = new byte[clear.Length];
+				for (int i = 0; i < clear.Length; i++) enc[i] = (byte)(clear[i] ^ key[i % key.Length] ^ ((i * 31 + 17) & 0xFF));
+				string encList = string.Join(",", enc.Select(b => b.ToString()));
+				string keyList = string.Join(",", key.Select(b => b.ToString()));
+				string code =
+@"// Auto-generated. Do not edit.
+using System;
+using System.Text;
+namespace BanMod
+{
+    internal static class BanModBuildSecret
+    {
+        public const string BuildId = """ + BuildId.Replace("\"", "\"\"") + @""";
+        public const bool BuildCodeWasMissing = " + BuildCodeWasMissing.ToLowerInvariant() + @";
+        private static readonly byte[] Enc = new byte[] { " + encList + @" };
+        private static readonly byte[] Key = new byte[] { " + keyList + @" };
+        public static string GetActivationCode()
+        {
+            byte[] clear = new byte[Enc.Length];
+            for (int i = 0; i < Enc.Length; i++)
+                clear[i] = (byte)(Enc[i] ^ Key[i % Key.Length] ^ ((i * 31 + 17) & 0xFF));
+            return Encoding.UTF8.GetString(clear);
+        }
+    }
+}
+";
+				File.WriteAllText(OutputFile, code, new UTF8Encoding(false));
+			]]></Code>
+		</Task>
+	</UsingTask>
+
+	<Target Name="GenerateBanModBuildSecret" BeforeTargets="BeforeCompile">
+		<MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
+		<GenerateBanModBuildSecretTask ActivationCode="$(BuildActivationCode)" BuildId="$(BuildId)" BuildCodeWasMissing="$(BuildCodeWasMissing)" OutputFile="$(GeneratedSecretFile)" />
+		<Message Importance="high" Text="BanMod build secret generated obfuscated. Missing file allowed. BuildCodeWasMissing=$(BuildCodeWasMissing)" />
+	</Target>
+
+	<ItemGroup>
+		<EmbeddedResource Include=".\Resources\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AmongUs.GameLibs.Steam" Version="2026.6.5" />
+		<PackageReference Include="BepInEx.IL2CPP.MSBuild" Version="2.1.0-rc.1" PrivateAssets="all" ExcludeAssets="runtime" />
+		<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.735" ExcludeAssets="runtime;native" />
+	</ItemGroup>
+
+	<Target Name="Copy" AfterTargets="Build">
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\Among Us\BepInEx\plugins" UseSymboliclinksIfPossible="true" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sepe2\Desktop" UseSymboliclinksIfPossible="true" />
+	</Target>
+
+	<PropertyGroup>
+		<Il2CppAssemblyName>Assembly-CSharp</Il2CppAssemblyName>
+		<Il2CppGameAssemblyPath>C:\Program Files (x86)\Steam\steamapps\common\Among Us\GameAssembly.dll</Il2CppGameAssemblyPath>
+		<Il2CppMetadataPath>C:\Program Files (x86)\Steam\steamapps\common\Among Us\Among Us_Data\il2cpp_data\Metadata\global-metadata.dat</Il2CppMetadataPath>
+	</PropertyGroup>
+	<ProjectExtensions>
+		<VisualStudio>
+			<UserProperties />
+		</VisualStudio>
+	</ProjectExtensions>
+</Project>

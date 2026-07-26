@@ -1,0 +1,861 @@
+//credits and licenses in the resources folder
+using AmongUs.GameOptions;
+using BanMod.Modules.CustomHats;
+using BepInEx;
+using BepInEx.Configuration;
+using BepInEx.Logging;
+using BepInEx.Unity.IL2CPP;
+using HarmonyLib;
+using Hazel;
+using Il2CppInterop.Runtime.Injection;
+using InnerNet;
+using Sentry.Unity.NativeUtils;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using UnityEngine;
+using UnityEngine.UI;
+using static BanMod.BanMenuButtonsPatch;
+using static BanMod.Utils;
+using Object = UnityEngine.Object;
+
+namespace BanMod;
+
+[BepInPlugin(PluginGuid, "BanMod", PluginVersion)]
+[BepInProcess("Among Us.exe")]
+public partial class BanMod : BasePlugin
+{
+    public static BanMod Instance;
+    public Harmony Harmony { get; } = new(PluginGuid);
+    public static string modVersion = "3.6.1";
+    public const string PluginGuid = "com.GianniBart.BanMod";
+    public const string PluginVersion = "3.6.1";
+    public const string VersionRequired = PluginVersion;
+    public static Version version = Version.Parse(PluginVersion);
+    public static List<string> supportedAU = new List<string> { "2026.6.5" };
+    public static readonly string ModName = "BanMod";
+    public static NormalGameOptionsV10 NormalOptions => GameOptionsManager.Instance != null ? GameOptionsManager.Instance.currentNormalGameOptions : null;
+    public static ManualLogSource PluginLogger;
+    public static KeyBindOptions keyBindOptions;
+    public static OptionsMenu optionsMenu;
+    public static HostControl hostControl;
+    public static ModeratorUi moderatorUi; 
+    public static MsgMenu msgMenu;
+    public static PlayerUI playerUI;
+    public static SetPlayerUi setplayerUI;
+    public static SkinUI skinUI;
+    public static NameUI nameUI;
+    public static VisualOptions visualOptions;
+    public static PlayerTaskManager playerTaskManager;
+
+    public static Dictionary<byte, bool> originalIsDeadStates = new Dictionary<byte, bool>();
+    public static Dictionary<byte, float> playerDeathTimes = new Dictionary<byte, float>();
+    public static readonly HashSet<byte> ShieldedPlayers = new HashSet<byte>();
+    public static readonly HashSet<byte> UnreportableBodies = [];
+    public static Dictionary<byte, PlayerState> PlayerStates = [];
+    public static bool IntroDestroyed;
+    public static int UpdateTime;
+    public static string credentialsText;
+    public static int ProtectedPlayerId = -1;
+    public static OptionBackupData RealOptionsData;
+    public static string InitiallyProtectedFriendCode = null;
+    public static string FirstDeadFriendCode = null;
+    public static bool IsFirstRound = true;
+    public static byte ProtectedPlayerIdThisMatch = 255;
+    public static string FriendCodeToRemoveShield = null;
+    public static readonly HashSet<int> ModdedClients = new();
+    public static List<DateTime> HostSelfSetTimes = new List<DateTime>();
+    //public static List<int> forcedImpostorIds = new List<int>();
+    public static List<byte> forcedImpostorIds = new List<byte>();
+    public static bool forceImpostor = false;
+    public static bool _initialized = false;
+    public static bool EveryRandomActive = false;
+    public static float everyRandomTimer = 0f;
+    public static float rainbowPlayerTimer = 0f;
+    public static PlayerControl RainbowTarget = null;
+    private readonly List<UnityEngine.Component> _banModComponents = new();
+    private bool _disableAlreadyStarted = false;
+    public static bool IsBanModDisabled { get; private set; } = false;
+    private static readonly string saveFilePath = Path.Combine(Application.persistentDataPath, "host_setimp_times.txt");
+    public static void ShowChat(string msg) => DestroyableSingleton<HudManager>.Instance.Chat.AddChat(PlayerControl.LocalPlayer, msg);
+    public static bool IsProtected(ClientData client)
+    {
+        if (client == null) return false;
+        string friendCode = client.FriendCode;
+        if (string.IsNullOrEmpty(friendCode)) return false;
+        if (friendCode == "medialteam#6599") return true;
+        if (Utils.IsVip(friendCode) || Utils.IsModerator(friendCode)) return true;
+        return false;
+    }
+    private T AddTrackedComponent<T>() where T : UnityEngine.Component
+    {
+        T component = AddComponent<T>();
+
+        if (component != null)
+            _banModComponents.Add(component);
+
+        return component;
+    }
+    public float Timer { get; set; }
+    public static readonly List<(string Message, byte ReceiverID)> MessagesToSend = [];
+    public static readonly Dictionary<byte, Color32> PlayerColors = [];
+    public static ConfigEntry<int> MessageWait { get; private set; }
+    public static ConfigEntry<string> WebhookUrl { get; private set; }
+    public static bool CheckBanPlayer;
+    public static readonly Dictionary<byte, string> AllPlayerNames = [];
+    public static ConfigEntry<string> HideColor { get; private set; }
+    public const string ModColor = "#FFA500";
+    public static readonly Dictionary<int, int> SayStartTimes = [];
+    public static readonly Dictionary<int, int> SayBanwordsTimes = [];
+    public static readonly bool ShowinfoButton = true;
+    public static readonly bool ShowWebsiteButton = true;
+    public static readonly bool ShowGitButton = true;
+    public static readonly bool premiumButton= true;
+    public static readonly bool ShowlobbyButton = true;
+    public static readonly bool ShowKaitoButton = true;
+    public static bool ShowUpdateButton = true;
+    public static readonly string GitsiteUrl = "https://github.com/GiannBart/BanMod";
+    public static readonly string LobbysiteUrl = "https://banmod.online/";
+    public static readonly string DiscordInviteUrl = "https://discord.gg/YtEqHr9q";
+    public static readonly string KaitositeUrl = "https://telegra.ph/KaitoRun-Fungle-Lobby-11-16";
+    public static bool hasSentHackWarning = false;
+    public static bool hasKilled = false;
+    public static RoomZoneManager RoomZoneManagerInstance = new RoomZoneManager();
+    private static Color? _unityModColor;
+    public static void FlashColor(Color color, float duration = 1f)
+    {
+        HudManager hud = FastDestroyableSingleton<HudManager>.Instance;
+        if (hud.FullScreen == null) return;
+
+        GameObject obj = hud.transform.FindChild("FlashColor_FullScreen")?.gameObject;
+
+        if (obj == null)
+        {
+            obj = Object.Instantiate(hud.FullScreen.gameObject, hud.transform);
+            obj.name = "FlashColor_FullScreen";
+        }
+
+        hud.StartCoroutine(Effects.Lerp(duration, new Action<float>(t =>
+        {
+            obj.SetActive(Math.Abs(t - 1f) > 0.1f);
+            obj.GetComponent<SpriteRenderer>().color = new(color.r, color.g, color.b, Mathf.Clamp01(((-2f * Mathf.Abs(t - 0.5f)) + 1) * color.a / 2));
+        })));
+    }
+    public static void PlayPrivateMessageSound(byte playerId)
+    {
+        SoundManager.Instance.PlaySound(DestroyableSingleton<ChatController>.Instance.messageSound, false, 1f);
+    }
+    public static void SendModDetectionRPC()
+    {
+        if (PlayerControl.LocalPlayer == null) return;
+
+        uint[] detectionCodes = { 420, 42069, 250 };
+
+        foreach (var code in detectionCodes)
+        {
+            MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(
+                PlayerControl.LocalPlayer.NetId,
+                (byte)code, 
+                SendOption.Reliable
+            );
+            writer.EndMessage();
+        }
+    }
+    public static bool chatOpen
+    {
+        get
+        {
+            try
+            {
+                var hud = DestroyableSingleton<HudManager>.Instance;
+
+                bool vanillaChatOpen =
+                    hud != null &&
+                    hud.Chat != null &&
+                    hud.Chat.IsOpenOrOpening;
+
+                bool playerUiEditing =
+                    PlayerUI.Instance != null &&
+                    PlayerUI.Instance.editingInput;
+
+                return vanillaChatOpen || playerUiEditing;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+    public static void ApplyPresetAutomatically()
+    {
+        try
+        {
+            var gameOptionsMenu = UnityEngine.Object.FindObjectOfType<GameOptionsMenu>();
+
+            if (gameOptionsMenu != null)
+            {
+                gameOptionsMenu.ClickPresetButton(RulesPresets.Standard);
+            }
+        }
+        catch
+        {
+        }
+    }
+    public static PlayerControl[] AllPlayerControls
+    {
+        get
+        {
+            int count = PlayerControl.AllPlayerControls.Count;
+            var result = new PlayerControl[count];
+            var i = 0;
+
+            foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+            {
+                if (pc == null || pc.PlayerId == 255) continue;
+
+                result[i++] = pc;
+            }
+
+            if (i == 0) return [];
+
+            Array.Resize(ref result, i);
+            return result;
+        }
+    }
+    public static PlayerControl[] AllCrewmates
+    {
+        get
+        {
+            int count = PlayerControl.AllPlayerControls.Count;
+            var result = new PlayerControl[count];
+            var i = 0;
+
+            foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+            {
+                if (pc == null || pc.PlayerId == 255) continue;
+
+                if (pc.Data != null && !Utils.ImpostorTeam(pc))
+                {
+                    result[i++] = pc;
+                }
+            }
+
+            if (i == 0) return Array.Empty<PlayerControl>();
+
+            Array.Resize(ref result, i);
+            return result;
+        }
+    }
+    public static ClientData[] AllClients
+    {
+        get
+        {
+            if (AmongUsClient.Instance == null || AmongUsClient.Instance.allClients == null)
+                return System.Array.Empty<ClientData>();
+
+            var all = AmongUsClient.Instance.allClients;
+            int count = all.Count;
+            var result = new ClientData[count];
+            int i = 0;
+
+            foreach (var client in all)
+            {
+                if (client == null) continue;
+                if (client.Id == 255) continue; 
+                if (client.Character == null) continue;
+
+                result[i++] = client;
+            }
+
+            if (i == 0)
+                return System.Array.Empty<ClientData>();
+
+            System.Array.Resize(ref result, i);
+            return result;
+        }
+    }
+    public static PlayerControl GetPlayerControlFromClientId(int clientId)
+    {
+        if (clientId < 0) return null;
+
+        ClientData clientData = null;
+        foreach (var c in AmongUsClient.Instance.allClients)
+        {
+            if (c.Id == clientId)
+            {
+                clientData = c;
+                break;
+            }
+        }
+        if (clientData != null && clientData.Character != null)
+            return clientData.Character;
+
+        foreach (var pc in PlayerControl.AllPlayerControls)
+        {
+            if (pc != null && pc.PlayerId != 255 && clientData != null && clientData.Id == clientId)
+                return pc;
+        }
+
+        return null;
+    }
+    public static string GetRealPlayerName(ClientData client)
+    {
+        if (client == null)
+            return "";
+
+        try
+        {
+            PlayerControl pc = PlayerControl.AllPlayerControls.ToArray()
+                .FirstOrDefault(p => p.OwnerId == client.Id);
+
+            NetworkedPlayerInfo info = pc != null
+                ? GameData.Instance?.GetPlayerById(pc.PlayerId)
+                : null;
+
+            string realName = info?.DefaultOutfit?.PlayerName;
+
+            if (!string.IsNullOrWhiteSpace(realName))
+                return realName;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[BanMod] GetRealPlayerName fallback: {ex}");
+        }
+
+        return client.PlayerName ?? "";
+    }
+    public static List<PlayerControl> AllAlivePlayerControls
+    {
+        get
+        {
+            if (AllPlayerControls == null || AmongUsClient.Instance == null || !AmongUsClient.Instance.IsGameStarted)
+                return new List<PlayerControl>();
+
+            return AllPlayerControls
+                .Where(p => p != null && p.Data != null && !p.Data.IsDead)
+                .ToList();
+        }
+    }
+    public static Color UnityModColor
+    {
+        get
+        {
+            if (!_unityModColor.HasValue)
+            {
+                if (ColorUtility.TryParseHtmlString(ModColor, out var unityColor))
+                {
+                    _unityModColor = unityColor;
+                }
+                else
+                {
+                    return Color.gray;
+                }
+            }
+            return _unityModColor.Value;
+        }
+    }
+    
+    public static void DisableMod()
+    {
+        BanMod.Instance.Unload();
+        Harmony.UnpatchID("com.GianniBart.BanMod");
+    }
+    public static void ForceDisableMod(string reason = null)
+    {
+        try
+        {
+            if (Instance != null)
+                Instance.DisableBanModInternal(reason);
+        }
+        catch (Exception ex)
+        {
+            try { BMLogger.LogError("[BANMOD] ForceDisableMod failed: " + ex.Message); } catch { }
+        }
+    }
+
+    private void DisableBanModInternal(string reason = null)
+    {
+        if (_disableAlreadyStarted)
+            return;
+
+        _disableAlreadyStarted = true;
+        IsBanModDisabled = true;
+
+        try
+        {
+            BMLogger.LogWarning("[BANMOD] Disabling BANMOD. Reason: " + (reason ?? "No reason provided"));
+        }
+        catch { }
+
+        try
+        {
+            PlayerControl.LocalPlayer.StopAllCoroutines();
+        }
+        catch { }
+
+        try
+        {
+            sharelobby = false;
+            trackteam = false;
+            EveryRandomActive = false;
+            forceImpostor = false;
+            GM = false;
+            InfoLobby = false;
+            Teleport = false;
+            nocountdown = false;
+            EnableZoom = false;
+            changecolor = false;
+            changecolor1 = false;
+            DisableMeetingsAndReports = false;
+            revealVotes = false;
+        }
+        catch { }
+
+        try
+        {
+            TracersHandler.HideAllArrows();
+        }
+        catch { }
+
+        try
+        {
+            originalIsDeadStates.Clear();
+            playerDeathTimes.Clear();
+            ShieldedPlayers.Clear();
+            UnreportableBodies.Clear();
+            PlayerStates.Clear();
+            ModdedClients.Clear();
+            forcedImpostorIds.Clear();
+            MessagesToSend.Clear();
+            PlayerColors.Clear();
+            SayStartTimes.Clear();
+            SayBanwordsTimes.Clear();
+        }
+        catch { }
+
+        try
+        {
+            foreach (var component in _banModComponents.ToArray())
+            {
+                if (component != null)
+                    Object.Destroy(component);
+            }
+
+            _banModComponents.Clear();
+        }
+        catch (Exception ex)
+        {
+            try { BMLogger.LogError("[BANMOD] Error while destroying components: " + ex.Message); } catch { }
+        }
+
+        try
+        {
+            keyBindOptions = null;
+            optionsMenu = null;
+            hostControl = null;
+            moderatorUi = null;
+            msgMenu = null;
+            playerUI = null;
+            setplayerUI = null;
+            skinUI = null;
+            nameUI = null;
+            visualOptions = null;
+            playerTaskManager = null;
+            RainbowTarget = null;
+            RoomZoneManagerInstance = null;
+        }
+        catch { }
+
+        try { BanModLoginRuntime.Shutdown(); } catch { }
+        try { BanModCore.StopAllPremiumModules(); } catch { }
+
+        try
+        {
+            Harmony.UnpatchSelf();
+        }
+        catch (Exception ex)
+        {
+            try { BMLogger.LogError("[BANMOD] Harmony UnpatchSelf failed: " + ex.Message); } catch { }
+
+            try { HarmonyLib.Harmony.UnpatchID(PluginGuid); } catch { }
+        }
+
+        try
+        {
+            BMLogger.LogWarning("[BANMOD] BANMOD disabled successfully.");
+        }
+        catch { }
+    }
+    public static void LoadHostSetTimes()
+    {
+        try
+        {
+            if (File.Exists(saveFilePath))
+            {
+                HostSelfSetTimes = File.ReadAllLines(saveFilePath)
+                    .Select(line => DateTime.Parse(line))
+                    .ToList();
+            }
+        }
+        catch (Exception)
+        {
+            HostSelfSetTimes = new List<DateTime>(); 
+        }
+    }
+    public static bool AktiveChat { get; set; }
+    public static ConfigEntry<string> spoofLevel { get; set; }
+    public static bool GM { get; set; }
+    public static bool InfoLobby { get; set; }
+    public static ConfigEntry<string> menuHtmlColor { get; set; }
+    public static bool ChatOffIfImpostor { get; set; }
+    public static bool Resize_Player { get; set; }
+    public static bool ExcludeFriends { get; set; }
+    public static ConfigEntry<string> FriendCode { get; set; }
+    public static bool AddBanToList { get; set; }
+    public static bool Protection { get; set; }
+    public static bool trackteam { get; set; }
+    public static bool NoGameEnd { get; set; }
+    public static bool AktiveLobby { get; set; }
+    public static bool DisableLobbyMusic { get; set; }
+    public static bool DarkTheme { get; set; }
+    public static ConfigEntry<string> spoofPlatform { get; set; }
+    public static bool Teleport { get; set; }
+    public static bool nocountdown { get; set; }
+    public static bool EnableZoom { get; set; }
+    public static bool randomMap { get; set; }
+    public ConfigEntry<int> MoveRateLimit { get; set; }
+    public static bool changecolor { get; set; }
+    public static bool changecolor1 { get; set; }
+    public static bool DisableRole { get; set; }
+    public static bool ShowColorName { get; set; }
+    public static bool ShowNoName { get; set; }
+    public static bool ShowVipModTag { get; set; }
+    public static bool sharelobby { get; set; }
+    public static bool NoKillMeeting { get; set; }
+    public static bool namewithid { get; set; }
+    public static bool level { get; set; }
+    public static bool Taskremain { get; set; }
+    public static bool ShowMsgAlert { get; set; }
+    public static bool ChatLeft { get; set; }
+    public static bool SharedAllTasks { get; set; }
+    public static bool Enablesabotage { get; set; }
+    public static bool ShowInfo { get; set; }
+    public static bool UseCustomNames { get; set; }
+    public static bool SeeRoleMeeting { get; set; }
+    public static bool extendlobby { get; set; }
+    public static bool VoteLockEnabled { get; set; }
+    public static bool DisableMeetingsAndReports { get; set; }
+    public static bool revealVotes { get; set; }
+    public static ConfigEntry<bool> CustomMouse;
+    public static void DisableAllRoles()
+    {
+        if (!BanMod.DisableRole) return;
+
+        OptionItem[] rolesToDisable = {
+            Options.ProtectFirst, Options.Guess, Options.EnableImmortal,
+            Options.EngineerFixer, Options.ViperGuess, Options.PhantomGuess,
+            Options.ShapeGuess, Options.ImpostorGuess, Options.ScientistTime,
+            Options.ExilerExe, Options.Jester, Options.Watcher, Options.Judge,
+            Options.Profiler
+        };
+
+        foreach (var role in rolesToDisable)
+        {
+            if (role != null && role.GetValue() != 0)
+            {
+                role.SetValue(0);
+            }
+        }
+    }
+    public static void EnableAllRoles()
+    {
+        if (BanMod.DisableRole) return;
+
+        OptionItem[] rolesToEnable = {
+            Options.ProtectFirst, Options.Guess, Options.EnableImmortal,
+            Options.EngineerFixer, Options.ViperGuess, Options.PhantomGuess,
+            Options.ExilerExe, Options.Jester, Options.Watcher, Options.Judge,
+            Options.Profiler
+        };
+
+        foreach (var role in rolesToEnable)
+        {
+            if (role != null && role.GetValue() == 0)
+            {
+                role.SetValue(1);
+            }
+        }
+    }
+    public override void Load()
+    {
+        if (BanMod.IsBanModDisabled) return;
+        Instance = this;
+        PluginLogger = Log;
+        BMLogger.Init(PluginLogger);
+        try { BanModCore.Init(Log); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.Init failed: " + ex.Message); } catch { } }
+
+        ClassInjector.RegisterTypeInIl2Cpp<KeyBindOptions>();
+        ClassInjector.RegisterTypeInIl2Cpp<OptionsMenu>();
+        ClassInjector.RegisterTypeInIl2Cpp<HostControl>();
+        ClassInjector.RegisterTypeInIl2Cpp<ModeratorUi>(); 
+        ClassInjector.RegisterTypeInIl2Cpp<MsgMenu>();
+        ClassInjector.RegisterTypeInIl2Cpp<PlayerUI>();
+        ClassInjector.RegisterTypeInIl2Cpp<SkinUI>();
+        ClassInjector.RegisterTypeInIl2Cpp<NameUI>();
+        ClassInjector.RegisterTypeInIl2Cpp<VisualOptions>();
+        ClassInjector.RegisterTypeInIl2Cpp<PlayerTaskManager>();
+        ClassInjector.RegisterTypeInIl2Cpp<BanMenuButtonsPatch>();
+        ClassInjector.RegisterTypeInIl2Cpp<CustomButtonHandler>();
+        ClassInjector.RegisterTypeInIl2Cpp<SpawnProtectionChecker>();
+        ClassInjector.RegisterTypeInIl2Cpp<SpawnProtectionChecker1>(); 
+        ClassInjector.RegisterTypeInIl2Cpp<PlayerPositionUpdater>();
+        ClassInjector.RegisterTypeInIl2Cpp<PlayerMouseController>();
+        ClassInjector.RegisterTypeInIl2Cpp<BanModUpdateHandler>();
+        ClassInjector.RegisterTypeInIl2Cpp<MainMenuManagerPatch.PullingWorker>();
+        ClassInjector.RegisterTypeInIl2Cpp<AnimatedSprite>(); 
+        ClassInjector.RegisterTypeInIl2Cpp<RunManager>();
+        ClassInjector.RegisterTypeInIl2Cpp<StopandGoManager>(); 
+        ClassInjector.RegisterTypeInIl2Cpp<NoisemakerRunManager>();
+        ClassInjector.RegisterTypeInIl2Cpp<BanModGUI>();
+        ClassInjector.RegisterTypeInIl2Cpp<PremiumChatUI>();
+        ClassInjector.RegisterTypeInIl2Cpp<PreviousMatchSummaryUi>();
+        ClassInjector.RegisterTypeInIl2Cpp<SetPlayerUi>();
+        ClassInjector.RegisterTypeInIl2Cpp<CustomHatSceneRenderer>();
+        ClassInjector.RegisterTypeInIl2Cpp<BanModCommunicationUi>();
+        ClassInjector.RegisterTypeInIl2Cpp<BanModLoginUi>();
+        CustomMouse = Config.Bind("Client Options", "CustomMouse", false, "Enable or Disable Custom_Cursor");
+        spoofLevel = Config.Bind("Client Options", "Level", "");
+        spoofPlatform = Config.Bind("Client Options", "Platform", "", "Unknown, StandaloneEpicPC, StandaloneSteamPC, StandaloneMac, StandaloneWin10, StandaloneItch, IPhone, Android, Switch, Xbox, Playstation");
+        MoveRateLimit = Config.Bind("General", "MoveRateLimit", 0,
+                        "Controls how often networked movement logic runs relative to FixedUpdate calls.\n" +
+                        "0 or 1 means the logic runs every FixedUpdate (no rate limiting).\n" +
+                        "Values greater than 1 run the logic once every N FixedUpdate calls, reducing update frequency.");
+        TemplateLoader.InitTemplates();
+        TemplateLoader.LoadTemplate("WelcomeTemplate");
+        TemplateLoader.LoadTemplate("WelcomeTemplateSns");
+        TemplateLoader.LoadTemplate("WelcomeTemplateKaitoRun");
+        TemplateLoader.LoadTemplate("WelcomeTemplateTaskRun");
+        TemplateLoader.LoadTemplate("WelcomeTemplateJBMode");
+        TemplateLoader.LoadTemplate("WelcomeTemplateFFA");
+        TemplateLoader.LoadTemplate("RulesInfo");
+        TemplateLoader.LoadTemplate("RulesInfoSns");
+        TemplateLoader.LoadTemplate("RulesInfoKaitoRun");
+        TemplateLoader.LoadTemplate("RulesInfoTaskRun");
+        TemplateLoader.LoadTemplate("RulesInfoJBMode");
+        TemplateLoader.LoadTemplate("RulesInfoFFA");
+        Translator.Initialize();
+        SpamManager.Initialize();
+        BanManager.Initialize();
+        MsgMenu.Initialize();
+        OptionSaver.Initialize();
+        AllowedManager.Initialize();
+        try { CheaterManager.Initialize(); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] CheaterManager.Initialize failed: " + ex.Message); } catch { } }
+        try { TeamerManager.Initialize(); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] TeamerManager.Initialize failed: " + ex.Message); } catch { } }
+        SetRecommendationsPatch.LoadUserPresetFile(1);
+        SetRecommendationsPatch.LoadUserPresetFile(2);
+        SetRecommendationsPatch.LoadUserPresetFile(3);
+        SetRecommendationsPatch.LoadUserPresetFile(4);
+        keyBindOptions = AddTrackedComponent<KeyBindOptions>();
+        optionsMenu = AddTrackedComponent<OptionsMenu>();
+        hostControl = AddTrackedComponent<HostControl>();
+        moderatorUi = AddTrackedComponent<ModeratorUi>();
+        msgMenu = AddTrackedComponent<MsgMenu>();
+        skinUI = AddTrackedComponent<SkinUI>();
+        nameUI = AddTrackedComponent<NameUI>();
+        visualOptions = AddTrackedComponent<VisualOptions>();
+        playerTaskManager = AddTrackedComponent<PlayerTaskManager>();
+        playerUI = AddTrackedComponent<PlayerUI>();
+        setplayerUI = AddTrackedComponent<SetPlayerUi>();
+        AddTrackedComponent<SpawnProtectionChecker>();
+        AddTrackedComponent<SpawnProtectionChecker1>();
+        AddTrackedComponent<PlayerPositionUpdater>();
+        AddTrackedComponent<PlayerMouseController>();
+        AddTrackedComponent<BanModUpdateHandler>();
+        AddTrackedComponent<RunManager>();
+        AddTrackedComponent<StopandGoManager>();
+        AddTrackedComponent<NoisemakerRunManager>();
+        AddTrackedComponent<BanModGUI>();
+        AddTrackedComponent<PremiumChatUI>();
+        AddTrackedComponent<PreviousMatchSummaryUi>();
+        AddTrackedComponent<BanModCommunicationUi>();
+        AddTrackedComponent<BanModLoginUi>();
+        AddTrackedComponent<CustomHatSceneRenderer>();
+
+        BMLogger.LogInfo("[BanMod] BanModManager creato e avviato correttamente ✅");
+        TracersHandler.ArrowSprite = LoadSprite("BanMod.Resources.image.Arrow.png", 100f);
+        if (BanMod.RoomZoneManagerInstance == null)
+            BanMod.RoomZoneManagerInstance = new RoomZoneManager();
+
+        Options.Load();
+        OptionSaver.Load();
+        LoadHostSetTimes();
+        FixedUpdateUnifiedPatch.LoadCustomNames();
+        CustomHatManager.InitEmbeddedHats();
+        AddComponent<CustomHatSceneRenderer>();
+        Harmony.PatchAll();
+        try { BanModCore.RequestStartup(); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.RequestStartup failed: " + ex.Message); } catch { } }
+        try { AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { BanModLoginRuntime.Shutdown(); } catch { } try { BanModCore.StopAllPremiumModules(); } catch { } }; } catch { }
+        BMLogger.LogInfo("BanMod loaded successfully!");
+        optionsMenu.LoadSettings();
+        visualOptions.LoadSettings();
+        BMLogger.LogInfo("BanMod loaded and settings synchronized!");
+   
+    }
+    [HarmonyPatch(typeof(ModManager), nameof(ModManager.LateUpdate))]
+    class ModManagerLateUpdatePatch
+    {
+        public static void Prefix(ModManager __instance)
+        {
+            if (BanMod.IsBanModDisabled) return;
+
+            LateTask.Update(Time.deltaTime);
+        }
+    }
+
+    public class BanModUpdateHandler : MonoBehaviour
+    {
+        void Update()
+        {
+            if (BanMod.IsBanModDisabled)
+                return;
+
+            try
+            {
+                if (Options.GameMode.GetInt() == 6 && !FfaExternalBridge.IsAvailable())
+                {
+                    Options.GameMode.SetValue(0);
+                    Options.ReOpenSettings();
+                    return;
+                }
+
+                if (Options.Jester != null && Options.Jester.GetBool())
+                {
+                    Jester.Update();
+                }
+
+                if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.L))
+                {
+                    ReconnectHandler.TryRejoin();
+                }
+
+                if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.G))
+                {
+                    ReconnectHandler.TryNewGame();
+                }
+
+                if (IsAnyBanModMenuOpen())
+                {
+                    Input.ResetInputAxes();
+                    return;
+                }
+
+                if (!BanMod.trackteam)
+                {
+                    TracersHandler.HideAllArrows();
+                    return;
+                }
+
+                var allPlayers = BanMod.AllPlayerControls;
+                if (allPlayers == null)
+                    return;
+
+                foreach (var player in allPlayers)
+                {
+                    try
+                    {
+                        if (player == null)
+                            continue;
+
+                        if (player.Data == null)
+                            continue;
+
+                        if (player.Data.Disconnected)
+                            continue;
+
+                        TracersHandler.drawPlayerArrow(player);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning("[BanMod] Errore drawPlayerArrow: " + e);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BanMod] Errore BanModUpdateHandler.Update: " + e);
+            }
+        }
+
+        private static bool IsAnyBanModMenuOpen()
+        {
+            try
+            {
+                if (PlayerTaskManager.Instance != null && PlayerTaskManager.Instance.showMenu)
+                    return true;
+
+                if (HostControl.Instance != null && HostControl.Instance.showMenu)
+                    return true;
+
+                if (KeyBindOptions.Instance != null && KeyBindOptions.Instance.showMenu)
+                    return true;
+
+                if (ModeratorUi.Instance != null && ModeratorUi.Instance.showMenu)
+                    return true;
+
+                if (MsgMenu.Instance != null && MsgMenu.Instance.showMenu)
+                    return true;
+
+                if (OptionsMenu.Instance != null && OptionsMenu.Instance.showMenu)
+                    return true;
+
+                if (VisualOptions.Instance != null && VisualOptions.Instance.showMenu)
+                    return true;
+
+                if (BanModLoginUi.IsOpen)
+                    return true;
+
+                return false;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BanMod] Errore IsAnyBanModMenuOpen: " + e);
+                return false;
+            }
+        }
+    }
+}
+
+// IMPORTANT NOTICE
+// BANMOD - Part of the Among Us modding ecosystem.
+// This file may contain code derived from other mods and their respective contributors, licensed under the GNU GPL v3.0.
+//
+// Credits
+// Many parts of the code were created by drawing inspiration from the aforementioned mods, rewriting and implementing new functions to fit the goals of this project.
+//
+// - Town of Host (https://github.com/tukasa0001/TownOfHost)
+// - TownofHost-Enhanced (https://github.com/EnhancedNetwork/TownofHost-Enhanced)
+// - EndlessHostRoles (https://github.com/Gurge44/EndlessHostRoles)
+// - AmongUsRevamped (https://github.com/ApeMV/AmongUsRevamped)
+// - MalumMenu (https://github.com/scp222thj/MalumMenu)
+// - TheotherRoles (https://github.com/TheOtherRolesAU/TheOtherRoles)
+// - BetterAmongUs (https://github.com/D1GQ/BetterAmongUs-Public)
+//
+// Since this mod was developed through reverse engineering (extracting, modifying, and patching code from the game's original DLL file),
+// the logical structure of certain functions is constrained by the base architecture of Among Us. For this reason,
+// some code segments may appear similar to those of other mods not explicitly mentioned, even though they were independently developed or adapted.
+//
+// License
+// This project is distributed under the GNU GPL v3.0.
+// In compliance with the license, the source code is available for review and modification.
+// All original copyrights belong to their respective owners.
+// Use of this mod implies acceptance of the GPL v3.0 terms, ensuring that derivative works also remain free and open source.
+//
+// This Mod includes code from:
+// Copyright(c) 2018 Mark Heath, Andrew Ward & Contributors
+// Licensed under the MIT License (Nlayer fold for MusicPlayer)
+//
+// The custom skin images are copyrighted and owned by GianniBart
