@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/banmod-banner.jpg" alt="Banner BanMod" width="100%">
+<img src="docs/images/image.png" alt="Banner BanMod" width="100%">
 
 # BanMod
 
