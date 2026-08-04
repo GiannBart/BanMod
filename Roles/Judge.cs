@@ -314,23 +314,37 @@ namespace BanMod
             if (!Options.Judge.GetBool())
                 return true;
 
-            if (!Judge.JudgeSelected ||
-                Judge.JudgeId == byte.MaxValue)
-            {
+            if (!Judge.JudgeSelected || Judge.JudgeId == byte.MaxValue)
                 return true;
+
+            bool everyoneVoted = true;
+
+            for (int i = 0; i < __instance.playerStates.Length; i++)
+            {
+                PlayerVoteArea state = __instance.playerStates[i];
+
+                if (state != null && !state.AmDead && !state.DidVote)
+                {
+                    everyoneVoted = false;
+                    break;
+                }
             }
 
-            if (!__instance.playerStates.All(
-                    state => state.AmDead || state.DidVote))
-            {
+            if (!everyoneVoted)
                 return true;
-            }
 
-            PlayerVoteArea judgeVoteArea =
-                __instance.playerStates.FirstOrDefault(
-                    state =>
-                        state != null &&
-                        state.TargetPlayerId == Judge.JudgeId);
+            PlayerVoteArea judgeVoteArea = null;
+
+            for (int i = 0; i < __instance.playerStates.Length; i++)
+            {
+                PlayerVoteArea state = __instance.playerStates[i];
+
+                if (state != null && state.TargetPlayerId == Judge.JudgeId)
+                {
+                    judgeVoteArea = state;
+                    break;
+                }
+            }
 
             if (judgeVoteArea == null ||
                 judgeVoteArea.AmDead ||
@@ -341,7 +355,6 @@ namespace BanMod
 
             byte judgeTarget = judgeVoteArea.VotedFor;
 
-            // Non raddoppiare mancato voto, skip o voto forzato.
             if (judgeTarget == 252 ||
                 judgeTarget == 253 ||
                 judgeTarget == 254 ||
@@ -353,74 +366,99 @@ namespace BanMod
             var voteDict = __instance.CalculateVotes();
 
             if (voteDict == null ||
-                voteDict.Count == 0 ||
-                !voteDict.TryGetValue(
-                    judgeTarget,
-                    out int normalVotes))
+                !voteDict.TryGetValue(judgeTarget, out int votesIncludingJudge))
             {
                 return true;
             }
 
-            voteDict[judgeTarget] = normalVotes * 2;
+            int votesWithoutJudge = votesIncludingJudge - 1;
+
+            if (votesWithoutJudge < 0)
+                votesWithoutJudge = 0;
+
+            int doubledVotes = votesWithoutJudge * 2;
+
+            if (doubledVotes > 0)
+                voteDict[judgeTarget] = doubledVotes;
+            else
+                voteDict.Remove(judgeTarget);
 
             bool tie;
-            var max = voteDict.MaxPair(out tie);
-
             NetworkedPlayerInfo exiled = null;
 
-            if (!tie)
+            if (voteDict.Count == 0)
             {
-                for (int i = 0; i < GameData.Instance.AllPlayers.Count; i++)
-                {
-                    NetworkedPlayerInfo player =
-                        GameData.Instance.AllPlayers[i];
+                tie = true;
+            }
+            else
+            {
+                var max = voteDict.MaxPair(out tie);
 
-                    if (player != null &&
-                        player.PlayerId == max.Key)
+                if (!tie)
+                {
+                    for (int i = 0; i < GameData.Instance.AllPlayers.Count; i++)
                     {
-                        exiled = player;
-                        break;
+                        NetworkedPlayerInfo player =
+                            GameData.Instance.AllPlayers[i];
+
+                        if (player != null && player.PlayerId == max.Key)
+                        {
+                            exiled = player;
+                            break;
+                        }
                     }
                 }
             }
 
-            MeetingHud.VoterState[] normalStates =
-                new MeetingHud.VoterState[
-                    __instance.playerStates.Length];
+            var finalStates =
+                new System.Collections.Generic.List<MeetingHud.VoterState>();
 
-            for (int i = 0;
-                 i < __instance.playerStates.Length;
-                 i++)
+            for (int i = 0; i < __instance.playerStates.Length; i++)
             {
-                PlayerVoteArea area =
-                    __instance.playerStates[i];
+                PlayerVoteArea area = __instance.playerStates[i];
 
-                normalStates[i] =
+                if (area == null)
+                    continue;
+
+                finalStates.Add(
                     new MeetingHud.VoterState
                     {
                         VoterId = area.TargetPlayerId,
-                        VotedForId = area.VotedFor
-                    };
+                        VotedForId =
+                            area.TargetPlayerId == Judge.JudgeId
+                                ? byte.MaxValue
+                                : area.VotedFor
+                    });
             }
 
-            MeetingHud.VoterState[] duplicatedStates =
-                normalStates
-                    .Where(state =>
-                        state.VotedForId == judgeTarget)
-                    .ToArray();
+            for (int i = 0; i < __instance.playerStates.Length; i++)
+            {
+                PlayerVoteArea area = __instance.playerStates[i];
 
-            MeetingHud.VoterState[] finalStates =
-                normalStates
-                    .Concat(duplicatedStates)
-                    .ToArray();
+                if (area == null ||
+                    area.AmDead ||
+                    area.TargetPlayerId == Judge.JudgeId ||
+                    area.VotedFor != judgeTarget)
+                {
+                    continue;
+                }
+
+                finalStates.Add(
+                    new MeetingHud.VoterState
+                    {
+                        VoterId = area.TargetPlayerId,
+                        VotedForId = judgeTarget
+                    });
+            }
 
             BMLogger.Info(
-                $"[Judge] Voti e icone per PlayerId " +
-                $"{judgeTarget}: {normalVotes} -> " +
-                $"{normalVotes * 2}");
+                $"[Judge] Target={judgeTarget}, " +
+                $"voti normali={votesWithoutJudge}, " +
+                $"voti raddoppiati={doubledVotes}, " +
+                $"stati RPC={finalStates.Count}");
 
             __instance.RpcVotingComplete(
-                finalStates,
+                finalStates.ToArray(),
                 exiled,
                 tie);
 
