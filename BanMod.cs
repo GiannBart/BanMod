@@ -84,12 +84,19 @@ public partial class BanMod : BasePlugin
     public static void ShowChat(string msg) => DestroyableSingleton<HudManager>.Instance.Chat.AddChat(PlayerControl.LocalPlayer, msg);
     public static bool IsProtected(ClientData client)
     {
-        if (client == null) return false;
+        if (client == null)
+            return false;
+
         string friendCode = client.FriendCode;
-        if (string.IsNullOrEmpty(friendCode)) return false;
-        if (friendCode == "medialteam#6599") return true;
-        if (Utils.IsVip(friendCode) || Utils.IsModerator(friendCode)) return true;
-        return false;
+
+        if (string.IsNullOrWhiteSpace(friendCode))
+            return false;
+
+        if (AllowedManager.IsModCreator(friendCode))
+            return true;
+
+        return Utils.IsVip(friendCode) ||
+               Utils.IsModerator(friendCode);
     }
     private T AddTrackedComponent<T>() where T : UnityEngine.Component
     {
