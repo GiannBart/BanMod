@@ -45,10 +45,14 @@ namespace BanMod
         private static bool _premiumRefreshLoopStarted;
         private static bool _premiumRefreshRunning;
         private static bool _premiumRefreshRequested;
+        private static bool _activationRefreshRunning;
+        private static string _extraReportConfirmedToken = "";
 
         private static string _friendCode = "";
         private static string _playerName = "";
         private static string _activationToken = "";
+        private static long _activationTokenExpiresAtUnix = 0;
+        private static bool _activationTokenRecoveryOnly;
         private static string _capturedFriendCode = "";
         private static string _capturedPlayerName = "";
         private static int _capturedClientId = -1;
@@ -378,36 +382,112 @@ namespace BanMod
 
         public static void ClearCurrentActivationToken()
         {
-            try { _activationToken = ""; } catch { }
+            try
+            {
+                _activationToken = "";
+                _activationTokenExpiresAtUnix = 0;
+                _activationTokenRecoveryOnly = false;
+                _extraReportConfirmedToken = "";
+            }
+            catch { }
+        }
+
+        private static bool HasUsableActivationToken()
+        {
+            try
+            {
+                long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                return !_activationTokenRecoveryOnly
+                    && !string.IsNullOrWhiteSpace(_activationToken)
+                    && _activationTokenExpiresAtUnix > now + 20;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool HasConfirmedExtraReportForCurrentToken()
+        {
+            try
+            {
+                return HasUsableActivationToken()
+                    && !string.IsNullOrWhiteSpace(_extraReportConfirmedToken)
+                    && string.Equals(
+                        _extraReportConfirmedToken,
+                        _activationToken,
+                        StringComparison.Ordinal
+                    );
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static IEnumerator EnsureActivationTokenForApi(Action<bool, string> callback)
         {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(_activationToken))
-                {
-                    callback?.Invoke(true, _activationToken);
-                    yield break;
-                }
+            // Lobby, comunicazioni e premium possono richiedere il rinnovo nello
+            // stesso frame. Una sola coroutine esegue attivazione + report; le altre
+            // aspettano il risultato, evitando activation_at concorrenti sul server.
+            while (_activationRefreshRunning)
+                yield return null;
 
+            if (HasConfirmedExtraReportForCurrentToken())
+            {
+                callback?.Invoke(true, _activationToken);
+                yield break;
+            }
+
+            _activationRefreshRunning = true;
+
+            if (!HasUsableActivationToken())
+            {
+                ClearCurrentActivationToken();
                 TryCaptureEosFriendCode("EOSManager.FriendCode/api");
 
                 if (string.IsNullOrWhiteSpace(_friendCode))
                 {
+                    _activationRefreshRunning = false;
+                    callback?.Invoke(false, "");
+                    yield break;
+                }
+
+                bool activationOk = false;
+                yield return ActivationFlow(success => activationOk = success);
+
+                if (!activationOk || !HasUsableActivationToken())
+                {
+                    ClearCurrentActivationToken();
+                    _activationRefreshRunning = false;
                     callback?.Invoke(false, "");
                     yield break;
                 }
             }
-            catch
+
+            // Non rendere utilizzabile il token finché il server non conferma di
+            // avere accettato il report extra-mod appartenente proprio a quel token.
+            string tokenForReport = _activationToken;
+            bool reportOk = false;
+
+            yield return SendExtraModsReport(
+                "activation_refresh",
+                tokenForReport,
+                success => reportOk = success
+            );
+
+            if (reportOk &&
+                !string.IsNullOrWhiteSpace(tokenForReport) &&
+                string.Equals(_activationToken, tokenForReport, StringComparison.Ordinal))
             {
-                callback?.Invoke(false, "");
-                yield break;
+                _extraReportConfirmedToken = tokenForReport;
             }
 
-            bool ok = false;
-            yield return ActivationFlow(x => ok = x);
-            callback?.Invoke(ok && !string.IsNullOrWhiteSpace(_activationToken), _activationToken);
+            bool ready = HasConfirmedExtraReportForCurrentToken();
+            string readyToken = ready ? _activationToken : "";
+
+            _activationRefreshRunning = false;
+            callback?.Invoke(ready, readyToken);
         }
 
         public static void Init(ManualLogSource log)
@@ -449,6 +529,9 @@ namespace BanMod
             UnityWebRequest request = UnityWebRequest.Get(LoginManifestUrl);
             request.timeout = RequestTimeoutSeconds;
             request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Authorization", "Bearer " + _activationToken);
+            request.SetRequestHeader("X-BANMOD-FriendCode", _friendCode);
+            request.SetRequestHeader("X-BANMOD-PlayerName", _playerName);
 
             yield return request.SendWebRequest();
 
@@ -511,16 +594,6 @@ namespace BanMod
 
         private static IEnumerator StartupFlow()
         {
-            bool loginLoaded = false;
-            yield return EnsureLoginBinLoaded(ok => loginLoaded = ok);
-
-            if (!loginLoaded)
-            {
-                BanMod.ForceDisableMod("Required login.bin could not be downloaded or verified.");
-                yield break;
-            }
-
-
             // L'updater deve partire prima di attivazione, token ed extra-mod gate.
             // In questo modo anche un client marcato come modificato o con extra mod
             // non consentite può sempre recuperare una release ufficiale obbligatoria.
@@ -577,7 +650,34 @@ namespace BanMod
                 yield break;
             }
 
-            yield return SendExtraModsReport("startup", _ => { });
+            // Un token normale deve essere accompagnato dal report extra-mod della
+            // stessa attivazione. Un token recovery, invece, serve soltanto a
+            // scaricare login.bin affinché il modulo possa eseguire disable_mod.
+            if (!_activationTokenRecoveryOnly)
+            {
+                bool reportReady = false;
+                yield return EnsureActivationTokenForApi((ok, token) => reportReady = ok);
+
+                if (!reportReady)
+                {
+                    Debug.LogWarning(
+                        "[BANMOD][EXTRA] Report non ancora confermato; " +
+                        "i servizi privati resteranno chiusi e verrà ritentato."
+                    );
+                }
+            }
+
+            // login.bin contiene l'unico parser del comando disable_mod. Il server
+            // consente di scaricarlo anche con un token di recovery limitato quando
+            // la DLL principale risulta modificata, senza aprire i servizi premium.
+            bool loginLoaded = false;
+            yield return EnsureLoginBinLoaded(ok => loginLoaded = ok);
+
+            if (!loginLoaded)
+            {
+                BanMod.ForceDisableMod("Required login.bin could not be downloaded or verified.");
+                yield break;
+            }
 
             // Una sola richiesta per sessione, dopo attivazione e controllo extra-mod.
             // I manager uniscono i record del server esclusivamente ai file reali:
@@ -654,15 +754,24 @@ namespace BanMod
         {
             while (true)
             {
-                yield return new WaitForSeconds(LobbyStatusIntervalSeconds);
-
+                // Controlla rapidamente finché il giocatore non entra in una lobby.
+                // Appena la lobby è disponibile, invia subito lo stato al server.
                 if (!IsInLobbyOrGame())
+                {
+                    yield return new WaitForSeconds(1f);
                     continue;
+                }
 
                 if (_statusRunning)
+                {
+                    yield return new WaitForSeconds(1f);
                     continue;
+                }
 
                 yield return SendLobbyStatus();
+
+                // Dopo il primo invio aggiorna la lobby con l'intervallo normale.
+                yield return new WaitForSeconds(LobbyStatusIntervalSeconds);
             }
         }
 
@@ -670,12 +779,13 @@ namespace BanMod
         {
             while (true)
             {
+                // Primo caricamento immediato: il vecchio loop aspettava 30 secondi
+                // prima di popolare il browser e faceva sembrare intermittente la
+                // condivisione delle lobby appena aperte.
+                if (!_lobbyListRunning)
+                    yield return FetchModdedLobbies();
+
                 yield return new WaitForSeconds(LobbyListIntervalSeconds);
-
-                if (_lobbyListRunning)
-                    continue;
-
-                yield return FetchModdedLobbies();
             }
         }
 
@@ -744,11 +854,31 @@ namespace BanMod
             }
 
             _activationToken = response.activation_token;
+            _activationTokenRecoveryOnly = response.recovery_only;
+            _extraReportConfirmedToken = "";
+            int lifetime = response.expires_in_seconds > 0
+                ? response.expires_in_seconds
+                : 300;
+            _activationTokenExpiresAtUnix =
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Math.Max(30, lifetime);
             callback(true);
         }
 
         private static IEnumerator SendExtraModsReport(string reason, Action<bool> callback)
         {
+            yield return SendExtraModsReport(reason, _activationToken, callback);
+        }
+
+        private static IEnumerator SendExtraModsReport(
+            string reason,
+            string activationToken,
+            Action<bool> callback)
+        {
+            if (string.IsNullOrWhiteSpace(activationToken))
+            {
+                callback?.Invoke(false);
+                yield break;
+            }
             List<DetectedModInfo> mods = new List<DetectedModInfo>();
             bool scanSuccess = false;
             string scanError = "";
@@ -772,6 +902,9 @@ namespace BanMod
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
+            req.SetRequestHeader("Authorization", "Bearer " + activationToken);
+            req.SetRequestHeader("X-BANMOD-FriendCode", _friendCode);
+            req.SetRequestHeader("X-BANMOD-PlayerName", _playerName);
 
             yield return req.SendWebRequest();
 
@@ -786,7 +919,11 @@ namespace BanMod
             ExtraReportResponse response = null;
             try { response = JsonSerializer.Deserialize<ExtraReportResponse>(text, JsonOptions); } catch { }
 
-            bool ok = response != null && response.success && response.valid;
+            bool ok = response != null
+                && response.success
+                && response.valid
+                && response.accepted
+                && response.report_authenticated;
             callback(ok);
         }
 
@@ -847,6 +984,24 @@ namespace BanMod
 
         private static IEnumerator RequestPremiumAndLoadBins()
         {
+            // Tutte le API private richiedono un'attivazione recente.
+            // Rinnova il token prima di aggiornare i servizi premium, invece di
+            // continuare a usare per sempre il token creato all'avvio.
+            bool tokenReady = false;
+            string validToken = "";
+
+            yield return EnsureActivationTokenForApi((success, value) =>
+            {
+                tokenReady = success;
+                validToken = value ?? "";
+            });
+
+            if (!tokenReady || string.IsNullOrWhiteSpace(validToken))
+                yield break;
+
+            _activationToken = validToken;
+            BanModApiTokenManager.Token = validToken;
+
             string body = "{"
                 + "\"FriendCode\":" + JsonString(_friendCode) + ","
                 + "\"PlayerName\":" + JsonString(_playerName) + ","
@@ -985,6 +1140,9 @@ namespace BanMod
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
+            req.SetRequestHeader("Authorization", "Bearer " + _activationToken);
+            req.SetRequestHeader("X-BANMOD-FriendCode", _friendCode);
+            req.SetRequestHeader("X-BANMOD-PlayerName", _playerName);
 
             yield return req.SendWebRequest();
 
@@ -1042,6 +1200,27 @@ namespace BanMod
         private static IEnumerator SendLobbyStatus()
         {
             _statusRunning = true;
+
+            // Il server considera valida l'attivazione solo per circa 300 secondi.
+            // Il vecchio heartbeat applicava direttamente il token iniziale e, una
+            // volta scaduto, riceveva 401 senza ottenere un nuovo token.
+            bool tokenReady = false;
+            string validToken = "";
+
+            yield return EnsureActivationTokenForApi((success, value) =>
+            {
+                tokenReady = success;
+                validToken = value ?? "";
+            });
+
+            if (!tokenReady || string.IsNullOrWhiteSpace(validToken))
+            {
+                Debug.LogWarning("[BANMOD][LOBBY] Token di attivazione non disponibile; heartbeat non inviato.");
+                _statusRunning = false;
+                yield break;
+            }
+
+            BanModApiTokenManager.Token = validToken;
 
             string friendCode = _friendCode;
             string playerName = _playerName;
@@ -1163,15 +1342,93 @@ namespace BanMod
                 + "}";
 
 
-            UnityWebRequest req = new UnityWebRequest(LobbyStatusUrl, "POST");
-            req.timeout = RequestTimeoutSeconds;
-            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
+            UnityWebRequest req = null;
+            UnityWebRequestAsyncOperation operation = null;
 
-            yield return req.SendWebRequest();
+            try
+            {
+                req = new UnityWebRequest(LobbyStatusUrl, "POST");
+                req.timeout = RequestTimeoutSeconds;
+                req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                req.downloadHandler = new DownloadHandlerBuffer();
+                req.SetRequestHeader("Content-Type", "application/json");
 
-            _statusRunning = false;
+                // Invia il token di attivazione e gli header identificativi BANMOD.
+                BanModApiTokenManager.ApplyAuthHeader(req);
+
+                operation = req.SendWebRequest();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(
+                    "[BANMOD][LOBBY] Errore preparazione richiesta: " +
+                    ex.GetType().Name + ": " + ex.Message
+                );
+
+                try { req?.Dispose(); } catch { }
+                _statusRunning = false;
+                yield break;
+            }
+
+            yield return operation;
+
+            try
+            {
+                string responseText = "";
+
+                try
+                {
+                    responseText = req.downloadHandler != null
+                        ? req.downloadHandler.text
+                        : "";
+                }
+                catch
+                {
+                    responseText = "";
+                }
+
+                if (req.responseCode == 401)
+                {
+                    Debug.LogWarning(
+                        "[BANMOD][LOBBY] Token non valido o scaduto."
+                    );
+
+                    BanModApiTokenManager.ClearToken();
+                }
+                else if (
+                    req.result != UnityWebRequest.Result.Success ||
+                    req.responseCode < 200 ||
+                    req.responseCode >= 300
+                )
+                {
+                    Debug.LogError(
+                        "[BANMOD][LOBBY] Invio fallito: HTTP=" +
+                        req.responseCode +
+                        " error=" + (req.error ?? "") +
+                        " response=" + responseText
+                    );
+                }
+                else
+                {
+                    Debug.Log(
+                        "[BANMOD][LOBBY] Heartbeat inviato: HTTP=" +
+                        req.responseCode +
+                        " response=" + responseText
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(
+                    "[BANMOD][LOBBY] Errore lettura risposta: " +
+                    ex.GetType().Name + ": " + ex.Message
+                );
+            }
+            finally
+            {
+                try { req?.Dispose(); } catch { }
+                _statusRunning = false;
+            }
         }
 
         private static string SafeGetOldFriendCode(PlayerControl player)
@@ -1406,37 +1663,67 @@ namespace BanMod
         {
             _lobbyListRunning = true;
 
-            UnityWebRequest req = UnityWebRequest.Get(ActiveLobbiesUrl);
-            req.timeout = RequestTimeoutSeconds;
-            req.downloadHandler = new DownloadHandlerBuffer();
-
-            yield return req.SendWebRequest();
-
-            string text = req.downloadHandler != null ? req.downloadHandler.text : "";
-
-            if (req.result == UnityWebRequest.Result.Success && req.responseCode >= 200 && req.responseCode < 300)
+            string[] urls = new string[]
             {
-                try
+                ActiveLobbiesUrl,
+                ApiBaseUrl + "/api/lobbies/public"
+            };
+
+            bool loaded = false;
+
+            for (int attempt = 0; attempt < urls.Length && !loaded; attempt++)
+            {
+                UnityWebRequest req = UnityWebRequest.Get(urls[attempt]);
+                req.timeout = RequestTimeoutSeconds;
+                req.downloadHandler = new DownloadHandlerBuffer();
+
+                yield return req.SendWebRequest();
+
+                string text = "";
+                try { text = req.downloadHandler != null ? req.downloadHandler.text : ""; }
+                catch { text = ""; }
+
+                if (req.result == UnityWebRequest.Result.Success &&
+                    req.responseCode >= 200 && req.responseCode < 300)
                 {
-                    ActiveLobbiesResponse response = JsonSerializer.Deserialize<ActiveLobbiesResponse>(text, JsonOptions);
-                    if (response != null && response.success && response.lobbies != null)
+                    try
                     {
-                        List<ModdedLobbyInfo> visible = new List<ModdedLobbyInfo>();
-                        for (int i = 0; i < response.lobbies.Count; i++)
+                        ActiveLobbiesResponse response = JsonSerializer.Deserialize<ActiveLobbiesResponse>(text, JsonOptions);
+                        if (response != null && response.success && response.lobbies != null)
                         {
-                            ModdedLobbyInfo lobby = response.lobbies[i];
-                            // Tutte le lobby pubbliche devono essere visibili nella mod.
-                            // ShareLobby controlla solo l'esposizione del codice sulla vetrina web.
-                            if (lobby == null || !lobby.is_public || lobby.is_private)
-                                continue;
-                            visible.Add(lobby);
+                            List<ModdedLobbyInfo> visible = new List<ModdedLobbyInfo>();
+                            HashSet<string> seenCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                            for (int i = 0; i < response.lobbies.Count; i++)
+                            {
+                                ModdedLobbyInfo lobby = response.lobbies[i];
+                                if (lobby == null || lobby.is_private)
+                                    continue;
+
+                                // I feed legacy non valorizzano sempre is_public:
+                                // un codice non vuoto resta una lobby compatibile.
+                                if (!lobby.is_public && string.IsNullOrWhiteSpace(lobby.lobby_code))
+                                    continue;
+
+                                string code = lobby.lobby_code ?? "";
+                                if (!string.IsNullOrWhiteSpace(code) && !seenCodes.Add(code.Trim()))
+                                    continue;
+
+                                visible.Add(lobby);
+                            }
+
+                            LastModdedLobbies = visible;
+                            loaded = true;
                         }
-                        LastModdedLobbies = visible;
                     }
+                    catch { }
                 }
-                catch { }
+
+                try { req.Dispose(); } catch { }
             }
 
+            // In caso di errore conserviamo LastModdedLobbies invece di svuotarlo:
+            // un singolo timeout non deve far sparire tutte le lobby dalla UI.
             _lobbyListRunning = false;
         }
 
@@ -1455,6 +1742,12 @@ namespace BanMod
                         using (HttpClient client = new HttpClient())
                         {
                             client.Timeout = TimeSpan.FromSeconds(RequestTimeoutSeconds);
+                            if (!string.IsNullOrWhiteSpace(_activationToken))
+                                client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", "Bearer " + _activationToken);
+                            if (!string.IsNullOrWhiteSpace(_friendCode))
+                                client.DefaultRequestHeaders.TryAddWithoutValidation("X-BANMOD-FriendCode", _friendCode);
+                            if (!string.IsNullOrWhiteSpace(_playerName))
+                                client.DefaultRequestHeaders.TryAddWithoutValidation("X-BANMOD-PlayerName", _playerName);
 
                             using (HttpResponseMessage response = await client.GetAsync(url))
                             {
@@ -2207,8 +2500,21 @@ namespace BanMod
         private sealed class GameIdentity { public string FriendCode; public string PlayerName; }
         public sealed class DetectedModInfo { public string Name; public string FileName; public string AssemblyName; public string Version; public string Sha256; }
         public sealed class ChallengeResponse { public bool success { get; set; } public string nonce { get; set; } public int expires_in_seconds { get; set; } }
-        public sealed class ActivationResponse { public bool success { get; set; } public string activation_token { get; set; } public int expires_in_seconds { get; set; } }
-        public sealed class ExtraReportResponse { public bool success { get; set; } public bool valid { get; set; } public string reason { get; set; } }
+        public sealed class ActivationResponse
+        {
+            public bool success { get; set; }
+            public string activation_token { get; set; }
+            public int expires_in_seconds { get; set; }
+            public bool recovery_only { get; set; }
+        }
+        public sealed class ExtraReportResponse
+        {
+            public bool success { get; set; }
+            public bool valid { get; set; }
+            public bool accepted { get; set; }
+            public bool report_authenticated { get; set; }
+            public string reason { get; set; }
+        }
         public sealed class AccessResponse
         {
             public bool success { get; set; }
