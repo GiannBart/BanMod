@@ -14,7 +14,7 @@ class ChatBubbleSetRightPatch
 {
     public static void Postfix(ChatBubble __instance)
     {
-        if (BanMod.ChatLeft) __instance.SetLeft();
+        if (Options.ChatLeft.GetBool()) __instance.SetLeft();
     }
 }
 [HarmonyPatch(typeof(ChatBubble), nameof(ChatBubble.SetName))]
@@ -23,7 +23,7 @@ class ChatBubbleSetNamePatch
     public static void Postfix(ChatBubble __instance, [HarmonyArgument(1)] bool isDead)
     {
         if (BanMod.IsBanModDisabled) return;
-        bool darkTheme = BanMod.DarkTheme;
+        bool darkTheme = BanMod.DarkTheme.Value;
         bool hasCustomColor = ChatColorManager.currentChatColor.HasValue;
 
         if (hasCustomColor)
@@ -98,7 +98,7 @@ public static class ChatBubble_SetName
     {
         if (BanMod.IsBanModDisabled) return;
 
-        if (PlayerControl.LocalPlayer.Data.IsDead && BanMod.SeeRoleMeeting && PlayerControl.LocalPlayer.Data.RoleType != RoleTypes.GuardianAngel)
+        if (PlayerControl.LocalPlayer.Data.IsDead && BanMod.SeeRoleMeeting.Value && PlayerControl.LocalPlayer.Data.RoleType != RoleTypes.GuardianAngel)
         {
             Utils.ChatNametags(__instance);
         }
