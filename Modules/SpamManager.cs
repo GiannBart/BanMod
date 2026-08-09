@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -172,7 +172,7 @@ namespace BanMod
             string playername = player.Data.PlayerName;
 
             if (player.PlayerId == PlayerControl.LocalPlayer.PlayerId ||
-                (BanMod.ExcludeFriends && Utils.IsVip(player.FriendCode) ||
+                (BanMod.ExcludeFriends.Value && Utils.IsVip(player.FriendCode) ||
                 Utils.IsModerator(player.FriendCode)))
                 return false;
             if (!CheckStart(text))
@@ -214,7 +214,7 @@ namespace BanMod
             string playername = player.Data.PlayerName;
 
             if (player.PlayerId == PlayerControl.LocalPlayer.PlayerId ||
-                (BanMod.ExcludeFriends && Utils.IsVip(player.FriendCode) ||
+                (BanMod.ExcludeFriends.Value && Utils.IsVip(player.FriendCode) ||
                 Utils.IsModerator(player.FriendCode)))
                 return false;
             if (!CheckWord(text))
