@@ -29,6 +29,7 @@ public static class PreviousMatchPopupTracker
         public int Done;
         public int Total;
         public long LastCompletionOrder;
+        public float LastCompletionTimeSeconds = -1f;
     }
 
     public sealed class ProtectionStat
@@ -104,6 +105,7 @@ public static class PreviousMatchPopupTracker
     private static readonly List<MatchSnapshot> History = new();
 
     private static long _taskCompletionCounter = 0;
+    private static float _matchStartedAt = -1f;
     private static string _lastTaskCompleterName = "";
     private static int _lastTaskCompleterDone = 0;
     private static int _lastTaskCompleterTotal = 0;
@@ -144,6 +146,8 @@ public static class PreviousMatchPopupTracker
 
     public static void CaptureInitialRoles()
     {
+        _matchStartedAt = Time.time;
+
         InitialRoles.Clear();
 
         foreach (var player in PlayerControl.AllPlayerControls.ToArray())
@@ -166,6 +170,14 @@ public static class PreviousMatchPopupTracker
         }
 
         BMLogger.Info($"[PreviousMatch] Salvati {InitialRoles.Count} ruoli iniziali della partita.", "PreviousMatch");
+
+        foreach (var player in PlayerControl.AllPlayerControls.ToArray())
+        {
+            if (player == null || player.Data == null)
+                continue;
+
+            UpdatePlayerTask(player);
+        }
     }
 
     public static void ResetCurrentMatch()
@@ -181,6 +193,7 @@ public static class PreviousMatchPopupTracker
         _lastTaskCompleterName = "";
         _lastTaskCompleterDone = 0;
         _lastTaskCompleterTotal = 0;
+        _matchStartedAt = -1f;
 
         SpecialKillerFailed = false;
         PhantomFailed = false;
@@ -404,7 +417,8 @@ public static class PreviousMatchPopupTracker
                 Name = GetPlayerName(player),
                 Done = done,
                 Total = total,
-                LastCompletionOrder = 0
+                LastCompletionOrder = 0,
+                LastCompletionTimeSeconds = -1f
             };
 
             CurrentTasks[player.PlayerId] = stat;
@@ -444,7 +458,8 @@ public static class PreviousMatchPopupTracker
                 Name = GetPlayerName(player),
                 Done = done,
                 Total = total,
-                LastCompletionOrder = 0
+                LastCompletionOrder = 0,
+                LastCompletionTimeSeconds = -1f
             };
             CurrentTasks[player.PlayerId] = stat;
         }
@@ -453,6 +468,12 @@ public static class PreviousMatchPopupTracker
         stat.Done = done;
         stat.Total = total;
 
+        if (_matchStartedAt < 0f)
+            _matchStartedAt = Time.time;
+
+        stat.LastCompletionTimeSeconds =
+            Mathf.Max(0f, Time.time - _matchStartedAt);
+
         _taskCompletionCounter++;
         stat.LastCompletionOrder = _taskCompletionCounter;
 
@@ -460,7 +481,55 @@ public static class PreviousMatchPopupTracker
         _lastTaskCompleterDone = done;
         _lastTaskCompleterTotal = total;
     }
+    private static string GetTaskRankLabel(int position)
+    {
+        switch (position)
+        {
+            case 1:
+                return "<color=#FFD700>1st</color>";
 
+            case 2:
+                return "<color=#C0C0C0>2nd</color>";
+
+            case 3:
+                return "<color=#CD7F32>3rd</color>";
+
+            default:
+                return position + GetOrdinalSuffix(position);
+        }
+    }
+
+    private static string GetOrdinalSuffix(int number)
+    {
+        int lastTwoDigits = number % 100;
+
+        if (lastTwoDigits >= 11 && lastTwoDigits <= 13)
+            return "th";
+
+        switch (number % 10)
+        {
+            case 1:
+                return "st";
+
+            case 2:
+                return "nd";
+
+            case 3:
+                return "rd";
+
+            default:
+                return "th";
+        }
+    }
+
+    private static string FormatTaskCompletionTime(float seconds)
+    {
+        int totalSeconds = Mathf.Max(0, Mathf.FloorToInt(seconds));
+        int minutes = totalSeconds / 60;
+        int remainingSeconds = totalSeconds % 60;
+
+        return $"{minutes}:{remainingSeconds:00}";
+    }
     public static void RegisterGuesserAttempt(PlayerControl guesser, PlayerControl target, string guessedRoleName, bool success)
     {
         GuesserName = GetPlayerName(guesser);
@@ -535,6 +604,10 @@ public static class PreviousMatchPopupTracker
         snap.TaskStats = CurrentTasks.Values
             .Select(CloneTaskStat)
             .OrderByDescending(x => x.Done)
+            .ThenBy(x =>
+                x.LastCompletionTimeSeconds < 0f
+                    ? float.MaxValue
+                    : x.LastCompletionTimeSeconds)
             .ThenBy(x => x.Name)
             .ToList();
 
@@ -851,16 +924,49 @@ public static class PreviousMatchPopupTracker
         }
 
         report.AppendLine();
-        report.AppendLine(GetString("TaskSummaryHeader"));
-        if (snap.TaskStats.Count == 0)
+        report.AppendLine("TASK PODIUM");
+
+        if (snap.TaskStats == null || snap.TaskStats.Count == 0)
         {
-            report.AppendLine(GetString("TaskSummaryEmpty"));
+            report.AppendLine("No task data available.");
         }
         else
         {
-            foreach (var task in snap.TaskStats.OrderByDescending(t => t.Done).ThenBy(t => t.Name))
+            var rankedTasks = snap.TaskStats
+                .OrderByDescending(t => t.Done)
+                .ThenBy(t =>
+                    t.LastCompletionTimeSeconds < 0f
+                        ? float.MaxValue
+                        : t.LastCompletionTimeSeconds)
+                .ThenBy(t => t.Name)
+                .ToList();
+
+            for (int index = 0; index < rankedTasks.Count; index++)
             {
-                report.AppendLine(string.Format(GetString("TaskSummaryLine"), task.Name, task.Done, task.Total));
+                TaskStat task = rankedTasks[index];
+                int position = index + 1;
+
+                string rankLabel = GetTaskRankLabel(position);
+                string timeText = "";
+
+                if (task.LastCompletionTimeSeconds >= 0f)
+                {
+                    string formattedTime =
+                        FormatTaskCompletionTime(task.LastCompletionTimeSeconds);
+
+                    if (task.Total > 0 && task.Done >= task.Total)
+                    {
+                        timeText = $" - completed in {formattedTime}";
+                    }
+                    else if (task.Done > 0)
+                    {
+                        timeText = $" - last task completed at {formattedTime}";
+                    }
+                }
+
+                report.AppendLine(
+                    $"{rankLabel} - {task.Name}: " +
+                    $"{task.Done}/{task.Total} tasks{timeText}");
             }
         }
 
@@ -948,7 +1054,8 @@ public static class PreviousMatchPopupTracker
             Name = s.Name,
             Done = s.Done,
             Total = s.Total,
-            LastCompletionOrder = s.LastCompletionOrder
+            LastCompletionOrder = s.LastCompletionOrder,
+            LastCompletionTimeSeconds = s.LastCompletionTimeSeconds
         };
     }
 
