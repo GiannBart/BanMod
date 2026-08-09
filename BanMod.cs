@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.6.1";
+    public static string modVersion = "3.6.7";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.6.1";
+    public const string PluginVersion = "3.6.7";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.6.5" };
@@ -41,7 +41,6 @@ public partial class BanMod : BasePlugin
     public static NormalGameOptionsV10 NormalOptions => GameOptionsManager.Instance != null ? GameOptionsManager.Instance.currentNormalGameOptions : null;
     public static ManualLogSource PluginLogger;
     public static KeyBindOptions keyBindOptions;
-    public static OptionsMenu optionsMenu;
     public static HostControl hostControl;
     public static ModeratorUi moderatorUi; 
     public static MsgMenu msgMenu;
@@ -81,7 +80,8 @@ public partial class BanMod : BasePlugin
     private bool _disableAlreadyStarted = false;
     public static bool IsBanModDisabled { get; private set; } = false;
     private static readonly string saveFilePath = Path.Combine(Application.persistentDataPath, "host_setimp_times.txt");
-    public static void ShowChat(string msg) => DestroyableSingleton<HudManager>.Instance.Chat.AddChat(PlayerControl.LocalPlayer, msg);
+    //public static void ShowChat(string msg) => DestroyableSingleton<HudManager>.Instance.Chat.AddChat(PlayerControl.LocalPlayer, msg);
+
     public static bool IsProtected(ClientData client)
     {
         if (client == null)
@@ -406,19 +406,8 @@ public partial class BanMod : BasePlugin
 
         try
         {
-            sharelobby = false;
-            trackteam = false;
             EveryRandomActive = false;
             forceImpostor = false;
-            GM = false;
-            InfoLobby = false;
-            Teleport = false;
-            nocountdown = false;
-            EnableZoom = false;
-            changecolor = false;
-            changecolor1 = false;
-            DisableMeetingsAndReports = false;
-            revealVotes = false;
         }
         catch { }
 
@@ -462,7 +451,6 @@ public partial class BanMod : BasePlugin
         try
         {
             keyBindOptions = null;
-            optionsMenu = null;
             hostControl = null;
             moderatorUi = null;
             msgMenu = null;
@@ -513,57 +501,45 @@ public partial class BanMod : BasePlugin
             HostSelfSetTimes = new List<DateTime>(); 
         }
     }
-    public static bool AktiveChat { get; set; }
+    public static ConfigEntry<bool> ShowFPS { get; private set; }
+    public static ConfigEntry<bool> GM { get; private set; }
+    public static ConfigEntry<bool> DarkTheme { get; private set; }
+    public static ConfigEntry<bool> DisableLobbyMusic { get; private set; }
+    public static ConfigEntry<bool> AktiveLobby { get; private set; }
+    public static ConfigEntry<bool> AktiveChat { get; private set; }
+    public static ConfigEntry<bool> ChatOffIfImpostor { get; private set; }
+    public static ConfigEntry<bool> Resize_Player { get; private set; }
+    public static ConfigEntry<bool> ExcludeFriends { get; private set; }
+    public static ConfigEntry<bool> AddBanToList { get; private set; }
+    public static ConfigEntry<bool> NoGameEnd { get; private set; }
+    public static ConfigEntry<bool> EnableZoom { get; private set; }
+    public static ConfigEntry<bool> Teleport { get; private set; }
+    public static ConfigEntry<bool> SwitchVanilla { get; private set; }
+    public static ConfigEntry<bool> SeeRoleMeeting { get; private set; }
+    public static ConfigEntry<bool> VoteLockEnabled { get; private set; }
     public static ConfigEntry<string> spoofLevel { get; set; }
-    public static bool GM { get; set; }
-    public static bool InfoLobby { get; set; }
     public static ConfigEntry<string> menuHtmlColor { get; set; }
-    public static bool ChatOffIfImpostor { get; set; }
-    public static bool Resize_Player { get; set; }
-    public static bool ExcludeFriends { get; set; }
     public static ConfigEntry<string> FriendCode { get; set; }
-    public static bool AddBanToList { get; set; }
-    public static bool Protection { get; set; }
-    public static bool trackteam { get; set; }
-    public static bool NoGameEnd { get; set; }
-    public static bool AktiveLobby { get; set; }
-    public static bool DisableLobbyMusic { get; set; }
-    public static bool DarkTheme { get; set; }
     public static ConfigEntry<string> spoofPlatform { get; set; }
-    public static bool Teleport { get; set; }
-    public static bool nocountdown { get; set; }
-    public static bool EnableZoom { get; set; }
-    public static bool randomMap { get; set; }
     public ConfigEntry<int> MoveRateLimit { get; set; }
-    public static bool changecolor { get; set; }
-    public static bool changecolor1 { get; set; }
-    public static bool DisableRole { get; set; }
     public static bool ShowColorName { get; set; }
     public static bool ShowNoName { get; set; }
     public static bool ShowVipModTag { get; set; }
-    public static bool sharelobby { get; set; }
-    public static bool NoKillMeeting { get; set; }
     public static bool namewithid { get; set; }
     public static bool level { get; set; }
     public static bool Taskremain { get; set; }
     public static bool ShowMsgAlert { get; set; }
-    public static bool ChatLeft { get; set; }
     public static bool SharedAllTasks { get; set; }
     public static bool Enablesabotage { get; set; }
     public static bool ShowInfo { get; set; }
     public static bool UseCustomNames { get; set; }
-    public static bool SeeRoleMeeting { get; set; }
-    public static bool extendlobby { get; set; }
-    public static bool VoteLockEnabled { get; set; }
-    public static bool DisableMeetingsAndReports { get; set; }
-    public static bool revealVotes { get; set; }
     public static ConfigEntry<bool> CustomMouse;
     public static void DisableAllRoles()
     {
-        if (!BanMod.DisableRole) return;
+        if (!Options.DisableRole.GetBool()) return;
 
         OptionItem[] rolesToDisable = {
-            Options.ProtectFirst, Options.Guess, Options.EnableImmortal,
+            Options.Guess, Options.EnableImmortal,
             Options.EngineerFixer, Options.ViperGuess, Options.PhantomGuess,
             Options.ShapeGuess, Options.ImpostorGuess, Options.ScientistTime,
             Options.ExilerExe, Options.Jester, Options.Watcher, Options.Judge,
@@ -580,10 +556,10 @@ public partial class BanMod : BasePlugin
     }
     public static void EnableAllRoles()
     {
-        if (BanMod.DisableRole) return;
+        if (Options.DisableRole.GetBool()) return;
 
         OptionItem[] rolesToEnable = {
-            Options.ProtectFirst, Options.Guess, Options.EnableImmortal,
+            Options.Guess, Options.EnableImmortal,
             Options.EngineerFixer, Options.ViperGuess, Options.PhantomGuess,
             Options.ExilerExe, Options.Jester, Options.Watcher, Options.Judge,
             Options.Profiler
@@ -605,8 +581,31 @@ public partial class BanMod : BasePlugin
         BMLogger.Init(PluginLogger);
         try { BanModCore.Init(Log); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.Init failed: " + ex.Message); } catch { } }
 
+        ShowFPS = Config.Bind("Client Options", "ShowFPS", false);
+        GM = Config.Bind("Client Options", "GM", false);
+        DarkTheme = Config.Bind("Client Options", "DarkTheme", false);
+        DisableLobbyMusic = Config.Bind("Client Options", "DisableLobbyMusic", false);
+        AktiveLobby = Config.Bind("Client Options", "EnableCustomDecorations", true);
+        AktiveChat = Config.Bind("Client Options", "AktiveChat", false);
+        ChatOffIfImpostor = Config.Bind("Client Options", "ChatOffIfImpostor", true);
+        Resize_Player = Config.Bind("Client Options", "Resize_Player", false);
+        ExcludeFriends = Config.Bind("Client Options", "ExcludeFriends", false);
+        AddBanToList = Config.Bind("Client Options", "AddBanToList", true);
+        NoGameEnd = Config.Bind("Client Options", "NoGameEnd", false);
+        EnableZoom = Config.Bind("Client Options", "EnableZoom", false);
+        Teleport = Config.Bind("Client Options", "Teleport", true);
+        SeeRoleMeeting = Config.Bind("Client Options", "SeeRoleMeeting", true);
+        SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", true);
+
+        CustomMouse = Config.Bind("Client Options", "CustomMouse", false, "Enable or Disable Custom_Cursor");
+        spoofLevel = Config.Bind("Client Options", "Level", "");
+        spoofPlatform = Config.Bind("Client Options", "Platform", "", "Unknown, StandaloneEpicPC, StandaloneSteamPC, StandaloneMac, StandaloneWin10, StandaloneItch, IPhone, Android, Switch, Xbox, Playstation");
+        MoveRateLimit = Config.Bind("General", "MoveRateLimit", 0,
+                        "Controls how often networked movement logic runs relative to FixedUpdate calls.\n" +
+                        "0 or 1 means the logic runs every FixedUpdate (no rate limiting).\n" +
+                        "Values greater than 1 run the logic once every N FixedUpdate calls, reducing update frequency.");
+
         ClassInjector.RegisterTypeInIl2Cpp<KeyBindOptions>();
-        ClassInjector.RegisterTypeInIl2Cpp<OptionsMenu>();
         ClassInjector.RegisterTypeInIl2Cpp<HostControl>();
         ClassInjector.RegisterTypeInIl2Cpp<ModeratorUi>(); 
         ClassInjector.RegisterTypeInIl2Cpp<MsgMenu>();
@@ -634,13 +633,7 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<CustomHatSceneRenderer>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModCommunicationUi>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModLoginUi>();
-        CustomMouse = Config.Bind("Client Options", "CustomMouse", false, "Enable or Disable Custom_Cursor");
-        spoofLevel = Config.Bind("Client Options", "Level", "");
-        spoofPlatform = Config.Bind("Client Options", "Platform", "", "Unknown, StandaloneEpicPC, StandaloneSteamPC, StandaloneMac, StandaloneWin10, StandaloneItch, IPhone, Android, Switch, Xbox, Playstation");
-        MoveRateLimit = Config.Bind("General", "MoveRateLimit", 0,
-                        "Controls how often networked movement logic runs relative to FixedUpdate calls.\n" +
-                        "0 or 1 means the logic runs every FixedUpdate (no rate limiting).\n" +
-                        "Values greater than 1 run the logic once every N FixedUpdate calls, reducing update frequency.");
+
         TemplateLoader.InitTemplates();
         TemplateLoader.LoadTemplate("WelcomeTemplate");
         TemplateLoader.LoadTemplate("WelcomeTemplateSns");
@@ -667,7 +660,6 @@ public partial class BanMod : BasePlugin
         SetRecommendationsPatch.LoadUserPresetFile(3);
         SetRecommendationsPatch.LoadUserPresetFile(4);
         keyBindOptions = AddTrackedComponent<KeyBindOptions>();
-        optionsMenu = AddTrackedComponent<OptionsMenu>();
         hostControl = AddTrackedComponent<HostControl>();
         moderatorUi = AddTrackedComponent<ModeratorUi>();
         msgMenu = AddTrackedComponent<MsgMenu>();
@@ -707,7 +699,6 @@ public partial class BanMod : BasePlugin
         try { BanModCore.RequestStartup(); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.RequestStartup failed: " + ex.Message); } catch { } }
         try { AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { BanModLoginRuntime.Shutdown(); } catch { } try { BanModCore.StopAllPremiumModules(); } catch { } }; } catch { }
         BMLogger.LogInfo("BanMod loaded successfully!");
-        optionsMenu.LoadSettings();
         visualOptions.LoadSettings();
         BMLogger.LogInfo("BanMod loaded and settings synchronized!");
    
@@ -732,6 +723,13 @@ public partial class BanMod : BasePlugin
 
             try
             {
+                if (GameStates.isLobby && (GameModeType)Options.GameMode.GetValue() != GameModeType.BanMod)
+                {
+                    if (Options.DisableRole.GetBool())
+                    {
+                        BanMod.DisableAllRoles();
+                    }
+                }
                 if (Options.GameMode.GetInt() == 6 && !FfaExternalBridge.IsAvailable())
                 {
                     Options.GameMode.SetValue(0);
@@ -760,7 +758,7 @@ public partial class BanMod : BasePlugin
                     return;
                 }
 
-                if (!BanMod.trackteam)
+                if (!Options.TrackImpostorTeammate.GetBool())
                 {
                     TracersHandler.HideAllArrows();
                     return;
@@ -814,9 +812,6 @@ public partial class BanMod : BasePlugin
                     return true;
 
                 if (MsgMenu.Instance != null && MsgMenu.Instance.showMenu)
-                    return true;
-
-                if (OptionsMenu.Instance != null && OptionsMenu.Instance.showMenu)
                     return true;
 
                 if (VisualOptions.Instance != null && VisualOptions.Instance.showMenu)
