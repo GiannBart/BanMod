@@ -595,6 +595,7 @@ public partial class BanMod : BasePlugin
         EnableZoom = Config.Bind("Client Options", "EnableZoom", false);
         Teleport = Config.Bind("Client Options", "Teleport", true);
         SeeRoleMeeting = Config.Bind("Client Options", "SeeRoleMeeting", true);
+        VoteLockEnabled = Config.Bind("Client Options", "VoteLockEnabled", true);
         SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", true);
 
         CustomMouse = Config.Bind("Client Options", "CustomMouse", false, "Enable or Disable Custom_Cursor");
