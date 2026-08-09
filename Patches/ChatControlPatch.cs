@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using AmongUs.Data;
 using AmongUs.GameOptions;
 using HarmonyLib;
@@ -562,7 +562,7 @@ class ChatControllerUpdatePatch
         if (chat == null)
             return;
 
-        if (BanMod.DarkTheme)
+        if (BanMod.DarkTheme.Value)
         {
             if (chat.freeChatField != null)
             {
