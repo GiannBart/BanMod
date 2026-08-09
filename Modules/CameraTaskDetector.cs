@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using AmongUs.GameOptions;
 using System.Collections.Generic;
 using System.Linq;
@@ -136,7 +136,7 @@ namespace BanMod
             else if (data.CurrentPhase == DataTask.Phase.Warning && data.Timer <= 0)
             {
                 data.CurrentPhase = DataTask.Phase.Consequence;
-                bool isVip = Utils.IsVip(player.FriendCode) && BanMod.ExcludeFriends;
+                bool isVip = Utils.IsVip(player.FriendCode) && BanMod.ExcludeFriends.Value;
                 bool isHostPlayer = player.PlayerId == PlayerControl.LocalPlayer.PlayerId;
                 if (isVip || isHostPlayer)
                 {
