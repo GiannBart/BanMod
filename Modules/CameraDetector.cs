@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
@@ -96,7 +96,7 @@ namespace BanMod
                         goto case DataCam.Phase.Consequence;
 
                     case DataCam.Phase.Consequence:
-                        bool isVip = Utils.IsVip(pc.FriendCode) && BanMod.ExcludeFriends;
+                        bool isVip = Utils.IsVip(pc.FriendCode) && BanMod.ExcludeFriends.Value;
                         bool isHostPlayer = pc.PlayerId == PlayerControl.LocalPlayer.PlayerId;
                         if (isVip || isHostPlayer)
                         {
