@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
+using UnityEngine.ProBuilder;
 using static BanMod.BanMod;
 using static BanMod.Translator;
 using static BanMod.Utils;
@@ -112,9 +113,9 @@ public static class HudManagerInitializePatch
 {
     public static void Postfix()
     {
-        if (AmongUsClient.Instance.AmHost && (Protection))
+        if (AmongUsClient.Instance.AmHost && (Options.Protection10Sec.GetBool()))
         {
-            if (!Protection) return;
+            if (!Options.Protection10Sec.GetBool()) return;
             Block.StartShieldTimer(PlayerControl.LocalPlayer, 10);
             NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, "KillBlock for 10S Added");
         }
