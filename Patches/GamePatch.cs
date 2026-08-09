@@ -73,6 +73,7 @@ public static class GameStartPatch
         if (BanMod.IsBanModDisabled) return;
         if (!AmongUsClient.Instance.AmHost) return;
         if (FakeMapLobbyUtility.Active) return;
+        FirstMeetingProtectionManager.ResetForNewGame();
         GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
         if (Options.Jester.GetBool())
         {
@@ -94,29 +95,29 @@ public static class GameStartPatch
         BanMod.IsFirstRound = true;
         BanMod.ProtectedPlayerIdThisMatch = 255;
 
-        if (Options.ProtectFirst.GetBool())
-        {
-            if (BanMod.FirstDeadFriendCode != null)
-            {
-                PlayerControl playerToProtect = BanMod.AllPlayerControls
-                    .FirstOrDefault(p => p != null && p.Data != null && p.Data.FriendCode == BanMod.FirstDeadFriendCode);
+        //if (Options.ProtectFirst.GetBool())
+        //{
+        //    if (BanMod.FirstDeadFriendCode != null)
+        //    {
+        //        PlayerControl playerToProtect = BanMod.AllPlayerControls
+        //            .FirstOrDefault(p => p != null && p.Data != null && p.Data.FriendCode == BanMod.FirstDeadFriendCode);
 
-                if (playerToProtect != null && !playerToProtect.Data.IsDead)
-                {
-                    if (!BanMod.ShieldedPlayers.Contains(playerToProtect.PlayerId))
-                    {
-                        BanMod.ShieldedPlayers.Add(playerToProtect.PlayerId);
-                    }
-                    BanMod.InitiallyProtectedFriendCode = playerToProtect.Data.FriendCode;
+        //        if (playerToProtect != null && !playerToProtect.Data.IsDead)
+        //        {
+        //            if (!BanMod.ShieldedPlayers.Contains(playerToProtect.PlayerId))
+        //            {
+        //                BanMod.ShieldedPlayers.Add(playerToProtect.PlayerId);
+        //            }
+        //            BanMod.InitiallyProtectedFriendCode = playerToProtect.Data.FriendCode;
 
-                    BanMod.ProtectedPlayerIdThisMatch = playerToProtect.PlayerId;
-                }
-            }
-        }
+        //            BanMod.ProtectedPlayerIdThisMatch = playerToProtect.PlayerId;
+        //        }
+        //    }
+        //}
 
-        BanMod.FirstDeadFriendCode = null;
+        //BanMod.FirstDeadFriendCode = null;
     
-        if (Options.ProtectHostFirstRound.GetBool())
+        if (Options.ProtectFirstHost.GetBool())
         {
             if (PlayerControl.LocalPlayer != null && !PlayerControl.LocalPlayer.Data.IsDead)
             {
@@ -126,7 +127,159 @@ public static class GameStartPatch
                 }
             }
         }
+        MatchSummary1.StartMatchTimer();
+        GameTimeLimit.Start();
         AmongUsClient.Instance.StartCoroutine(WaitForLocalPlayerAndExecute());
+    }
+    private static void ApplyProtectFirst()
+    {
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
+
+        string previousFirstDeadFriendCode =
+            BanMod.FirstDeadFriendCode;
+
+        BanMod.FirstDeadFriendCode = null;
+
+        if (!Options.ProtectFirstDead.GetBool())
+        {
+            BMLogger.Info(
+                "[ProtectFirst] Opzione disabilitata."
+            );
+
+            return;
+        }
+
+        if (string.IsNullOrEmpty(
+                previousFirstDeadFriendCode))
+        {
+            BMLogger.Info(
+                "[ProtectFirst] Nessun primo morto registrato " +
+                "nella partita precedente."
+            );
+
+            return;
+        }
+
+        PlayerControl playerToProtect =
+            BanMod.AllPlayerControls.FirstOrDefault(player =>
+                player != null &&
+                player.Data != null &&
+                !player.Data.IsDead &&
+                !player.Data.Disconnected &&
+                player != PlayerControl.LocalPlayer &&
+                player.Data.FriendCode ==
+                    previousFirstDeadFriendCode);
+
+        if (playerToProtect == null)
+        {
+            BMLogger.Info(
+                $"[ProtectFirst] Il giocatore non è presente " +
+                $"nella nuova partita. FriendCode: " +
+                $"{previousFirstDeadFriendCode}"
+            );
+
+            return;
+        }
+
+        bool applied =
+            FirstMeetingProtectionManager.AddPlayer(
+                playerToProtect,
+                "ProtectFirst"
+            );
+
+        if (!applied)
+            return;
+
+        BanMod.InitiallyProtectedFriendCode =
+            playerToProtect.Data.FriendCode;
+
+        BanMod.ProtectedPlayerIdThisMatch =
+            playerToProtect.PlayerId;
+
+        BMLogger.Info(
+            $"[ProtectFirst] Selezionato " +
+            $"{playerToProtect.Data.PlayerName}, " +
+            $"PlayerId: {playerToProtect.PlayerId}"
+        );
+    }
+    private static void ApplyManualFirstMeetingProtection()
+    {
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
+
+        if (Options.ProtectFirstPlayer == null)
+            return;
+
+        string selectedPlayerName = "None";
+
+        try
+        {
+            int selectedIndex =
+                Options.ProtectFirstPlayer.GetValue();
+
+            string[] selections =
+                Options.ProtectFirstPlayer.Selections;
+
+            if (selections != null &&
+                selectedIndex >= 0 &&
+                selectedIndex < selections.Length)
+            {
+                selectedPlayerName =
+                    selections[selectedIndex];
+            }
+        }
+        catch (System.Exception exception)
+        {
+            BMLogger.LogWarning(
+                $"[ManualFirstProtection] Errore lettura selezione: " +
+                $"{exception.Message}"
+            );
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                selectedPlayerName) ||
+            string.Equals(
+                selectedPlayerName,
+                "None",
+                System.StringComparison.OrdinalIgnoreCase
+            ))
+        {
+            BMLogger.Info(
+                "[ManualFirstProtection] Nessun giocatore selezionato."
+            );
+
+            return;
+        }
+
+        bool applied =
+            FirstMeetingProtectionManager.AddPlayerByName(
+                selectedPlayerName,
+                "ManualSelection"
+            );
+
+        if (!applied)
+        {
+            BMLogger.LogWarning(
+                $"[ManualFirstProtection] Impossibile proteggere: " +
+                $"{selectedPlayerName}"
+            );
+
+            return;
+        }
+
+        BMLogger.Info(
+            $"[ManualFirstProtection] Protezione applicata a: " +
+            $"{selectedPlayerName}"
+        );
     }
     private static IEnumerator WaitForLocalPlayerAndExecute()
     {
@@ -139,11 +292,14 @@ public static class GameStartPatch
         while (!BanMod.AllPlayerControls.All(p => p != null && p.Data != null && (p.roleAssigned || p.Data.Disconnected)))
         yield return null;
 
+        ApplyProtectFirst();
+        ApplyManualFirstMeetingProtection();
+
         if (Options.Jester.GetBool())
         {
             Jester.SendJesterMessage();
         }
-        if (BanMod.GM)
+        if (BanMod.GM.Value)
         {
             PlayerControl.LocalPlayer.RpcSetRole(RoleTypes.CrewmateGhost);
             HudManager.Instance.StartCoroutine(CheatUtils.CompletaTutteLeTaskConDelay(1f));
@@ -249,7 +405,7 @@ public static class CheckEndCriteriaPatch
             TaskTracker.UpdatePlayerTask(player);
 
         }
-        if (BanMod.NoGameEnd) return false;
+        if (BanMod.NoGameEnd.Value) return false;
 
         if (MeetingHud.Instance != null && impVivi == 0)
         {
@@ -355,7 +511,7 @@ public static class EndGameSavePatch
             MatchSummary1.CrewmateWin = false;
             MatchSummary1.ImpostorWin = true;
         }
-
+        MatchSummary1.StopMatchTimer();
         MatchSummary1.SaveToHistory();
         UnifiedRPCHandlerPatch.AlreadyHandledCheaters.Clear();
     }
@@ -366,7 +522,7 @@ class CheckTaskCompletionPatch
 {
     public static bool Prefix(ref bool __result)
     {
-        if (BanMod.NoGameEnd)
+        if (BanMod.NoGameEnd.Value)
         {
             __result = false;
             return false;
@@ -531,7 +687,7 @@ public static class EndCriteriaPatch
 {
     public static bool Prefix(LogicGameFlowHnS __instance)
     {
-        if (BanMod.NoGameEnd)
+        if (BanMod.NoGameEnd.Value)
             return false;
 
         if (GameData.Instance == null || AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
