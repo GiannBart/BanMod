@@ -213,7 +213,7 @@ public static class BanManager
         if (player == null)
             return;
 
-        if (!AmongUsClient.Instance.AmHost || !BanMod.AddBanToList)
+        if (!AmongUsClient.Instance.AmHost || !BanMod.AddBanToList.Value)
             return;
 
         if (SilentPermanentFriendCodeBan.ShouldSuppressBanManagerWrite(player))
