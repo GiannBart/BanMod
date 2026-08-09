@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using AmongUs.Data;
 using AmongUs.Data.Player;
 using AmongUs.GameOptions;
@@ -77,45 +77,69 @@ using TimeSpan = System.TimeSpan;
 using Type = System.Type;
 
 namespace BanMod;
+
 [HarmonyPatch(typeof(PingTracker), nameof(PingTracker.Update))]
 public static class PingTracker_Update
 {
     public static void Postfix(PingTracker __instance)
     {
-        if (AmongUsClient.Instance == null || __instance.text == null) return;
+        if (AmongUsClient.Instance == null || __instance.text == null)
+            return;
 
         __instance.text.alignment = TextAlignmentOptions.Center;
         __instance.aspectPosition.DistanceFromEdge = new Vector3(0f, 0.50f, 0f);
 
-        string pingText = Utils.getColoredPingText(AmongUsClient.Instance.Ping);
+        string finalText = Utils.getColoredPingText(
+            AmongUsClient.Instance.Ping
+        );
 
         int myVotes = 0;
 
         if (!AmongUsClient.Instance.AmHost)
         {
-            myVotes = VoteBanTracker.GetVoteCount(AmongUsClient.Instance.ClientId);
+            myVotes = VoteBanTracker.GetVoteCount(
+                AmongUsClient.Instance.ClientId
+            );
         }
 
         if (myVotes > 0)
         {
-            string voteColor = "yellow";
+            string voteColor = "#FFFF00";
 
             if (myVotes >= 2)
             {
-                bool isFlashOn = (Mathf.FloorToInt(Time.time * 4) % 2 == 0);
-                voteColor = isFlashOn ? "red" : "yellow";
+                bool isFlashOn =
+                    Mathf.FloorToInt(Time.time * 4f) % 2 == 0;
+
+                voteColor = isFlashOn ? "#FF0000" : "#FFFF00";
             }
 
-            __instance.text.text = $"{pingText} | <color={voteColor}>Kicks: {myVotes}/3</color>";
+            finalText +=
+                $" | <color={voteColor}>Kicks: {myVotes}/3</color>";
         }
-        else
+
+        if (BanMod.ShowFPS.Value)
         {
-            __instance.text.text = pingText;
+            float deltaTime = Mathf.Max(Time.unscaledDeltaTime, 0.0001f);
+            int fps = Mathf.RoundToInt(1f / deltaTime);
+
+            string fpsColor;
+
+            if (fps < 20)
+                fpsColor = "#FF0000";
+            else if (fps < 40)
+                fpsColor = "#FFFF00";
+            else
+                fpsColor = "#00FF00";
+
+            finalText +=
+                $"\n<color=#00FFFF>FPS:</color> " +
+                $"<color={fpsColor}>{fps}</color>";
         }
+
+        __instance.text.text = finalText;
     }
 }
-
-
 
 
 [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
@@ -186,9 +210,13 @@ public class EndGameManager_Start_Patch
 [HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.ProtectPlayer))]
 public static class ProtectPlayerPatch
 {
-    public static bool Prefix(PlayerControl __instance, PlayerControl target, int colorId)
+    public static bool Prefix(
+        PlayerControl __instance,
+        PlayerControl target,
+        int colorId)
     {
-        bool isCurrentlyProtected = BanMod.ShieldedPlayers.Contains(target.PlayerId);
+        if (target == null || target.Data == null)
+            return true;
 
         if (!AmongUsClient.Instance.AmHost)
             return true;
@@ -196,29 +224,41 @@ public static class ProtectPlayerPatch
         if (__instance != PlayerControl.LocalPlayer)
             return true;
 
-        if (target.protectedByGuardianId != -1 )
-            return false;
+        bool isCurrentlyProtected =
+            BanMod.ShieldedPlayers.Contains(target.PlayerId);
 
-        if ((Options.ProtectFirst.GetBool()
-                || Options.ProtectHostFirstRound.GetBool()
-                || Options.EnableImmortal.GetBool()
-                || Options.Watcher.GetBool()
-                || BanMod.Protection
-                || Options.EnableShield.GetBool()))
+        if (!isCurrentlyProtected &&
+            !Options.Protection10Sec.GetBool() &&
+            !Options.EnableShield.GetBool())
         {
-
-            target.TurnOnProtection(
-                PlayerControl.LocalPlayer.Data.IsDead ||
-                (PlayerControl.LocalPlayer.Data.Role.TeamType == RoleTeamTypes.Impostor &&
-                 GameOptionsManager.Instance.CurrentGameOptions.GetBool(BoolOptionNames.ImpostorsCanSeeProtect)),
-                colorId,
-                (int)__instance.Data.PlayerId
-            );
-            if (target.Data != null) target.Data.MarkDirty();
-            return false; 
+            return true;
         }
 
-        return true; 
+        if (target.Data.IsDead)
+            return false;
+
+        if (target.protectedByGuardianId != -1)
+            return false;
+
+        bool canSeeProtection =
+            PlayerControl.LocalPlayer.Data.IsDead ||
+            (
+                PlayerControl.LocalPlayer.Data.Role.TeamType ==
+                RoleTeamTypes.Impostor &&
+                GameOptionsManager.Instance.CurrentGameOptions.GetBool(
+                    BoolOptionNames.ImpostorsCanSeeProtect
+                )
+            );
+
+        target.TurnOnProtection(
+            canSeeProtection,
+            colorId,
+            __instance.PlayerId
+        );
+
+        target.Data.MarkDirty();
+
+        return false;
     }
 }
 
@@ -410,7 +450,7 @@ public static class LogicOptions_GetAnonymousVotes
     public static void Postfix(ref bool __result)
     {
         if (!AmongUsClient.Instance.AmHost) return;
-        if (BanMod.revealVotes)
+        if (Options.revealVotes.GetBool())
         {
             __result = false;
         }
@@ -423,7 +463,7 @@ public static class LogicOptionsNormal_GetAnonymousVotes
     public static void Postfix(ref bool __result)
     {
         if (!AmongUsClient.Instance.AmHost) return;
-        if (BanMod.revealVotes)
+        if (Options.revealVotes.GetBool())
         {
             __result = false;
         }
@@ -433,98 +473,107 @@ public static class LogicOptionsNormal_GetAnonymousVotes
 [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.OnGameJoined))]
 public static class LobbyHistoryPatch
 {
-    public static List<string> LastCodes = new List<string>();
+    // Contiene soltanto l'ultima lobby visitata.
+    public static string LastLobbyCode { get; private set; } = string.Empty;
 
     public static void Postfix(AmongUsClient __instance)
     {
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
-        string gameCode = GameCode.IntToGameName(__instance.GameId);
-        if (!string.IsNullOrEmpty(gameCode))
-        {
-            LastCodes.Remove(gameCode);
-            LastCodes.Insert(0, gameCode);
+        if (__instance == null)
+            return;
 
-            if (LastCodes.Count > 3)
+        GameModeType gameMode =
+            (GameModeType)Options.GameMode.GetValue();
+
+        string gameCode =
+            GameCode.IntToGameName(__instance.GameId);
+
+        if (!string.IsNullOrWhiteSpace(gameCode))
+        {
+            // Aggiorna e copia soltanto quando la lobby cambia.
+            if (!string.Equals(
+                    LastLobbyCode,
+                    gameCode,
+                    System.StringComparison.OrdinalIgnoreCase))
             {
-                LastCodes.RemoveAt(LastCodes.Count - 1);
-            }
+                LastLobbyCode = gameCode;
+                GUIUtility.systemCopyBuffer = gameCode;
 
-            GUIUtility.systemCopyBuffer = gameCode;
+                BMLogger.Info(
+                    $"[LobbyCode] Nuovo codice salvato e copiato: {gameCode}"
+                );
+            }
         }
-        if (__instance == null || GameManager.Instance == null) return;
-        if (!Options.IsLoaded) return;
-        if (GameManager.Instance.IsHideAndSeek() || gameMode == GameModeType.SnS || gameMode == GameModeType.TaskRun)
+
+        if (GameManager.Instance == null)
+            return;
+
+        if (!Options.IsLoaded)
+            return;
+
+        if (GameManager.Instance.IsHideAndSeek() ||
+            gameMode == GameModeType.SnS ||
+            gameMode == GameModeType.TaskRun ||
+            gameMode == GameModeType.FFA)
         {
-            BanMod.DisableRole = true;
             BanMod.DisableAllRoles();
-            
-        }
-        else if (gameMode == GameModeType.BanMod)
-        {
-            BanMod.DisableRole = false;
-            BanMod.EnableAllRoles();
-            
         }
     }
 }
+
 public static class ReconnectHandler
 {
-    private static int _attemptIndex = 0;
-
     public static void TryRejoin()
     {
-        if (LobbyHistoryPatch.LastCodes.Count == 0) return;
-        _attemptIndex = 0;
-        ExecuteRejoin();
+        if (AmongUsClient.Instance == null)
+            return;
+
+        string codeStr = LobbyHistoryPatch.LastLobbyCode;
+
+        if (string.IsNullOrWhiteSpace(codeStr))
+        {
+            BMLogger.LogWarning(
+                "[Reconnect] Nessun codice lobby salvato."
+            );
+
+            return;
+        }
+
+        try
+        {
+            int gameId = GameCode.GameNameToInt(codeStr);
+
+            BMLogger.Info(
+                $"[Reconnect] Tentativo di rientro nella lobby: {codeStr}"
+            );
+
+            AmongUsClient.Instance.StartCoroutine(
+                AmongUsClient.Instance.CoJoinOnlineGameFromCode(
+                    gameId,
+                    true
+                )
+            );
+        }
+        catch (Exception e)
+        {
+            BMLogger.LogWarning(
+                $"[Reconnect] Codice lobby non valido: {e.Message}"
+            );
+        }
     }
+
     public static void TryNewGame()
     {
         ExecuteCreateGame();
     }
-    private static void ExecuteRejoin()
-    {
-        if (AmongUsClient.Instance == null || _attemptIndex >= LobbyHistoryPatch.LastCodes.Count)
-        {
-            _attemptIndex = 0;
-            return;
-        }
 
-        string codeStr = LobbyHistoryPatch.LastCodes[_attemptIndex];
-        int gameId = GameCode.GameNameToInt(codeStr);
-
-        AmongUsClient.Instance.StartCoroutine(
-            AmongUsClient.Instance.CoJoinOnlineGameFromCode(gameId, true)
-        );
-    }
-
-    public static void OnJoinFailed()
-    {
-        _attemptIndex++;
-        ExecuteRejoin();
-    }
     private static void ExecuteCreateGame()
     {
         if (AmongUsClient.Instance == null)
-        {
             return;
-        }
 
         AmongUsClient.Instance.StartCoroutine(
             AmongUsClient.Instance.CoCreateOnlineGame()
         );
-    }
-}
-[HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.OnDisconnected))]
-public static class ReconnectFallbackPatch
-{
-    public static void Postfix(AmongUsClient __instance)
-    {
-        DisconnectReasons reason = __instance.LastDisconnectReason;
-
-        if (reason == DisconnectReasons.GameNotFound || reason == DisconnectReasons.GameFull)
-        {
-            ReconnectHandler.OnJoinFailed();
-        }
     }
 }
 [HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.CheckShapeshift))]
