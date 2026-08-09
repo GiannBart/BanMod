@@ -192,7 +192,7 @@ namespace BanMod
 
         private void HandleResizing()
         {
-            if (!BanMod.Resize_Player)
+            if (!BanMod.Resize_Player.Value)
                 return;
 
             if (Input.GetMouseButtonDown(2))
@@ -294,7 +294,7 @@ namespace BanMod
         {
             if (selectedPlayer == null)
                 return;
-            if (!BanMod.Teleport)
+            if (!BanMod.Teleport.Value)
                 return;
             if (selectedPlayer != PlayerControl.LocalPlayer)
                 return;
