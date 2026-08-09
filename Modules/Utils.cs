@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using AmongUs.Data;
 using AmongUs.Data.Player;
 using AmongUs.GameOptions;
@@ -3575,9 +3575,9 @@ public static class Utils
                               PlayerControl.LocalPlayer.Data != null &&
                               PlayerControl.LocalPlayer.Data.Role.TeamType == RoleTeamTypes.Impostor;
 
-            bool chatOffIfImpostorEnabled = BanMod.ChatOffIfImpostor;
+            bool chatOffIfImpostorEnabled = BanMod.ChatOffIfImpostor.Value;
 
-            bool activeChatValue = BanMod.AktiveChat;
+            bool activeChatValue = BanMod.AktiveChat.Value;
 
             if (isImpostor && chatOffIfImpostorEnabled)
             {
@@ -4095,7 +4095,36 @@ public static class MatchSummary1
     public static string ImpostorName = "";
     public static string TaskWinnerName = "";
     public static string JesterName = "";
+    private static float MatchStartTime = 0f;
+    private static float MatchEndTime = 0f;
+    private static bool MatchTimerRunning = false;
+    public static void StartMatchTimer()
+    {
+        MatchStartTime = UnityEngine.Time.realtimeSinceStartup;
+        MatchEndTime = 0f;
+        MatchTimerRunning = true;
+    }
 
+    public static void StopMatchTimer()
+    {
+        if (!MatchTimerRunning)
+            return;
+
+        MatchEndTime = UnityEngine.Time.realtimeSinceStartup;
+        MatchTimerRunning = false;
+    }
+
+    public static string GetMatchTime()
+    {
+        float totalTime = MatchTimerRunning
+            ? UnityEngine.Time.realtimeSinceStartup - MatchStartTime
+            : MatchEndTime - MatchStartTime;
+
+        int minutes = (int)(totalTime / 60f);
+        int seconds = (int)(totalTime % 60f);
+
+        return $"{minutes:D2}:{seconds:D2}";
+    }
     public static void Reset()
     {
         ImpostorWin = false;
@@ -4106,6 +4135,9 @@ public static class MatchSummary1
         TaskWinnerName = "";
         JesterName = "";
         ReportHistory.Clear();
+        MatchStartTime = 0f;
+        MatchEndTime = 0f;
+        MatchTimerRunning = false;
     }
 
     public static string GetSummaryReport()
@@ -4195,6 +4227,7 @@ public static class MatchSummary1
 
             report.AppendLine($"Task: {ToFullWidthNumbers(totalDone.ToString())} / {ToFullWidthNumbers(totalTasks.ToString())}");
         }
+        report.AppendLine($"Match Time: {ToFullWidthNumbers(GetMatchTime())}");
         return report.ToString();
     }
 
@@ -4426,8 +4459,8 @@ public class SpawnProtectionChecker1 : MonoBehaviour
     private void Update()
     {
         if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return;
-        if (!BanMod.Protection) return;
-        if (BanMod.Protection)
+        if (!Options.Protection10Sec.GetBool()) return;
+        if (Options.Protection10Sec.GetBool())
         {
             if (currentMap == (MapNames)(-1) && ShipStatus.Instance != null)
             {
