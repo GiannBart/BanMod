@@ -13,7 +13,6 @@ namespace BanMod
             Host,
             Moderator,
             MsgMenu,
-            Options,
             PlayerTasks,
             SkinUI,
             VisualOptions,
@@ -105,7 +104,6 @@ namespace BanMod
             {
                 // Menu che possono aprirsi anche dal main menu.
                 case Panel.None:
-                case Panel.Options:
                 case Panel.MusicPlayer:
                 case Panel.Keybinds:
                     return RequiredRefs.None;
