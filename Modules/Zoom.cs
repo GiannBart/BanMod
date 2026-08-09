@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
@@ -19,7 +19,7 @@ namespace BanMod
 
                 if (HudManager.Instance.Chat?.IsOpenOrOpening == true) return;
 
-                bool canZoom = (BanMod.EnableZoom || PlayerMouseController.zoomkey) &&
+                bool canZoom = (BanMod.EnableZoom.Value || PlayerMouseController.zoomkey) &&
                                (GameStates.isLobby || GameStates.IsMeeting || PlayerControl.LocalPlayer.Data.IsDead);
 
                 if (canZoom)
