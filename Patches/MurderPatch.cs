@@ -31,7 +31,7 @@ internal static class MurderPlayerCombinedPatch
 {
     public static readonly Dictionary<byte, int> misfireCount = new();
     public static bool isBlocked = false;
-    public static void Postfix(PlayerControl __instance, [HarmonyArgument(0)] PlayerControl target, [HarmonyArgument(1)] MurderResultFlags resultFlags, ref bool __state)
+    public static void Postfix(PlayerControl __instance, [HarmonyArgument(0)] PlayerControl target, [HarmonyArgument(1)] MurderResultFlags resultFlags)
     {
         GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
 
@@ -109,6 +109,9 @@ internal static class MurderPlayerCombinedPatch
         if (failedProtected)
         {
             PreviousMatchPopupTracker.RegisterEffectiveProtectionSave(target);
+
+            FirstMeetingProtectionManager
+                .ReapplyAfterProtectedKill(target);
         }
         if (succeeded)
         {
