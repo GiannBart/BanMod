@@ -61,94 +61,40 @@ public static class SabotageSystemType_UpdateSystem_Patch
     }
 }
 
-[HarmonyPatch(typeof(SecurityCameraSystemType), nameof(SecurityCameraSystemType.UpdateSystem))]
+[HarmonyPatch(
+    typeof(SecurityCameraSystemType),
+    nameof(SecurityCameraSystemType.UpdateSystem))]
 public static class SecurityCameraSystemType_UpdateSystem_Patch
 {
-    private static bool triggeringAutoComms;
-    private static bool fixingAutoComms;
-
-    private static readonly HashSet<byte> PlayersAutoComms = new HashSet<byte>();
-
-    private static bool commsCausedByCameras;
-
-    public static bool Prefix(SecurityCameraSystemType __instance, PlayerControl player, MessageReader msgReader)
+    public static bool Prefix(
+        [HarmonyArgument(1)] MessageReader msgReader)
     {
-        bool isJbMode = (GameModeType)Options.GameMode.GetValue() == GameModeType.JBMode;
-        bool forceEnabled = Options.CameraCommsSabotage != null && Options.CameraCommsSabotage.GetBool();
-
-        if (!isJbMode && !forceEnabled)
-            return true;
-
         if (!AmongUsClient.Instance.AmHost)
             return true;
 
-        if (msgReader == null || msgReader.BytesRemaining <= 0)
-            return false;
+        if (!VanillaDeviceBlocker.ShouldBlockCameras())
+            return true;
 
-        byte op = msgReader.ReadByte();
-
-        if (player == null)
-            return false;
-
-        if (op == SecurityCameraSystemType.IncrementOp)
+        if (msgReader == null ||
+            msgReader.BytesRemaining <= 0)
         {
-            PlayersAutoComms.Add(player.PlayerId);
+            return true;
+        }
 
-            if (!triggeringAutoComms)
-            {
-                triggeringAutoComms = true;
+        MessageReader readerCopy =
+            MessageReader.Get(msgReader);
 
-                try
-                {
-                    if (!Utils.IsActive(SystemTypes.Comms))
-                    {
-                        commsCausedByCameras = true;
-                        ShipStatus.Instance.UpdateSystem(SystemTypes.Comms, player, 128);
-                    }
-                    else
-                    {
-                        commsCausedByCameras = false;
-                    }
-                }
-                finally
-                {
-                    triggeringAutoComms = false;
-                }
-            }
+        byte operation = readerCopy.ReadByte();
 
+        readerCopy.Recycle();
+
+        if (operation ==
+            SecurityCameraSystemType.IncrementOp)
+        {
             return false;
         }
 
-        if (op == SecurityCameraSystemType.DecrementOp)
-        {
-            PlayersAutoComms.Remove(player.PlayerId);
-
-            if (PlayersAutoComms.Count <= 0 && commsCausedByCameras && !fixingAutoComms)
-            {
-                fixingAutoComms = true;
-
-                try
-                {
-                    if (Utils.IsActive(SystemTypes.Comms))
-                    {
-                        ShipStatus_FixedUpdate_Patch.FixSabotage(
-                            ShipStatus.Instance,
-                            SystemTypes.Comms
-                        );
-                    }
-
-                    commsCausedByCameras = false;
-                }
-                finally
-                {
-                    fixingAutoComms = false;
-                }
-            }
-
-            return false;
-        }
-
-        return false;
+        return true;
     }
 }
 [HarmonyPatch(typeof(LogicGameFlowNormal), nameof(LogicGameFlowNormal.CheckEndCriteria))]
