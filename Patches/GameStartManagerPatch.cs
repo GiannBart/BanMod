@@ -237,9 +237,7 @@ public static class GameStartManagerPatch
 
                     if ((isFull || isClosing) && __instance.startState == GameStartManager.StartingStates.NotStarting && !GameStates.InGame)
                     {
-                        BanMod.nocountdown = true;
                         __instance.BeginGame();
-                        BanMod.nocountdown = false;
                         return; 
                     }
                 }
@@ -346,7 +344,7 @@ public class GameStartManagerBeginPatch
             __instance.ResetStartState();
             return false;
         }
-        if (BanMod.nocountdown)
+        if (Options.nocountdown.GetBool())
         {
             __instance.countDownTimer = 0f;
         }
@@ -370,7 +368,7 @@ public class GameStartManagerBeginPatch
     }
     private static void SelectRandomMap()
     {
-        if (BanMod.randomMap)
+        if (Options.randomMap.GetBool())
         {
             if (IRandom.Instance == null)
                 IRandom.SetInstance(new IRandom.NetRandomWrapper());
