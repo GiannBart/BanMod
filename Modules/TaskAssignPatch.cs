@@ -40,7 +40,7 @@ namespace BanMod
 
                 if (
                     (Watcher.WatcherSelected && pc.PlayerId == Watcher.WatcherId) ||
-                    ((BanMod.GM || ForcedRoleSystem.GM) && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
+                    ((BanMod.GM.Value || ForcedRoleSystem.GM) && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
                 )
                 {
                     if (generatedSharedTasks != null && generatedSharedTasks.Count > 0)
@@ -88,7 +88,7 @@ namespace BanMod
 
             if (
                 (Watcher.WatcherSelected && pc.PlayerId == Watcher.WatcherId) ||
-                ((BanMod.GM || ForcedRoleSystem.GM) && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
+                ((BanMod.GM.Value || ForcedRoleSystem.GM) && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
             )
             {
                 if (generatedCommonTasks != null && generatedCommonTasks.Count > 0)
