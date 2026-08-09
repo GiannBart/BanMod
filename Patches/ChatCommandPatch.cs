@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using AmongUs.Data;
 using AmongUs.GameOptions;
 using Assets.CoreScripts;
@@ -273,9 +273,9 @@ internal class ChatCommands
                     var client = pc.GetClient();
                     if (client != null)
                     {
-                        BanMod.AddBanToList = false;
+                        BanMod.AddBanToList.Value = false;
                         AmongUsClient.Instance.KickPlayer(client.Id, true);
-                        BanMod.AddBanToList = true;
+                        BanMod.AddBanToList.Value = true;
                     }
                 }
                 return true;
@@ -404,26 +404,22 @@ internal class ChatCommands
 
             case "/start":
                 {
-                    bool oldNocountdown = BanMod.nocountdown;
+                    bool oldNocountdown = Options.nocountdown.GetBool();
                     var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
                     if (manager != null)
                     {
-                        BanMod.nocountdown = false;
                         manager.BeginGame();
-                        BanMod.nocountdown = oldNocountdown;
                     }
                     return true;
                 }
 
             case "/instantstart":
                 {
-                    bool oldNocountdown = BanMod.nocountdown;
+                    bool oldNocountdown = Options.nocountdown.GetBool();
                     var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
                     if (manager != null)
                     {
-                        BanMod.nocountdown = true;
                         manager.BeginGame();
-                        BanMod.nocountdown = oldNocountdown;
                     }
                     return true;
                 }
@@ -2165,13 +2161,11 @@ internal class ChatCommands
             case "/instantstart":
                 {
                     if (!isModerator) return;
-                    bool oldNocountdown = BanMod.nocountdown;
+                    bool oldNocountdown = Options.nocountdown.GetBool();
                     var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
                     if (manager != null)
                     {
-                        BanMod.nocountdown = true;
                         manager.BeginGame();
-                        BanMod.nocountdown = oldNocountdown;
                     }
                     return;
                 }
@@ -2179,13 +2173,11 @@ internal class ChatCommands
             case "/start":
                 {
                     if (!isModerator) return;
-                    bool oldNocountdown = BanMod.nocountdown;
+                    bool oldNocountdown = Options.nocountdown.GetBool();
                     var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
                     if (manager != null)
                     {
-                        BanMod.nocountdown = false;
                         manager.BeginGame();
-                        BanMod.nocountdown = oldNocountdown;
                     }
                     return;
                 }
@@ -2279,12 +2271,12 @@ internal class ChatCommands
 
                     try
                     {
-                        BanMod.AddBanToList = false;
+                        BanMod.AddBanToList.Value = false;
                         AmongUsClient.Instance.KickPlayer(client.Id, true);
                     }
                     finally
                     {
-                        BanMod.AddBanToList = true;
+                        BanMod.AddBanToList.Value = true;
                     }
 
                     return;
@@ -2345,9 +2337,9 @@ internal class ChatCommands
                     if (color == byte.MaxValue)
                         break;
                     if (!GameStates.isLobby) return;
-                    if (BanMod.changecolor1 && (isModerator || isVip))
+                    if (Options.AllowColorChangeModerator.GetBool() && (isModerator || isVip))
                         player.RpcSetColor(color);
-                    else if (BanMod.changecolor)
+                    else if (Options.AllowColorChangeAll.GetBool())
                         player.RpcSetColor(color);
                     else return;
 
