@@ -27,6 +27,11 @@ public static class MeetingHudStartPatch
 
         if (!AmongUsClient.Instance.AmHost)
             return;
+
+        GameTimeLimit.Pause();
+        GameTimeLimit.SendTimeMessage();
+        FirstMeetingProtectionManager.EndAtFirstMeeting();
+
         if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost)
         {
             HostRoleOptionsRpc.SendToAll();
@@ -84,7 +89,7 @@ public static class MeetingHudClosePatch
     private static void Postfix()
     {
         if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return;
-        if (Options.ProtectHostFirstRound.GetBool() || AmongUsClient.Instance.AmHost)
+        if (Options.ProtectFirstHost.GetBool() || AmongUsClient.Instance.AmHost)
         {
             if (PlayerControl.LocalPlayer != null &&
                 PlayerControl.LocalPlayer.Data != null &&
@@ -109,7 +114,7 @@ public static class MeetingHudClosePatch
         if (AmongUsClient.Instance.IsGameOver) return;
         if (GameStates.isLobby) return;
         GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
-        if (BanMod.Protection)
+        if (Options.Protection10Sec.GetBool())
         {
             Block.StartShieldTimer(PlayerControl.LocalPlayer, 15);
             NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, "KillBlock for 10S Added");
@@ -125,7 +130,8 @@ public static class CombinedReportDeadBodyPatch
         GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
         if (!AmongUsClient.Instance.AmHost)
             return true;
-        if (BanMod.DisableMeetingsAndReports)
+
+        if (Options.DisableMeetingsAndReports.GetBool())
             return false;
 
         if (Watcher.IsWatcher(__instance))
@@ -143,10 +149,10 @@ public static class CombinedReportDeadBodyPatch
         if (target == null)
         {
             if (__instance.PlayerId == PlayerControl.LocalPlayer.PlayerId ||
-                (BanMod.ExcludeFriends && Utils.IsVip(__instance.FriendCode)))
+                (BanMod.ExcludeFriends.Value && Utils.IsVip(__instance.FriendCode)))
                 return true;
 
-            if (!BanMod.hasKilled && BanMod.NoKillMeeting)
+            if (!BanMod.hasKilled && Options.NoKillMeeting.GetBool())
                 return false;
 
             return true;
@@ -250,7 +256,7 @@ public static class AutoSkipVotePatch
     {
         if (__instance == null) return;
 
-        if (PlayerControl.LocalPlayer.Data.IsDead && BanMod.SeeRoleMeeting && PlayerControl.LocalPlayer.Data.RoleType != RoleTypes.GuardianAngel)
+        if (PlayerControl.LocalPlayer.Data.IsDead && BanMod.SeeRoleMeeting.Value && PlayerControl.LocalPlayer.Data.RoleType != RoleTypes.GuardianAngel)
         {
             MeetingNametags(__instance);
         }
@@ -588,7 +594,7 @@ public static class LastImpostorMeetingEndDelay
 
         while (Time.realtimeSinceStartup < endTime)
         {
-            if (BanMod.NoGameEnd)
+            if (BanMod.NoGameEnd.Value)
             {
                 delayRunning = false;
                 yield break;
@@ -601,7 +607,7 @@ public static class LastImpostorMeetingEndDelay
             AmongUsClient.Instance.AmHost &&
             flow != null &&
             flow.Manager != null &&
-            !BanMod.NoGameEnd)
+            !BanMod.NoGameEnd.Value)
         {
             flow.Manager.RpcEndGame(GameOverReason.CrewmatesByVote, showAd);
         }
@@ -650,34 +656,58 @@ public static class LastImpostorMeetingEndDelay
     }
 }
 
-[HarmonyPatch(typeof(ExileController), nameof(ExileController.WrapUp))]
+//[HarmonyPatch(typeof(ExileController), nameof(ExileController.WrapUp))]
+//public static class ExileControllerWrapUpPatch
+//{
+//    public static void Postfix()
+//    {
+//        if (!AmongUsClient.Instance.AmHost) return;
+
+//        if (BanMod.IsFirstRound)
+//        {
+//            if (BanMod.ProtectedPlayerIdThisMatch != 255)
+//            {
+//                BanMod.ShieldedPlayers.Remove(BanMod.ProtectedPlayerIdThisMatch);
+
+//                PlayerControl playerToUnshield = Utils.GetPlayerById(BanMod.ProtectedPlayerIdThisMatch);
+//                if (playerToUnshield != null && !playerToUnshield.Data.IsDead)
+//                {
+//                    playerToUnshield.RemoveProtection();
+//                    playerToUnshield.protectedByGuardianId = -1;
+//                    playerToUnshield.Data.MarkDirty();
+//                }
+
+//                BanMod.ProtectedPlayerIdThisMatch = 255;
+//                BanMod.InitiallyProtectedFriendCode = null;
+
+//                BMLogger.Info("[BanMod] Primo round terminato, protezione rimossa per il giocatore.");
+//            }
+
+//            BanMod.IsFirstRound = false;
+//        }
+//    }
+//}
+[HarmonyPatch(typeof(ExileController),nameof(ExileController.WrapUp))]
 public static class ExileControllerWrapUpPatch
 {
     public static void Postfix()
     {
-        if (!AmongUsClient.Instance.AmHost) return;
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
 
         if (BanMod.IsFirstRound)
         {
-            if (BanMod.ProtectedPlayerIdThisMatch != 255)
-            {
-                BanMod.ShieldedPlayers.Remove(BanMod.ProtectedPlayerIdThisMatch);
-
-                PlayerControl playerToUnshield = Utils.GetPlayerById(BanMod.ProtectedPlayerIdThisMatch);
-                if (playerToUnshield != null && !playerToUnshield.Data.IsDead)
-                {
-                    playerToUnshield.RemoveProtection();
-                    playerToUnshield.protectedByGuardianId = -1;
-                    playerToUnshield.Data.MarkDirty();
-                }
-
-                BanMod.ProtectedPlayerIdThisMatch = 255;
-                BanMod.InitiallyProtectedFriendCode = null;
-
-                BMLogger.Info("[BanMod] Primo round terminato, protezione rimossa per il giocatore.");
-            }
-
             BanMod.IsFirstRound = false;
         }
+        if (!Options.EnableGameTimer.GetBool())
+            return;
+
+        if (!GameTimeLimit.IsRunning)
+            return;
+
+        GameTimeLimit.Resume();
     }
 }
