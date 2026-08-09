@@ -1,4 +1,4 @@
-﻿//credits and licenses in the resources folder
+//credits and licenses in the resources folder
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using System;
@@ -23,7 +23,7 @@ public class LobbyStartPatch
     {
         GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
 
-        if (BanMod.AktiveLobby)
+        if (BanMod.AktiveLobby.Value)
         {
             __instance.StartCoroutine(
                 LobbyRendererReplacer.ReplaceLobbySprites(__instance).WrapToIl2Cpp()
@@ -81,7 +81,7 @@ public static class LobbyStairsColliderFix
     {
         if (lobby == null)
             return;
-        if (BanMod.AktiveLobby)
+        if (BanMod.AktiveLobby.Value)
         {
             DisableOriginalMainCollider(lobby);
         
@@ -514,7 +514,7 @@ public class LobbyBehaviourPatch
         System.Func<ISoundPlayer, bool> lobbybgm = x => x.Name.Equals("MapTheme");
         ISoundPlayer MapThemeSound = SoundManager.Instance.soundPlayers.Find(lobbybgm);
 
-        if (BanMod.DisableLobbyMusic)
+        if (BanMod.DisableLobbyMusic.Value)
         {
             if (MapThemeSound == null)
                 return;
