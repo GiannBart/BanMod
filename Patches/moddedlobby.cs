@@ -73,181 +73,1104 @@ namespace BanMod
             [HarmonyPostfix]
             public static void OnSetupGameInfo(GameContainer __instance)
             {
-                if (__instance == null || __instance.gameListing == null || __instance.capacity == null)
-                    return;
-
-                var listing = __instance.gameListing;
-                string rawName = listing.TrueHostName ?? listing.HostName ?? "Lobby";
-                string cleanHostName = System.Text.RegularExpressions.Regex.Replace(rawName, "<.*?>", string.Empty);
-
-                bool isMatch = string.IsNullOrEmpty(CurrentSearch) ||
-                               cleanHostName.IndexOf(CurrentSearch.Trim(), StringComparison.OrdinalIgnoreCase) >= 0;
-
-                if (isMatch)
+                if (__instance == null ||
+                    __instance.gameListing == null ||
+                    __instance.capacity == null)
                 {
-                    __instance.gameObject.SetActive(true);
-                    __instance.transform.localScale = Vector3.one;
-                    if (!string.IsNullOrEmpty(CurrentSearch)) __instance.transform.SetAsFirstSibling();
-                }
-                else
-                {
-                    __instance.gameObject.SetActive(false);
-                    __instance.transform.localScale = Vector3.zero;
                     return;
                 }
 
-                if (!BanMod.InfoLobby) return;
+                GameListing listing = __instance.gameListing;
+                string rawName =
+                    listing.TrueHostName ??
+                    listing.HostName ??
+                    "Lobby";
 
-                string currentLobbyCode = GameCode.IntToGameName(listing.GameId);
-                var (isModded, _) = ModdedLobby.DetectIfModded(listing);
+                string currentLobbyCode = "";
+                try
+                {
+                    currentLobbyCode =
+                        GameCode.IntToGameName(listing.GameId);
+                }
+                catch { }
 
-                var sb = new StringBuilder();
-                sb.Append("<size=45%>").Append($"<color={COLOR_WHITE}>{rawName}</color>").Append("\n<size=40%>")
-                  .Append($"<color={COLOR_CYAN}>{ModdedLobby.FormatPlatform(listing.Platform)}</color>");
+                var moddedResult = ModdedLobby.DetectIfModded(listing);
+                bool isModded = moddedResult.IsModded;
 
-                if (isModded) sb.Append($" <color={COLOR_RED}>[MODDED]</color>");
+                StringBuilder sb = new StringBuilder();
+
+                sb.Append("<size=45%>")
+                  .Append("<color=")
+                  .Append(COLOR_WHITE)
+                  .Append(">")
+                  .Append(rawName)
+                  .Append("</color>")
+                  .Append("\n<size=40%>")
+                  .Append("<color=")
+                  .Append(COLOR_CYAN)
+                  .Append(">")
+                  .Append(ModdedLobby.FormatPlatform(listing.Platform))
+                  .Append("</color>");
+
+                if (isModded)
+                    sb.Append(" <color=")
+                      .Append(COLOR_RED)
+                      .Append(">[MODDED]</color>");
 
                 sb.Append("\n<size=37%>");
-                string playerCountColor = listing.PlayerCount < 4 ? COLOR_RED : listing.PlayerCount < 10 ? COLOR_YELLOW : COLOR_GREEN;
-                sb.Append($"<color={playerCountColor}>{listing.PlayerCount}/{listing.MaxPlayers}</color>   ")
-                  .Append($"<color={COLOR_ORANGE}>{currentLobbyCode}</color>\n");
+
+                string playerCountColor =
+                    listing.PlayerCount < 4
+                        ? COLOR_RED
+                        : listing.PlayerCount < 10
+                            ? COLOR_YELLOW
+                            : COLOR_GREEN;
+
+                sb.Append("<color=")
+                  .Append(playerCountColor)
+                  .Append(">")
+                  .Append(listing.PlayerCount)
+                  .Append("/")
+                  .Append(listing.MaxPlayers)
+                  .Append("</color>   ")
+                  .Append("<color=")
+                  .Append(COLOR_ORANGE)
+                  .Append(">")
+                  .Append(currentLobbyCode)
+                  .Append("</color>\n");
 
                 if (listing.Options != null)
                 {
-                    sb.Append($"{Translator.GetString("Impostors1")}: <color={COLOR_WHITE}>{listing.Options.NumImpostors}</color> - ")
-                      .Append($"{Translator.GetString("KillCD")}: <color={COLOR_WHITE}>{listing.Options.GetFloat(FloatOptionNames.KillCooldown)}s</color></size>");
+                    sb.Append(Translator.GetString("Impostors1"))
+                      .Append(": <color=")
+                      .Append(COLOR_WHITE)
+                      .Append(">")
+                      .Append(listing.Options.NumImpostors)
+                      .Append("</color> - ")
+                      .Append(Translator.GetString("KillCD"))
+                      .Append(": <color=")
+                      .Append(COLOR_WHITE)
+                      .Append(">")
+                      .Append(listing.Options.GetFloat(
+                          FloatOptionNames.KillCooldown))
+                      .Append("s</color>");
                 }
 
-                __instance.capacity.text = sb.ToString();
-                __instance.capacity.richText = true;
+                sb.Append("</size>");
 
-                // La cache contiene tutte le lobby pubbliche e non private,
-                // indipendentemente da ShareLobby.
-                BanModActiveLobbyInfo banLobby = BanModActiveLobbyApi.FindCachedLobby(currentLobbyCode);
+                // Lobby information is always shown. The old InfoLobby bool
+                // is intentionally not checked.
+                BanModActiveLobbyInfo banLobby = null;
+
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(currentLobbyCode))
+                    {
+                        banLobby =
+                            BanModActiveLobbyApi.FindCachedLobby(
+                                currentLobbyCode);
+                    }
+                }
+                catch { }
+
                 if (banLobby != null)
                 {
-                    string serverHost = !string.IsNullOrWhiteSpace(banLobby.host_name) ? banLobby.host_name : banLobby.player_name;
-                    string serverMode = !string.IsNullOrWhiteSpace(banLobby.game_mode) ? banLobby.game_mode : banLobby.mode;
-                    string serverPlayers = !string.IsNullOrWhiteSpace(banLobby.players_text)
-                        ? banLobby.players_text
-                        : ((banLobby.players > 0 ? banLobby.players : banLobby.players_count) + "/" + (banLobby.max_players > 0 ? banLobby.max_players : listing.MaxPlayers));
-                    int serverKc = banLobby.kill_cooldown > 0 ? banLobby.kill_cooldown : banLobby.kc;
+                    string serverHost =
+                        !string.IsNullOrWhiteSpace(banLobby.host_name)
+                            ? banLobby.host_name
+                            : banLobby.player_name;
 
-                    string extra = $" <color={COLOR_RED}>[BANMOD]</color>";
-                    if (!string.IsNullOrWhiteSpace(serverMode)) extra += $" <color={COLOR_PURPLE}>{serverMode}</color>";
-                    if (!string.IsNullOrWhiteSpace(serverPlayers)) extra += $" <color={COLOR_GREEN}>{serverPlayers}</color>";
-                    if (serverKc > 0) extra += $" <color={COLOR_ORANGE}>KC:{serverKc}s</color>";
-                    if (!string.IsNullOrWhiteSpace(banLobby.region)) extra += $" <color={COLOR_CYAN}>{banLobby.region}</color>";
-                    if (!string.IsNullOrWhiteSpace(banLobby.language)) extra += $" <color={COLOR_WHITE}>{banLobby.language}</color>";
-                    if (!string.IsNullOrWhiteSpace(serverHost)) extra += $" <color={COLOR_YELLOW}>{serverHost}</color>";
+                    string serverMode =
+                        !string.IsNullOrWhiteSpace(banLobby.game_mode)
+                            ? banLobby.game_mode
+                            : banLobby.mode;
 
-                    __instance.capacity.text = __instance.capacity.text.Replace("</size></size>", extra + "</size></size>");
+                    string serverPlayers =
+                        !string.IsNullOrWhiteSpace(banLobby.players_text)
+                            ? banLobby.players_text
+                            : ((banLobby.players > 0
+                                    ? banLobby.players
+                                    : banLobby.players_count)
+                               + "/"
+                               + (banLobby.max_players > 0
+                                    ? banLobby.max_players
+                                    : listing.MaxPlayers));
+
+                    int serverKc =
+                        banLobby.kill_cooldown > 0
+                            ? banLobby.kill_cooldown
+                            : banLobby.kc;
+
+                    sb.Append("\n<size=31%>")
+                      .Append("<color=")
+                      .Append(COLOR_RED)
+                      .Append(">[BANMOD]</color>");
+
+                    if (!string.IsNullOrWhiteSpace(serverMode))
+                        sb.Append(" <color=")
+                          .Append(COLOR_PURPLE)
+                          .Append(">")
+                          .Append(serverMode)
+                          .Append("</color>");
+
+                    if (!string.IsNullOrWhiteSpace(serverPlayers))
+                        sb.Append(" <color=")
+                          .Append(COLOR_GREEN)
+                          .Append(">")
+                          .Append(serverPlayers)
+                          .Append("</color>");
+
+                    if (serverKc > 0)
+                        sb.Append(" <color=")
+                          .Append(COLOR_ORANGE)
+                          .Append(">KC:")
+                          .Append(serverKc)
+                          .Append("s</color>");
+
+                    if (!string.IsNullOrWhiteSpace(banLobby.region))
+                        sb.Append(" <color=")
+                          .Append(COLOR_CYAN)
+                          .Append(">")
+                          .Append(banLobby.region)
+                          .Append("</color>");
+
+                    if (!string.IsNullOrWhiteSpace(banLobby.language))
+                        sb.Append(" <color=")
+                          .Append(COLOR_WHITE)
+                          .Append(">")
+                          .Append(banLobby.language)
+                          .Append("</color>");
+
+                    if (!string.IsNullOrWhiteSpace(serverHost))
+                        sb.Append(" <color=")
+                          .Append(COLOR_YELLOW)
+                          .Append(">")
+                          .Append(serverHost)
+                          .Append("</color>");
+
+                    sb.Append("</size>");
                 }
+
+                __instance.capacity.richText = true;
+                __instance.capacity.text = sb.ToString();
             }
         }
     }
 
-    [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.Update))]
+
+    /// <summary>
+    /// Local lobby search used only inside FindAGame.
+    /// The active lobby patch calls ApplyToCurrentList after every refresh.
+    /// </summary>
     public static class BanModSearchInput
     {
-        private static float lastRequestTime = 0f;
+        private const int MAX_SEARCH_LENGTH = 25;
 
-        public static void Postfix()
+        private sealed class SearchRow
         {
-            if (SceneManager.GetActiveScene().name != "FindAGame") return;
+            public GameContainer Container;
+            public GameListing Listing;
+            public Vector3 Slot;
+            public int OriginalIndex;
+        }
 
-            string oldSearch = ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch;
-            bool changed = false;
+        private static readonly List<SearchRow> CurrentRows =
+            new List<SearchRow>();
 
-            if (Input.GetKeyDown(KeyCode.Backspace))
+        private static FindAGameManager currentManager;
+        private static int currentRenderedCount;
+
+        public static void SetSearch(string value)
+        {
+            if (SceneManager.GetActiveScene().name != "FindAGame")
+                return;
+
+            value = value ?? "";
+            value = value.Replace("\n", "").Replace("\r", "");
+
+            if (value.Length > MAX_SEARCH_LENGTH)
+                value = value.Substring(0, MAX_SEARCH_LENGTH);
+
+            if (string.Equals(
+                    ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch,
+                    value,
+                    StringComparison.Ordinal))
             {
-                if (ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch.Length > 0)
+                return;
+            }
+
+            ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch = value;
+            ApplyFilterAndUpdateCount();
+        }
+
+        /// <summary>
+        /// Called by BanModFindAGameActiveLobbyPatch after the complete list
+        /// has been rendered. It preserves the current search after refresh.
+        /// </summary>
+        internal static int ApplyToCurrentList(
+            FindAGameManager manager,
+            int renderedCount)
+        {
+            if (SceneManager.GetActiveScene().name != "FindAGame")
+                return Math.Max(0, renderedCount);
+
+            currentManager = manager;
+            currentRenderedCount = Math.Max(0, renderedCount);
+            CurrentRows.Clear();
+
+            if (manager == null || manager.gameContainers == null)
+                return 0;
+
+            int count = Math.Min(
+                currentRenderedCount,
+                manager.gameContainers.Length);
+
+            for (int i = 0; i < count; i++)
+            {
+                GameContainer container = manager.gameContainers[i];
+
+                if (container == null ||
+                    container.transform == null ||
+                    container.gameListing == null)
                 {
-                    ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch = ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch.Substring(0, ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch.Length - 1);
-                    changed = true;
+                    continue;
+                }
+
+                CurrentRows.Add(new SearchRow
+                {
+                    Container = container,
+                    Listing = container.gameListing,
+                    Slot = container.transform.localPosition,
+                    OriginalIndex = i
+                });
+            }
+
+            string search =
+                ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch ?? "";
+
+            // With an empty search the search system must not move, hide,
+            // resize or otherwise touch any lobby row.
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                SetFoundTexts(CurrentRows.Count);
+                return CurrentRows.Count;
+            }
+
+            return ApplyFilterAndUpdateCount();
+        }
+
+        private static int ApplyFilterAndUpdateCount()
+        {
+            if (SceneManager.GetActiveScene().name != "FindAGame")
+                return 0;
+
+            if (currentManager == null || CurrentRows.Count == 0)
+            {
+                SetFoundTexts(0);
+                return 0;
+            }
+
+            string search =
+                ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch ?? "";
+
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                RestoreAllRows();
+                SetFoundTexts(CurrentRows.Count);
+                return CurrentRows.Count;
+            }
+
+            List<SearchRow> ordered = new List<SearchRow>();
+
+            for (int i = 0; i < CurrentRows.Count; i++)
+            {
+                SearchRow row = CurrentRows[i];
+
+                if (row != null &&
+                    row.Container != null &&
+                    row.Listing != null &&
+                    MatchesSearch(row.Listing, search))
+                {
+                    ordered.Add(row);
                 }
             }
 
-            foreach (char c in Input.inputString)
+            ordered.Sort((a, b) =>
+                a.OriginalIndex.CompareTo(b.OriginalIndex));
+
+            // Hide every rendered row first, keeping its canonical slot.
+            for (int i = 0; i < CurrentRows.Count; i++)
             {
-                if (c == '\b') continue;
-                if (c == '\n' || c == '\r') { ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch = ""; changed = true; }
-                else if (c >= 32 && c <= 126 && ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch.Length < 25)
+                SearchRow row = CurrentRows[i];
+
+                try
                 {
-                    ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch += c;
-                    changed = true;
+                    if (row == null ||
+                        row.Container == null ||
+                        row.Container.transform == null ||
+                        row.Container.gameObject == null)
+                    {
+                        continue;
+                    }
+
+                    row.Container.transform.localPosition = row.Slot;
+                    row.Container.transform.localScale = Vector3.one;
+                    row.Container.gameObject.SetActive(false);
                 }
+                catch { }
             }
 
-            if (changed || oldSearch != ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch)
-            {
-                if (Time.time > lastRequestTime + 0.5f && FindAGameManager.Instance != null)
-                {
-                    FindAGameManager.Instance.ResetTimer();
-                    FindAGameManager.Instance.RefreshList();
-                    lastRequestTime = Time.time;
-                }
+            int visibleCount = 0;
 
-                ForceImmediateSort();
+            // Matching rows occupy the first canonical slots.
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                SearchRow row = ordered[i];
+
+                try
+                {
+                    if (row == null ||
+                        row.Container == null ||
+                        row.Container.transform == null ||
+                        row.Container.gameObject == null)
+                    {
+                        continue;
+                    }
+
+                    if (i < CurrentRows.Count)
+                    {
+                        row.Container.transform.localPosition =
+                            CurrentRows[i].Slot;
+                    }
+
+                    row.Container.transform.localScale = Vector3.one;
+                    row.Container.gameObject.SetActive(true);
+                    visibleCount++;
+                }
+                catch { }
+            }
+
+            SetFoundTexts(visibleCount);
+            return visibleCount;
+        }
+
+        private static void RestoreAllRows()
+        {
+            for (int i = 0; i < CurrentRows.Count; i++)
+            {
+                SearchRow row = CurrentRows[i];
+
+                try
+                {
+                    if (row == null ||
+                        row.Container == null ||
+                        row.Container.transform == null ||
+                        row.Container.gameObject == null)
+                    {
+                        continue;
+                    }
+
+                    row.Container.transform.localPosition = row.Slot;
+                    row.Container.transform.localScale = Vector3.one;
+                    row.Container.gameObject.SetActive(true);
+                }
+                catch { }
             }
         }
 
-        public static void ForceImmediateSort()
+        private static bool MatchesSearch(
+            GameListing listing,
+            string search)
         {
-            var containers = Object.FindObjectsOfType<GameContainer>();
-            if (containers == null) return;
+            if (listing == null)
+                return false;
 
-            foreach (var container in containers)
+            string normalizedSearch = NormalizeSearchText(search);
+
+            if (string.IsNullOrEmpty(normalizedSearch))
+                return true;
+
+            bool isModded = false;
+
+            try
             {
-                if (container == null) continue;
-                ModdedLobby.SetupGameInfoPatchNoTooltip.OnSetupGameInfo(container);
+                isModded = ModdedLobby.DetectIfModded(listing).IsModded;
+            }
+            catch { }
+
+            // Status searches are handled explicitly so that searching "mod"
+            // never matches values such as "not modded" or "non moddato".
+            if (IsModdedSearchTerm(normalizedSearch))
+                return isModded;
+
+            if (IsVanillaSearchTerm(normalizedSearch))
+                return !isModded;
+
+            StringBuilder searchable = new StringBuilder();
+
+            string listingHost =
+                listing.TrueHostName ??
+                listing.HostName ??
+                "";
+
+            searchable.Append(listingHost).Append(' ');
+            searchable.Append(GetPlatformSearchText(listing)).Append(' ');
+            searchable.Append(GetMapSearchText(listing)).Append(' ');
+
+            // Include the host and map supplied by the BanMod API as well.
+            try
+            {
+                BanModActiveLobbyInfo cached = GetCachedLobby(listing);
+
+                if (cached != null)
+                {
+                    string apiHost =
+                        !string.IsNullOrWhiteSpace(cached.host_name)
+                            ? cached.host_name
+                            : cached.player_name;
+
+                    searchable.Append(apiHost).Append(' ');
+                    searchable.Append(GetApiMapSearchText(cached)).Append(' ');
+                }
+            }
+            catch { }
+
+            return NormalizeSearchText(searchable.ToString())
+                .Contains(normalizedSearch);
+        }
+
+        private static bool IsModdedSearchTerm(string value)
+        {
+            return value == "MOD" ||
+                   value == "MODDED" ||
+                   value == "MODDATO" ||
+                   value == "MODDATA";
+        }
+
+        private static bool IsVanillaSearchTerm(string value)
+        {
+            return value == "VANILLA" ||
+                   value == "NOTMODDED" ||
+                   value == "NONMODDED" ||
+                   value == "UNMODDED" ||
+                   value == "NOMOD" ||
+                   value == "NONMODDATO" ||
+                   value == "NONMODDATA";
+        }
+
+        private static string GetPlatformSearchText(GameListing listing)
+        {
+            if (listing == null)
+                return "";
+
+            string formatted = ModdedLobby.FormatPlatform(listing.Platform);
+
+            switch (listing.Platform)
+            {
+                case Platforms.StandaloneSteamPC:
+                    return formatted + " SteamPC PC";
+
+                case Platforms.StandaloneEpicPC:
+                    return formatted + " EpicGames EpicPC PC";
+
+                case Platforms.StandaloneWin10:
+                    return formatted + " MicrosoftStore Windows Win10 PC";
+
+                case Platforms.Switch:
+                    return formatted + " Nintendo NintendoSwitch";
+
+                case Platforms.Xbox:
+                    return formatted + " Microsoft XboxConsole";
+
+                case Platforms.Playstation:
+                    return formatted + " PS PlayStationConsole";
+
+                case Platforms.StandaloneMac:
+                    return formatted + " Apple MacOS PC";
+
+                case Platforms.StandaloneItch:
+                    return formatted + " Itchio PC";
+
+                case Platforms.Android:
+                    return formatted + " Mobile Phone Tablet";
+
+                case Platforms.IPhone:
+                    return formatted + " iOS Apple Mobile Phone";
+
+                default:
+                    return formatted;
+            }
+        }
+
+        private static string GetMapSearchText(GameListing listing)
+        {
+            if (listing == null)
+                return "";
+
+            int mapId = -1;
+
+            try
+            {
+                object value = GetMemberValue(
+                    listing.Options,
+                    "MapId",
+                    "MapID",
+                    "mapId",
+                    "mapID",
+                    "Map");
+
+                if (value == null)
+                {
+                    value = GetMemberValue(
+                        listing,
+                        "MapId",
+                        "MapID",
+                        "mapId",
+                        "mapID",
+                        "Map");
+                }
+
+                if (value != null)
+                    mapId = Convert.ToInt32(value);
+            }
+            catch { }
+
+            return GetMapNames(mapId);
+        }
+
+        private static string GetApiMapSearchText(
+            BanModActiveLobbyInfo lobby)
+        {
+            if (lobby == null)
+                return "";
+
+            StringBuilder result = new StringBuilder();
+
+            try
+            {
+                object mapName = GetMemberValue(
+                    lobby,
+                    "map_name",
+                    "mapName",
+                    "MapName",
+                    "map",
+                    "Map");
+
+                if (mapName != null)
+                    result.Append(mapName.ToString()).Append(' ');
+            }
+            catch { }
+
+            try
+            {
+                object mapIdValue = GetMemberValue(
+                    lobby,
+                    "map_id",
+                    "mapId",
+                    "MapId",
+                    "MapID");
+
+                if (mapIdValue != null)
+                {
+                    int mapId = Convert.ToInt32(mapIdValue);
+                    result.Append(GetMapNames(mapId));
+                }
+            }
+            catch { }
+
+            return result.ToString();
+        }
+
+        private static string GetMapNames(int mapId)
+        {
+            switch (mapId)
+            {
+                case 0:
+                    return "The Skeld Skeld";
+
+                case 1:
+                    return "MIRA HQ Mira MiraHQ";
+
+                case 2:
+                    return "Polus";
+
+                case 3:
+                    return "The Skeld Skeld Dleks";
+
+                case 4:
+                    return "The Airship Airship";
+
+                case 5:
+                    return "The Fungle Fungle";
+
+                default:
+                    return mapId >= 0 ? "Map " + mapId : "";
+            }
+        }
+
+        private static BanModActiveLobbyInfo GetCachedLobby(
+            GameListing listing)
+        {
+            if (listing == null)
+                return null;
+
+            try
+            {
+                string code = GameCode.IntToGameName(listing.GameId);
+                return BanModActiveLobbyApi.FindCachedLobby(code);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static object GetMemberValue(
+            object instance,
+            params string[] names)
+        {
+            if (instance == null || names == null)
+                return null;
+
+            Type type = instance.GetType();
+
+            const System.Reflection.BindingFlags flags =
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.IgnoreCase;
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                try
+                {
+                    System.Reflection.PropertyInfo property =
+                        type.GetProperty(names[i], flags);
+
+                    if (property != null)
+                        return property.GetValue(instance, null);
+                }
+                catch { }
+
+                try
+                {
+                    System.Reflection.FieldInfo field =
+                        type.GetField(names[i], flags);
+
+                    if (field != null)
+                        return field.GetValue(instance);
+                }
+                catch { }
             }
 
-            if (containers.Length > 0 && containers[0].transform.parent != null)
+            return null;
+        }
+
+        private static string NormalizeSearchText(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "";
+
+            string withoutTags =
+                System.Text.RegularExpressions.Regex.Replace(
+                    value,
+                    "<.*?>",
+                    "");
+
+            StringBuilder result =
+                new StringBuilder(withoutTags.Length);
+
+            for (int i = 0; i < withoutTags.Length; i++)
             {
-                var layout = containers[0].transform.parent.GetComponent<VerticalLayoutGroup>();
-                if (layout != null) { layout.enabled = false; layout.enabled = true; }
+                char c = withoutTags[i];
+
+                if (char.IsWhiteSpace(c) || char.IsControl(c))
+                    continue;
+
+                System.Globalization.UnicodeCategory category =
+                    System.Globalization.CharUnicodeInfo
+                        .GetUnicodeCategory(c);
+
+                if (category ==
+                    System.Globalization.UnicodeCategory.Format)
+                {
+                    continue;
+                }
+
+                result.Append(char.ToUpperInvariant(c));
             }
+
+            return result.ToString();
+        }
+
+        private static int CompareSlots(Vector3 a, Vector3 b)
+        {
+            int y = b.y.CompareTo(a.y);
+
+            if (y != 0)
+                return y;
+
+            int x = a.x.CompareTo(b.x);
+
+            if (x != 0)
+                return x;
+
+            return a.z.CompareTo(b.z);
+        }
+
+        private static void SetFoundTexts(int count)
+        {
+            try
+            {
+                if (currentManager == null)
+                    return;
+
+                string value = Math.Max(0, count).ToString();
+
+                if (currentManager.matchesFoundText != null)
+                    currentManager.matchesFoundText.text = value;
+
+                if (currentManager.TotalText != null)
+                    currentManager.TotalText.text = value;
+            }
+            catch { }
+        }
+
+        public static void Reset()
+        {
+            ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch = "";
+            CurrentRows.Clear();
+            currentManager = null;
+            currentRenderedCount = 0;
         }
     }
 
-    [HarmonyPatch(typeof(FindAGameManager), nameof(FindAGameManager.HandleList))]
-    public static class HandleListPatch
-    {
-        public static void Postfix()
-        {
-            BanModSearchInput.ForceImmediateSort();
-        }
-    }
-
+    /// <summary>
+    /// IL2CPP-compatible search box. Input is accepted only while selected.
+    /// </summary>
     public class BanModGUI : MonoBehaviour
     {
+        public static BanModGUI Instance;
+
+        private const int MAX_SEARCH_LENGTH = 25;
+
+        private GUIStyle titleStyle;
+        private GUIStyle fieldStyle;
+        private GUIStyle placeholderStyle;
+        private GUIStyle clearStyle;
+
+        private bool isFocused;
+        private bool wasInFindAGame;
+
         public static void Create()
         {
-            if (GameObject.Find("BanModGUI")) return;
-            var obj = new GameObject("BanModGUI");
+            if (Instance != null)
+                return;
+
+            GameObject existing = GameObject.Find("BanModGUI");
+
+            if (existing != null)
+            {
+                BanModGUI existingGui =
+                    existing.GetComponent<BanModGUI>();
+
+                if (existingGui != null)
+                {
+                    Instance = existingGui;
+                    return;
+                }
+            }
+
+            GameObject obj = new GameObject("BanModGUI");
             obj.AddComponent<BanModGUI>();
             Object.DontDestroyOnLoad(obj);
         }
 
-        void OnGUI()
+        private void Awake()
         {
-            if (SceneManager.GetActiveScene().name != "FindAGame") return;
-            string search = ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch;
-            if (string.IsNullOrEmpty(search)) return;
+            if (Instance != null && Instance != this)
+            {
+                enabled = false;
+                return;
+            }
 
-            GUI.color = Color.yellow;
-            GUI.Label(new Rect(30, 30, 1000, 100), $"<size=40> 🔍 CERCA: {search.ToUpper()}_</size>");
+            Instance = this;
+            Object.DontDestroyOnLoad(gameObject);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
+
+        private void Update()
+        {
+            bool inFindAGame =
+                SceneManager.GetActiveScene().name == "FindAGame";
+
+            if (!inFindAGame)
+            {
+                if (wasInFindAGame)
+                {
+                    isFocused = false;
+                    BanModSearchInput.Reset();
+                }
+
+                wasInFindAGame = false;
+                return;
+            }
+
+            wasInFindAGame = true;
+            HandleMouse();
+            HandleKeyboard();
+        }
+
+        private void HandleMouse()
+        {
+            if (!Input.GetMouseButtonDown(0))
+                return;
+
+            Vector3 rawMouse = Input.mousePosition;
+            Vector2 guiMouse = new Vector2(
+                rawMouse.x,
+                Screen.height - rawMouse.y);
+
+            Rect fieldRect = GetFieldRect();
+            Rect clearRect = GetClearRect();
+
+            if (clearRect.Contains(guiMouse))
+            {
+                BanModSearchInput.SetSearch("");
+                isFocused = true;
+                return;
+            }
+
+            isFocused = fieldRect.Contains(guiMouse);
+        }
+
+        private void HandleKeyboard()
+        {
+            if (!isFocused ||
+                SceneManager.GetActiveScene().name != "FindAGame")
+            {
+                return;
+            }
+
+            string value =
+                ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch ?? "";
+
+            bool changed = false;
+
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                BanModSearchInput.SetSearch("");
+                isFocused = false;
+                return;
+            }
+
+            if (Input.GetKeyDown(KeyCode.Return) ||
+                Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                isFocused = false;
+                return;
+            }
+
+            if (Input.GetKeyDown(KeyCode.Backspace) &&
+                value.Length > 0)
+            {
+                value = value.Substring(0, value.Length - 1);
+                changed = true;
+            }
+
+            string input = Input.inputString;
+
+            if (!string.IsNullOrEmpty(input))
+            {
+                for (int i = 0; i < input.Length; i++)
+                {
+                    char c = input[i];
+
+                    if (c == '\b' ||
+                        c == '\n' ||
+                        c == '\r' ||
+                        char.IsControl(c))
+                    {
+                        continue;
+                    }
+
+                    if (value.Length >= MAX_SEARCH_LENGTH)
+                        break;
+
+                    value += c;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+                BanModSearchInput.SetSearch(value);
+        }
+
+        private void InitializeStyles()
+        {
+            if (fieldStyle != null)
+                return;
+
+            titleStyle = new GUIStyle(GUI.skin.label);
+            titleStyle.fontSize = 20;
+            titleStyle.fontStyle = FontStyle.Bold;
+            titleStyle.alignment = TextAnchor.MiddleCenter;
+            titleStyle.normal.textColor = Color.white;
+
+            fieldStyle = new GUIStyle(GUI.skin.label);
+            fieldStyle.fontSize = 23;
+            fieldStyle.alignment = TextAnchor.MiddleLeft;
+            fieldStyle.normal.textColor = Color.white;
+
+            placeholderStyle = new GUIStyle(GUI.skin.label);
+            placeholderStyle.fontSize = 20;
+            placeholderStyle.fontStyle = FontStyle.Italic;
+            placeholderStyle.alignment = TextAnchor.MiddleLeft;
+            placeholderStyle.normal.textColor =
+                new Color(1f, 1f, 1f, 0.45f);
+
+            clearStyle = new GUIStyle(GUI.skin.label);
+            clearStyle.fontSize = 22;
+            clearStyle.fontStyle = FontStyle.Bold;
+            clearStyle.alignment = TextAnchor.MiddleCenter;
+            clearStyle.normal.textColor = Color.white;
+        }
+
+        private static float GetPanelWidth()
+        {
+            return Mathf.Max(
+                280f,
+                Mathf.Min(520f, Screen.width - 60f));
+        }
+
+        private static float GetLeft()
+        {
+            return Mathf.Max(
+                10f,
+                (Screen.width - GetPanelWidth()) * 0.5f);
+        }
+
+        private static Rect GetPanelRect()
+        {
+            return new Rect(
+                GetLeft(),
+                25f,
+                GetPanelWidth(),
+                82f);
+        }
+
+        private static Rect GetFieldRect()
+        {
+            float left = GetLeft();
+            float width = GetPanelWidth();
+
+            return new Rect(
+                left + 12f,
+                56f,
+                width - 68f,
+                40f);
+        }
+
+        private static Rect GetClearRect()
+        {
+            float left = GetLeft();
+            float width = GetPanelWidth();
+
+            return new Rect(
+                left + width - 48f,
+                56f,
+                36f,
+                40f);
+        }
+
+        private void OnGUI()
+        {
+            if (SceneManager.GetActiveScene().name != "FindAGame")
+                return;
+
+            InitializeStyles();
+
+            Rect panelRect = GetPanelRect();
+            Rect fieldRect = GetFieldRect();
+            Rect clearRect = GetClearRect();
+
+            Rect titleRect = new Rect(
+                panelRect.x + 12f,
+                panelRect.y + 1f,
+                panelRect.width - 24f,
+                28f);
+
+            Color oldColor = GUI.color;
+
+            GUI.color = new Color(0f, 0f, 0f, 0.86f);
+            GUI.Box(panelRect, "");
+
+            GUI.color = isFocused
+                ? new Color(1f, 0.85f, 0.20f, 1f)
+                : new Color(0.72f, 0.72f, 0.72f, 1f);
+
+            GUI.Box(fieldRect, "");
+            GUI.Box(clearRect, "");
+
+            GUI.color = oldColor;
+
+            GUI.Label(
+                titleRect,
+                "SEARCH LOBBY",
+                titleStyle);
+
+            string search =
+                ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch ?? "";
+
+            Rect textRect = new Rect(
+                fieldRect.x + 10f,
+                fieldRect.y,
+                fieldRect.width - 20f,
+                fieldRect.height);
+
+            if (string.IsNullOrEmpty(search))
+            {
+                GUI.Label(
+                    textRect,
+                    isFocused ? "_" : "Name, platform, map or modded...",
+                    placeholderStyle);
+            }
+            else
+            {
+                bool cursorVisible =
+                    isFocused &&
+                    ((int)(Time.unscaledTime * 2f) % 2 == 0);
+
+                GUI.Label(
+                    textRect,
+                    search + (cursorVisible ? "_" : ""),
+                    fieldStyle);
+            }
+
+            GUI.Label(clearRect, "X", clearStyle);
         }
     }
 
-    [HarmonyPatch(typeof(SceneManager), nameof(SceneManager.Internal_SceneLoaded))]
+    [HarmonyPatch(
+        typeof(SceneManager),
+        nameof(SceneManager.Internal_SceneLoaded))]
     public static class SceneLoadPatch
     {
         public static void Postfix(Scene scene)
         {
-            if (scene.name == "FindAGame") BanModGUI.Create();
-            else ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch = "";
+            if (scene.name == "FindAGame")
+            {
+                BanModGUI.Create();
+            }
+            else
+            {
+                BanModSearchInput.Reset();
+            }
         }
     }
 }
