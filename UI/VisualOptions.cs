@@ -85,7 +85,6 @@ namespace BanMod
         public void SetupMenuContent()
         {
             menuItems.Clear();
-            AddToggle(GetString("SeeRoleMeeting"), "SeeRoleMeeting", () => BanMod.SeeRoleMeeting, v => BanMod.SeeRoleMeeting = v);
             AddToggle(GetString("Vis_CustomNames"), "UseCustomNames", () => BanMod.UseCustomNames, v => BanMod.UseCustomNames = v);
             AddToggle(GetString("Vis_ShowInfo"), "ShowInfo", () => BanMod.ShowInfo, v => BanMod.ShowInfo = v);
             AddToggle(GetString("Vis_NoName"), "ShowNoName", () => BanMod.ShowNoName, v => BanMod.ShowNoName = v);
@@ -93,15 +92,7 @@ namespace BanMod
             AddToggle(GetString("Vis_ColorName"), "ShowColorName", () => BanMod.ShowColorName, v => BanMod.ShowColorName = v);
             AddToggle(GetString("Vis_ShowLevel"), "level", () => BanMod.level, v => BanMod.level = v);
             AddToggle(GetString("Vis_TaskProgress"), "Taskremain", () => BanMod.Taskremain, v => BanMod.Taskremain = v);
-            AddToggle(GetString("ToggleZoomAction"), "EnableZoom", () => BanMod.EnableZoom, (v) => BanMod.EnableZoom = v);
-            AddToggle(GetString("Vis_ActiveLobby"), "ActiveLobbyDecorations", () => BanMod.AktiveLobby, (v) => BanMod.AktiveLobby = v);
-            AddToggle(GetString("DisableLobbyMusic"), "DisableMusic", () => BanMod.DisableLobbyMusic, (v) => BanMod.DisableLobbyMusic = v);
-            AddToggle(GetString("Vis_DarkTheme"), "DarkTheme", () => BanMod.DarkTheme, (v) => BanMod.DarkTheme = v);
-            AddToggle(GetString("Vis_TrackTeam"), "TrackImpostorTeammate", () => BanMod.trackteam, (v) => BanMod.trackteam = v);
-            AddToggle(GetString("Vis_EnableChat"), "ActiveChat", () => BanMod.AktiveChat, (v) => BanMod.AktiveChat = v);
-            AddToggle(GetString("Vis_ImpostorMute"), "ChatOffImpostor", () => BanMod.ChatOffIfImpostor, (v) => BanMod.ChatOffIfImpostor = v);
-            AddToggle(("Resize_Player"), "Resize_Player", () => BanMod.Resize_Player, (v) => BanMod.Resize_Player = v);
-            AddToggle(("revealVotes"), "revealVotes", () => BanMod.revealVotes, (v) => BanMod.revealVotes = v);
+
         }
         [HideFromIl2Cpp]
         private void AddToggle(string label, string internalName, Func<bool> getter, Action<bool> setter)
@@ -174,22 +165,12 @@ namespace BanMod
 
         private void ApplyValueToVariable(string name, bool value)
         {
-            if (name == "SeeRoleMeeting") BanMod.SeeRoleMeeting = value;
             if (name == "UseCustomNames") BanMod.UseCustomNames = value;
             if (name == "ShowInfo") BanMod.ShowInfo = value;
             if (name == "ShowVipModTag") BanMod.ShowVipModTag = value;
             if (name == "ShowIdInMeeting") BanMod.namewithid = value;
             if (name == "level") BanMod.level = value;
             if (name == "Taskremain") BanMod.Taskremain = value;
-            if (name == "EnableZoom") BanMod.EnableZoom = value;
-            if (name == "ActiveLobbyDecorations") BanMod.AktiveLobby = value;
-            if (name == "DisableMusic") BanMod.DisableLobbyMusic = value;
-            if (name == "DarkTheme") BanMod.DarkTheme = value;
-            if (name == "TrackImpostorTeammate") BanMod.trackteam = value;
-            if (name == "ActiveChat") BanMod.AktiveChat = value;
-            if (name == "ChatOffImpostor") BanMod.ChatOffIfImpostor = value;
-            if (name == "Resize_Player") BanMod.Resize_Player = value;
-            if (name == "revealVotes") BanMod.revealVotes = value;
         }
 
         private void UpdateMenuItemVisual(string internalName, bool value)
