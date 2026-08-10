@@ -303,11 +303,20 @@ namespace BanMod
                 return;
 
             Vector2 pos = GetMouseWorld();
+            if (selectedPlayer.NetTransform == null)
+                return;
+
             selectedPlayer.NetTransform.RpcSnapTo(pos);
         }
 
         public static void ReceiveSyncPlayerVisual(MessageReader reader, int senderId)
         {
+            if (reader == null)
+                return;
+
+            if (AmongUsClient.Instance == null)
+                return;
+
             byte targetId = reader.ReadByte();
             float scale = Mathf.Clamp(reader.ReadSingle(), 0.25f, 2.0f);
             byte bodyType = reader.ReadByte();
@@ -357,10 +366,20 @@ namespace BanMod
         }
         private void HandleActions()
         {
-            if (selectedPlayer == null)
+            if (selectedPlayer == null || selectedPlayer.Data == null)
                 return;
-            if (DestroyableSingleton<HudManager>.Instance.Chat.IsOpenOrOpening)
+
+            if (AmongUsClient.Instance == null)
                 return;
+
+            var hud = DestroyableSingleton<HudManager>.Instance;
+
+            if (hud == null)
+                return;
+
+            if (hud.Chat != null && hud.Chat.IsOpenOrOpening)
+                return;
+
             if (Input.GetKeyDown(KeyBindOptions.K1) && AmongUsClient.Instance.AmHost)
             {
                 {
@@ -392,45 +411,40 @@ namespace BanMod
                 if (selectedPlayer == null)
                     return;
 
-                float scale = selectedPlayer.transform.localScale.x;
-                PlayerBodyTypes nextBody = Utils.GetNextBodyType(selectedPlayer);
-
-                SetSelectedPlayerVisual(scale, nextBody);
-            }
-
-            if (Input.GetKeyDown(KeyBindOptions.K3) && AmongUsClient.Instance.AmHost)
-            {
-                if (AmongUsClient.Instance.AmHost)
+                if (ModeratorAuthority.CanUseLocal)
                 {
-                    AmongUsClient.Instance.KickPlayer(selectedPlayer.OwnerId, true);
+                    ModeratorAuthority.Request(
+                        ModeratorAction.ChangeBody,
+                        selectedPlayer.PlayerId);
+                }
+                else
+                {
+                    // Preserve the old non-moderator/self visual behavior.
+                    float scale = selectedPlayer.transform.localScale.x;
+                    PlayerBodyTypes nextBody = Utils.GetNextBodyType(selectedPlayer);
+                    SetSelectedPlayerVisual(scale, nextBody);
                 }
             }
 
-            if (Input.GetKeyDown(KeyBindOptions.K4) && AmongUsClient.Instance.AmHost)
+            if (Input.GetKeyDown(KeyBindOptions.K3) && ModeratorAuthority.CanUseLocal)
             {
-                if (AmongUsClient.Instance.AmHost)
-                {
-                    AmongUsClient.Instance.KickPlayer(selectedPlayer.OwnerId, false);
-                }
+                ModeratorAuthority.Request(
+                    ModeratorAction.Ban,
+                    selectedPlayer.PlayerId);
             }
-            if (Input.GetKeyDown(KeyBindOptions.K5))
+
+            if (Input.GetKeyDown(KeyBindOptions.K4) && ModeratorAuthority.CanUseLocal)
             {
-                if (AmongUsClient.Instance.AmHost)
-                {
-                    List<byte> usedColors = new();
-                    foreach (var p in GameData.Instance.AllPlayers)
-                        usedColors.Add((byte)p.DefaultOutfit.ColorId);
+                ModeratorAuthority.Request(
+                    ModeratorAction.Kick,
+                    selectedPlayer.PlayerId);
+            }
 
-                    List<byte> allColors = Enumerable.Range(0, Palette.PlayerColors.Length).Select(i => (byte)i).ToList();
-                    List<byte> freeColors = allColors.Where(c => !usedColors.Contains(c)).ToList();
-                    if (freeColors.Count == 0) freeColors.Add(0);
-
-                    System.Random rng = new();
-                    byte color = freeColors[rng.Next(freeColors.Count)];
-
-                    selectedPlayer.RpcSetColor(color);
-                }
-
+            if (Input.GetKeyDown(KeyBindOptions.K5) && ModeratorAuthority.CanUseLocal)
+            {
+                ModeratorAuthority.Request(
+                    ModeratorAction.RandomFreeColor,
+                    selectedPlayer.PlayerId);
             }
             if (Input.GetKeyDown(KeyBindOptions.K6))
             {
@@ -439,18 +453,9 @@ namespace BanMod
                 else if (zoomkey == true)
                     zoomkey = false;
             }
-            if (Input.GetKeyDown(KeyBindOptions.K7) && AmongUsClient.Instance.AmHost)
+            if (Input.GetKeyDown(KeyBindOptions.K7) && ModeratorAuthority.CanUseLocal)
             {
-                var lobby = LobbyBehaviour.Instance;
-                if (!GameStates.isLobby) return;
-                if (LobbyBehaviour.Instance == null)
-                {
-                    Utils.SpawnLobby();
-                }
-                else
-                {
-                    Utils.DestroyMap();
-                }
+                ModeratorAuthority.Request(ModeratorAction.ToggleLobbyObject);
             }
             if (Input.GetKeyDown(KeyBindOptions.K8) && AmongUsClient.Instance.AmHost)
             {
