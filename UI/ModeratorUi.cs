@@ -20,7 +20,10 @@ namespace BanMod
 
         private bool selectingPlayer = false;
         private bool selectingColor = false;
-        private string pendingCommand = "";
+
+        // Per le azioni RPC non usiamo più stringhe/commandi chat.
+        private ModeratorAction pendingPlayerAction;
+        private ModeratorAction pendingColorAction;
 
         public enum ItemType { Button, Header }
 
@@ -69,7 +72,7 @@ namespace BanMod
 
             if (KeyBindOptions.IsBindingActive) return;
 
-            if (Input.GetKeyDown(KeyBindOptions.K13) && !BanMod.chatOpen)
+            if (Input.GetKeyDown(KeyBindOptions.K14) && !BanMod.chatOpen)
             {
                 if (MenuRouter.Current == MenuRouter.Panel.Moderator)
                     MenuRouter.Open(MenuRouter.Panel.None);
@@ -83,23 +86,107 @@ namespace BanMod
             menuItems.Clear();
 
             menuItems.Add(new MenuItem { Label = GetString("Mod_Header_Game"), Type = ItemType.Header });
-            menuItems.Add(new MenuItem { Label = GetString("Mod_Priv_Pub"), Type = ItemType.Button, OnClick = () => { if (!AmongUsClient.Instance.IsGamePublic) Execute("/public"); else Execute("/private"); } });
-            menuItems.Add(new MenuItem { Label = GetString("Mod_Btn_NormalStart"), Type = ItemType.Button, OnClick = () => Execute("/start") });
-            menuItems.Add(new MenuItem { Label = GetString("InstantStartAction"), Type = ItemType.Button, OnClick = () => Execute("/instantstart") });
-            menuItems.Add(new MenuItem { Label = GetString("CallMeetingAction"), Type = ItemType.Button, OnClick = () => Execute("/meeting") });
-            menuItems.Add(new MenuItem { Label = GetString("Mod_Btn_EndMeeting"), Type = ItemType.Button, OnClick = () => Execute("/endmeeting") });
-            menuItems.Add(new MenuItem { Label = GetString("Mod_Btn_EndGame"), Type = ItemType.Button, OnClick = () => Execute("/endgame") });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("Mod_Priv_Pub"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.TogglePublicPrivate)
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("Mod_Btn_NormalStart"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.StartGame)
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("InstantStartAction"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.InstantStart)
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("CallMeetingAction"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.CallMeeting)
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("Mod_Btn_EndMeeting"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.EndMeeting)
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("Mod_Btn_EndGame"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.EndGame)
+            });
 
             menuItems.Add(new MenuItem { Label = GetString("Mod_Header_Players"), Type = ItemType.Header });
-            menuItems.Add(new MenuItem { Label = GetString("KickPlayerAction"), Type = ItemType.Button, OnClick = () => StartColorSelection("/kick") });
-            menuItems.Add(new MenuItem { Label = GetString("BanPlayerAction"), Type = ItemType.Button, OnClick = () => StartColorSelection("/ban") });
-            menuItems.Add(new MenuItem { Label = GetString("Mod_Btn_Color"), Type = ItemType.Button, OnClick = () => StartColorSelection("/every") });
-            menuItems.Add(new MenuItem { Label = "Copy_Outfit", Type = ItemType.Button, OnClick = () => StartPlayerSelection("/copy") });
-            menuItems.Add(new MenuItem { Label = "Reset_Outfit", Type = ItemType.Button, OnClick = () => Utils.RestoreOriginalOutfit(PlayerControl.LocalPlayer) });
+
+            // Mantengo la schermata di selezione colore originale:
+            // il colore viene usato SOLO per individuare il player,
+            // poi all'host viene inviato il PlayerId reale.
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("KickPlayerAction"),
+                Type = ItemType.Button,
+                OnClick = () => StartColorSelection(ModeratorAction.Kick)
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("BanPlayerAction"),
+                Type = ItemType.Button,
+                OnClick = () => StartColorSelection(ModeratorAction.Ban)
+            });
+
+            // L'azione colore del nuovo sistema lavora sul player selezionato
+            // e usa la stessa RandomFreeColor già prevista da ModeratorAuthority.
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("Mod_Btn_Color"),
+                Type = ItemType.Button,
+                OnClick = () => StartPlayerSelection(ModeratorAction.RandomFreeColor)
+            });
+
+            // Funzioni locali originali: restano invariate e non passano dalla chat.
+            menuItems.Add(new MenuItem
+            {
+                Label = "Copy_Outfit",
+                Type = ItemType.Button,
+                OnClick = () => StartCopySelection()
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = "Reset_Outfit",
+                Type = ItemType.Button,
+                OnClick = () => Utils.RestoreOriginalOutfit(PlayerControl.LocalPlayer)
+            });
 
             menuItems.Add(new MenuItem { Label = GetString("Mod_Header_Lobby"), Type = ItemType.Header });
-            menuItems.Add(new MenuItem { Label = GetString("DestroyLobbyAction"), Type = ItemType.Button, OnClick = () => Execute("/destroy") });
-            menuItems.Add(new MenuItem { Label = GetString("RecreateLobbyAction"), Type = ItemType.Button, OnClick = () => Execute("/lobby") });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("DestroyLobbyAction"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.DestroyLobby)
+            });
+
+            menuItems.Add(new MenuItem
+            {
+                Label = GetString("RecreateLobbyAction"),
+                Type = ItemType.Button,
+                OnClick = () => ModeratorAuthority.Request(ModeratorAction.SpawnLobby)
+            });
         }
 
         public void OpenMenu()
@@ -227,7 +314,30 @@ namespace BanMod
 
                         if (GUILayout.Button(label, buttonStyle, GUILayout.Width(btnWidth), GUILayout.Height(ButtonHeight)))
                         {
-                            Execute($"{pendingCommand} {colorId}");
+                            // La selezione per colore rimane identica lato UI,
+                            // ma NON viene più scritto "/kick red" o "/ban blue" in chat.
+                            PlayerControl target = null;
+
+                            foreach (var p in PlayerControl.AllPlayerControls)
+                            {
+                                if (p?.Data?.DefaultOutfit == null || p.Data.Disconnected)
+                                    continue;
+
+                                if (p.Data.DefaultOutfit.ColorId == colorId)
+                                {
+                                    target = p;
+                                    break;
+                                }
+                            }
+
+                            if (target != null)
+                            {
+                                ModeratorAuthority.Request(
+                                    pendingColorAction,
+                                    target.PlayerId
+                                );
+                            }
+
                             selectingColor = false;
                         }
                     }
@@ -264,14 +374,18 @@ namespace BanMod
 
                         if (GUILayout.Button(p.Data.PlayerName, buttonStyle, GUILayout.Width(btnWidth), GUILayout.Height(ButtonHeight)))
                         {
-                            if (pendingCommand == "/copy")
+                            if (_copySelection)
                             {
                                 Utils.SaveOriginalOutfit(PlayerControl.LocalPlayer);
                                 Utils.CopyOutfit(p, PlayerControl.LocalPlayer);
+                                _copySelection = false;
                             }
                             else
                             {
-                                Execute($"{pendingCommand} {p.PlayerId}");
+                                ModeratorAuthority.Request(
+                                    pendingPlayerAction,
+                                    p.PlayerId
+                                );
                             }
 
                             selectingPlayer = false;
@@ -284,6 +398,7 @@ namespace BanMod
                 GUILayout.Space(ButtonSpacing);
             }
         }
+
         [HideFromIl2Cpp]
         void FlushButtons(List<MenuItem> items, float width)
         {
@@ -308,27 +423,29 @@ namespace BanMod
             }
         }
 
-        void StartPlayerSelection(string cmd)
+        private bool _copySelection = false;
+
+        void StartPlayerSelection(ModeratorAction action)
         {
-            pendingCommand = cmd;
+            pendingPlayerAction = action;
+            _copySelection = false;
             selectingPlayer = true;
             selectingColor = false;
         }
 
-        void StartColorSelection(string cmd)
+        void StartCopySelection()
         {
-            pendingCommand = cmd;
-            selectingColor = true;
-            selectingPlayer = false;
+            _copySelection = true;
+            selectingPlayer = true;
+            selectingColor = false;
         }
 
-        void Execute(string cmd)
+        void StartColorSelection(ModeratorAction action)
         {
-            var chat = ChatControllerUpdatePatch.Instance;
-            if (chat == null) return;
-
-            chat.freeChatField.textArea.SetText(cmd);
-            chat.SendChat();
+            pendingColorAction = action;
+            _copySelection = false;
+            selectingColor = true;
+            selectingPlayer = false;
         }
     }
 }
