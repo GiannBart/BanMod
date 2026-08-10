@@ -196,7 +196,7 @@ namespace BanMod
             float colW = (_wR.width - 50f) / 2f;
 
             DrawMenuRow(GetString("HostControlMenu"), MenuRouter.Panel.Host, GetString("ModeratorControlMenu"), MenuRouter.Panel.Moderator, colW, 36f);
-            DrawMenuRow(GetString("MENU_MSG"), MenuRouter.Panel.MsgMenu, "", MenuRouter.Panel.None, colW, 36f);
+            DrawMenuRow(GetString("MENU_MSG"), MenuRouter.Panel.MsgMenu, GetString("PresetMenu"), MenuRouter.Panel.Presets, colW, 36f);
             DrawMenuRow(GetString("TASK_PLAYERS"), MenuRouter.Panel.PlayerTasks, GetString("Menu_SkinUI"), MenuRouter.Panel.SkinUI, colW, 36f);
             DrawMenuRow(GetString("VisualOptionsTitle"), MenuRouter.Panel.VisualOptions, GetString("Menu_PlayerUI"), MenuRouter.Panel.PlayerUI, colW, 36f);
 
