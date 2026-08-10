@@ -25,7 +25,7 @@ namespace BanMod
             K17 = KeyCode.Keypad6, K18 = KeyCode.Keypad7, K19 = KeyCode.Keypad8,
             K20 = KeyCode.Keypad9;
 
-        public static KeyCode KKeybindsMenu = KeyCode.F10; 
+        public static KeyCode KKeybindsMenu = KeyCode.F10;
 
         private string bindingAction = null;
         private GUIStyle titleStyle, exitButtonStyle, bindButtonStyle, labelStyle, categoryStyle, rowBoxStyle;
@@ -142,7 +142,7 @@ namespace BanMod
                     $"Task={K9}",
 
                     $"HostOpt={K12}", $"MsgOpt={K13}", $"ModOpt={K14}",
-                    $"OptOpt={K15}", $"PlayerOpt={K16}", $"SkinOpt={K17}",
+                    $"ModPreset={K15}", $"PlayerOpt={K16}", $"SkinOpt={K17}",
                     $"VisualOpt={K18}", $"TaskOpt={K19}", $"MusicOpt={K20}",
 
                     $"KeyBind_setting={KKeybindsMenu}"
@@ -185,7 +185,7 @@ namespace BanMod
                         case "HostOpt": K12 = parsedKey; break;
                         case "MsgOpt": K13 = parsedKey; break;
                         case "ModOpt": K14 = parsedKey; break;
-                        case "OptOpt": K15 = parsedKey; break;
+                        case "ModPreset": K15 = parsedKey; break;
                         case "PlayerOpt": K16 = parsedKey; break;
                         case "SkinOpt": K17 = parsedKey; break;
                         case "VisualOpt": K18 = parsedKey; break;
@@ -236,7 +236,7 @@ namespace BanMod
         {
             if (key == KeyCode.None) return false;
 
-            if (key == KeyCode.Delete) return false; 
+            if (key == KeyCode.Delete) return false;
             if (key == KeyCode.Escape) return false;
 
             if (key == KeyCode.Mouse0 || key == KeyCode.Mouse1 || key == KeyCode.Mouse2 ||
@@ -335,11 +335,11 @@ namespace BanMod
             DrawRow(GetString("HostControlMenu"), K12, "HostOpt");
             DrawRow(GetString("Key_MsgOpt"), K13, "MsgOpt");
             DrawRow(GetString("ModeratorControlMenu"), K14, "ModOpt");
-            DrawRow(GetString("MainOptionsTitle"), K15, "OptOpt");
+            DrawRow(GetString("PresetMenu"), K15, "ModPreset");
             DrawRow(GetString("Key_PlayerOpt"), K16, "PlayerOpt");
             DrawRow(GetString("Key_SkinOpt"), K17, "SkinOpt");
             DrawRow(GetString("VisualOptionsTitle"), K18, "VisualOpt");
-            DrawRow(GetString("Key_TaskOpt"), K19, "TaskOpt"); 
+            DrawRow(GetString("Key_TaskOpt"), K19, "TaskOpt");
             DrawRow(GetString("MusicOpt"), K20, "MusicOpt");
             DrawRow(GetString("Key_KeyBind"), KKeybindsMenu, "KeyBind_setting");
 
@@ -411,7 +411,7 @@ namespace BanMod
                 case "HostOpt": K12 = newKey; break;
                 case "MsgOpt": K13 = newKey; break;
                 case "ModOpt": K14 = newKey; break;
-                case "OptOpt": K15 = newKey; break;
+                case "ModPreset": K15 = newKey; break;
                 case "PlayerOpt": K16 = newKey; break;
                 case "SkinOpt": K17 = newKey; break;
                 case "VisualOpt": K18 = newKey; break;
