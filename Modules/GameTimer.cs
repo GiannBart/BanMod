@@ -105,7 +105,13 @@ public static class GameTimeLimit
         int minutes = totalSeconds / 60;
         int secs = totalSeconds % 60;
 
-        return $"{minutes:00}:{secs:00}";
+        if (minutes == 0)
+            return $"{secs} sec";
+
+        if (secs == 0)
+            return $"{minutes} min";
+
+        return $"{minutes}:{secs:00}";
     }
 
     public static void SendTimeMessage()
@@ -113,16 +119,23 @@ public static class GameTimeLimit
         if (!EnableGameTimer.GetBool())
             return;
 
-        string elapsed = FormatTime(GetElapsedTime());
-        string remaining = FormatTime(RemainingTime);
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        string elapsed = ToFullWidthNumbers(FormatTime(GetElapsedTime()));
+        string remaining = ToFullWidthNumbers(FormatTime(RemainingTime));
+
+        string messages =
+            $"Game Timer\n" +
+            $"Elapsed: {elapsed}\n" +
+            $"Remaining: {remaining}";
+
+        if (AmongUsClient.Instance.AmHost &&
+            PlayerControl.LocalPlayer.Data.IsDead)
         {
-            Utils.RequestProxyMessage($"Game Timer\n" + $"Elapsed: {elapsed}\n" + $"Remaining: {remaining}");
+            Utils.RequestProxyMessage(messages);
             MessageBlocker.UpdateLastMessageTime();
         }
         else
         {
-            Utils.SendMessage($"Game Timer\n" + $"Elapsed: {elapsed}\n" + $"Remaining: {remaining}");
+            Utils.SendMessage(messages);
             MessageBlocker.UpdateLastMessageTime();
         }
     }
