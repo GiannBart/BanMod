@@ -18,7 +18,8 @@ namespace BanMod
             VisualOptions,
             MusicPlayer,
             PlayerUI,
-            Keybinds
+            Keybinds,
+            Presets
         }
 
         [Flags]
@@ -116,6 +117,7 @@ namespace BanMod
                 case Panel.SkinUI:
                 case Panel.VisualOptions:
                 case Panel.PlayerUI:
+                case Panel.Presets:
                     return RequiredRefs.Client |
                            RequiredRefs.LocalPlayer |
                            RequiredRefs.PlayerData |
