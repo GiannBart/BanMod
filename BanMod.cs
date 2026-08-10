@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.6.7";
+    public static string modVersion = "3.6.8";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.6.7";
+    public const string PluginVersion = "3.6.8";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.6.5" };
@@ -634,6 +634,8 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<CustomHatSceneRenderer>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModCommunicationUi>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModLoginUi>();
+        ClassInjector.RegisterTypeInIl2Cpp<PresetMenuUi>();
+
 
         TemplateLoader.InitTemplates();
         TemplateLoader.LoadTemplate("WelcomeTemplate");
@@ -684,6 +686,7 @@ public partial class BanMod : BasePlugin
         AddTrackedComponent<BanModCommunicationUi>();
         AddTrackedComponent<BanModLoginUi>();
         AddTrackedComponent<CustomHatSceneRenderer>();
+        AddTrackedComponent<PresetMenuUi>();
 
         BMLogger.LogInfo("[BanMod] BanModManager creato e avviato correttamente ✅");
         TracersHandler.ArrowSprite = LoadSprite("BanMod.Resources.image.Arrow.png", 100f);
