@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder
 using AmongUs.GameOptions;
 using HarmonyLib;
 using InnerNet;
@@ -196,8 +197,9 @@ namespace BanMod
         public static OptionItem DisableMeetingsAndReports;
         public static OptionItem TrackImpostorTeammate;
         public static OptionItem revealVotes;
-        public static BooleanOptionItem EnableGameTimer;
+        public static OptionItem EnableGameTimer;
         public static IntegerOptionItem GameTimerMinutes;
+        public static OptionItem GameTimerMessage;
         public static OptionItem DisableDeviceCam;
         public static OptionItem DisableDeviceAdminPanel;
         public static OptionItem DisableDeviceVitals;
@@ -447,7 +449,7 @@ namespace BanMod
             PresetSelection = (StringOptionItem)StringOptionItem.Create("Preset", new[] { "Default", "Preset1", "Preset2", "Preset3" }, 0,
                 OptionCategory.GameMode,
                 true,
-                true,
+                false,
                 BanMod.ApplyPresetAutomatically
             ).SetColor(new Color32(255, 204, 0, 255));
 
@@ -491,6 +493,7 @@ namespace BanMod
             DisableDeviceVitals = BooleanOptionItem.Create("DisableDeviceVitals", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             EnableGameTimer = (BooleanOptionItem)BooleanOptionItem.Create("EnableGameTimer", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             GameTimerMinutes = (IntegerOptionItem)IntegerOptionItem.Create("GameTimerMinutes", new(5, 60, 5), 30, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
+            GameTimerMessage = BooleanOptionItem.Create("GameTimerMessage", false, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
 
             // MEETINGS
             NoKillMeeting = BooleanOptionItem.Create("NoKillMeeting", false, OptionCategory.Meetings, true).SetColor(new Color32(0, 153, 255, 255));
@@ -732,6 +735,18 @@ namespace BanMod
         }
         public static void ReOpenSettings()
         {
+            if (!IsLoaded)
+                return;
+
+            if (!GameStates.isLobby)
+                return;
+
+            if (AmongUsClient.Instance == null)
+                return;
+
+            if (PlayerControl.LocalPlayer == null)
+                return;
+
             if (_reOpenSettingsScheduled)
                 return;
 
