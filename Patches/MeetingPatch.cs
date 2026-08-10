@@ -29,7 +29,10 @@ public static class MeetingHudStartPatch
             return;
 
         GameTimeLimit.Pause();
-        GameTimeLimit.SendTimeMessage();
+        if (Options.GameTimerMessage.GetBool())
+        {
+            GameTimeLimit.SendTimeMessage();
+        }
         FirstMeetingProtectionManager.EndAtFirstMeeting();
 
         if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost)
