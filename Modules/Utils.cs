@@ -4075,13 +4075,18 @@ public static class Utils
     }
     public static string ToFullWidthNumbers(string input)
     {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
         return new string(input.Select(c =>
         {
-            if (char.IsDigit(c))
+            if (c >= '0' && c <= '9')
                 return (char)('０' + (c - '0'));
+
             return c;
         }).ToArray());
     }
+
 
 }
 
