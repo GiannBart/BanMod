@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 namespace BanMod
 {
     public static class BanModCommunicationConfig

@@ -1,10 +1,4 @@
-// Adapted by GianniBart / BanMod.
-// Active lobby browser for the new BanMod API:
-// - reads /api/lobbies/active from the server
-// - merges BanMod active lobbies above vanilla lobbies
-// - resolves each BanMod lobby through the official game code lookup
-// - keeps vanilla rows below
-
+//credits and licenses in the resources folder/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -114,9 +108,6 @@ namespace BanMod
                 List<GameContainer> containers =
                     new List<GameContainer>(originalContainers);
 
-                // Continue after the final existing row. The previous version
-                // started below the fifth prefab and could overlap rows that
-                // already existed when Among Us supplied ten containers.
                 while (containers.Count < MAX_DISPLAYED_LOBBIES)
                 {
                     GameContainer clone =
@@ -223,7 +214,6 @@ namespace BanMod
             int matchedFromVanilla = 0;
             int resolvedFromCode = 0;
 
-            // 1) If the BanMod lobby already exists in the vanilla response, move it above.
             foreach (BanModActiveLobbyInfo lobby in candidates)
             {
                 string code = NormalizeCode(SafeCode(lobby));
@@ -243,7 +233,6 @@ namespace BanMod
                 }
             }
 
-            // 2) If it is not in vanilla, resolve through official code lookup.
             foreach (BanModActiveLobbyInfo lobby in candidates)
             {
                 if (id != requestId)
@@ -289,8 +278,6 @@ namespace BanMod
 
             int rendered = RenderFinalList(manager, banModRows, vanillaGames);
 
-            // Reapply the current search after every refresh. This keeps the
-            // typed text, lobby information and filtered result list in sync.
             int visible = BanModSearchInput.ApplyToCurrentList(manager, rendered);
             SetFoundTexts(manager, visible);
 
@@ -718,11 +705,9 @@ namespace BanMod
             if (!lobby.is_public || lobby.is_private)
                 return false;
 
-            // ShareLobby non filtra la mod: tutte le lobby pubbliche sono visibili.
             if (!string.IsNullOrWhiteSpace(lobby.status))
                 return IsLobbyStatus(lobby.status);
 
-            // /api/lobbies/active already returns active lobby rows.
             return true;
         }
 

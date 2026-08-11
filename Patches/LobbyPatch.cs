@@ -615,14 +615,6 @@ public static class LobbyBehaviour_Update_Patch
                 playersToMessage.Remove(friendCode);
                 continue;
             }
-
-            //{
-            //    string name = player.Data.PlayerName;
-            //    string title = TemplateLoader.FormatTemplate("WelcomeTemplate", name);
-
-            //    Utils.SendMessage(title, player.PlayerId);
-            //    MessageBlocker.UpdateLastMessageTime();
-            //}
             {
                 string name = player.Data.PlayerName;
                 string mode = Options.GameMode.GetString();

@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using InnerNet;
 using System;
 using System.IO;
@@ -45,9 +46,6 @@ namespace BanMod
                 if (!File.Exists(TeamerListPath))
                     File.Create(TeamerListPath).Close();
 
-                // All'avvio viene caricata subito la lista locale. La richiesta al
-                // server viene avviata dal BanModCore dopo attivazione e controllo
-                // extra-mod, una sola volta per sessione.
                 LoadLocalCache();
             }
             catch (Exception e)
@@ -95,8 +93,6 @@ namespace BanMod
                 string platform = "Unknown";
                 string hackUsed = "Unknown";
 
-                // Formato nuovo: friendCode,hashedPuid,playerName,platform,hackUsed
-                // Formato vecchio: friendCode,hashedPuid,playerName,hackUsed
                 if (parts.Length > 4)
                 {
                     platform = parts[3].Trim();
@@ -149,8 +145,6 @@ namespace BanMod
             AddDetected(friendCode, hashedPuid, playerName, platform, reason);
         }
 
-        // Può essere chiamato anche da altri componenti/mod caricati nello stesso
-        // processo quando hanno già i dati identificativi del player.
         public static void AddDetected(
             string friendCode,
             string hashedPuid = "",
@@ -190,8 +184,6 @@ namespace BanMod
             else
                 BMLogger.Info($"[TeamerManager] Teamer aggiornato localmente: {record.PlayerName} [{friendCode}] [{hashedPuid}]", "AntiCheat");
 
-            // Invia al server senza riscaricare la lista: il download completo
-            // avviene una sola volta all'avvio del gioco.
             _ = SendToServerWhenReadyAsync(
                 record.FriendCode,
                 record.HashedPuid,
@@ -546,8 +538,6 @@ namespace BanMod
                             after = cachedTeamers.Count;
                         }
 
-                        // Scrive sempre nel file effettivamente usato dal manager:
-                        // ./BAN_DATA/DENIED/Teamer.txt
                         SaveLocalCache();
 
                         BMLogger.Info(

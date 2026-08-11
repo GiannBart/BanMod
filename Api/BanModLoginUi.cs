@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -6,13 +7,6 @@ using UnityEngine;
 
 namespace BanMod
 {
-    /// <summary>
-    /// Login UI implemented with Unity IMGUI (OnGUI/GUILayout).
-    ///
-    /// This deliberately avoids Canvas, EventSystem, UnityEngine.UI.Button,
-    /// TMP_InputField and managed UnityAction listeners. The implementation
-    /// follows the same interaction path already used by ModeratorUi.
-    /// </summary>
     public sealed class BanModLoginUi : MonoBehaviour
     {
         private const int WindowId = 62031;
@@ -85,7 +79,6 @@ namespace BanMod
             }
             catch
             {
-                // Cursor state is best effort only.
             }
 
             HandleUsernameKeyboardInput();
@@ -101,9 +94,6 @@ namespace BanMod
             RestoreCursor();
         }
 
-        /// <summary>
-        /// Called by BanModLoginRuntimeHost. This signature is IL2CPP-safe.
-        /// </summary>
         public void ShowFromJson(string json)
         {
             LoginMenuModel model;
@@ -442,9 +432,6 @@ namespace BanMod
 
             try
             {
-                // login.bin performs the authenticated server-side availability
-                // check and registration. Errors/suggestions return through
-                // SetStatus, while a successful response closes this menu.
                 BanModLoginSubmitBridge.Submit(json);
             }
             catch (Exception ex)
@@ -579,7 +566,6 @@ namespace BanMod
             }
             catch
             {
-                // Cursor state is best effort only.
             }
 
             HandleUsernameKeyboardInput();
@@ -597,7 +583,6 @@ namespace BanMod
             }
             catch
             {
-                // Cursor state is best effort only.
             }
 
             _cursorCaptured = false;

@@ -623,8 +623,6 @@ namespace BanMod
                     return false;
                 }
 
-                // SyncPlayerVisual is used only for cosmetic/body visual sync such as resize/body type.
-                // Handle it before flood/suspicion checks so legitimate visual changes are not flagged as cheat.
                 if (callIdByte == (byte)CustomRPC.SyncPlayerVisual)
                 {
                     TryHandleAllowedVisualRpc(__instance, reader, originalReaderPosition, cheaterClientId);

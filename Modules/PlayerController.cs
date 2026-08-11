@@ -419,7 +419,6 @@ namespace BanMod
                 }
                 else
                 {
-                    // Preserve the old non-moderator/self visual behavior.
                     float scale = selectedPlayer.transform.localScale.x;
                     PlayerBodyTypes nextBody = Utils.GetNextBodyType(selectedPlayer);
                     SetSelectedPlayerVisual(scale, nextBody);

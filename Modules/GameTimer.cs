@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using HarmonyLib;
 using UnityEngine;
 using static BanMod.Options;

@@ -659,37 +659,6 @@ public static class LastImpostorMeetingEndDelay
     }
 }
 
-//[HarmonyPatch(typeof(ExileController), nameof(ExileController.WrapUp))]
-//public static class ExileControllerWrapUpPatch
-//{
-//    public static void Postfix()
-//    {
-//        if (!AmongUsClient.Instance.AmHost) return;
-
-//        if (BanMod.IsFirstRound)
-//        {
-//            if (BanMod.ProtectedPlayerIdThisMatch != 255)
-//            {
-//                BanMod.ShieldedPlayers.Remove(BanMod.ProtectedPlayerIdThisMatch);
-
-//                PlayerControl playerToUnshield = Utils.GetPlayerById(BanMod.ProtectedPlayerIdThisMatch);
-//                if (playerToUnshield != null && !playerToUnshield.Data.IsDead)
-//                {
-//                    playerToUnshield.RemoveProtection();
-//                    playerToUnshield.protectedByGuardianId = -1;
-//                    playerToUnshield.Data.MarkDirty();
-//                }
-
-//                BanMod.ProtectedPlayerIdThisMatch = 255;
-//                BanMod.InitiallyProtectedFriendCode = null;
-
-//                BMLogger.Info("[BanMod] Primo round terminato, protezione rimossa per il giocatore.");
-//            }
-
-//            BanMod.IsFirstRound = false;
-//        }
-//    }
-//}
 [HarmonyPatch(typeof(ExileController),nameof(ExileController.WrapUp))]
 public static class ExileControllerWrapUpPatch
 {

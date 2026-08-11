@@ -114,8 +114,6 @@ namespace BanMod
                 if (BanMod.IsBanModDisabled)
                     return true;
 
-                // During startup / main menu the Among Us objects and BanMod
-                // options may not exist yet. Do not touch them at all.
                 if (AmongUsClient.Instance == null)
                     return true;
 
@@ -160,8 +158,6 @@ namespace BanMod
                     ex.GetType().Name + " - " + ex.Message
                 );
 
-                // On every unexpected startup state, let Among Us run
-                // its original SetRecommendations implementation.
                 return true;
             }
         }
@@ -606,9 +602,6 @@ namespace BanMod
                 if (GameOptionsManager.Instance.CurrentGameOptions == null)
                     return null;
 
-                // CurrentGameOptions is an IL2CPP object.
-                // Do not use System.Reflection to retrieve it.
-                // Use the same Cast<T>() approach already used elsewhere in BanMod.
                 return GameOptionsManager.Instance
                     .CurrentGameOptions
                     .Cast<NormalGameOptionsV10>();
@@ -917,10 +910,6 @@ namespace BanMod
                     GetUserPresetName(3)
                 };
 
-                // IMPORTANT:
-                // Values stay 0,1,2,3, so ResolveOptions still maps
-                // 1 -> Preset_1.json, 2 -> Preset_2.json, 3 -> Preset_3.json.
-                // Only the visible labels are changed.
                 Options.PresetSelection.Selections = names;
                 Options.PresetSelection.Rule = (0, names.Length - 1, 1);
             }
@@ -1022,9 +1011,6 @@ namespace BanMod
                 if (Options.GameMode == null)
                     return;
 
-                // Keep the original indexes used by GameModeType:
-                // 0 SnS, 1 BanMod, 2 KaitoRun, 3 Default,
-                // 4 TaskRun, 5 JBMode, 6 FFA.
                 string[] names =
                 {
                     GetGameModePresetName(GameModeType.SnS),
@@ -1837,7 +1823,6 @@ namespace BanMod
             if (BanMod.IsBanModDisabled)
                 return;
 
-            // Do not query menu/options state while Among Us is loading.
             if (AmongUsClient.Instance == null)
                 return;
 
@@ -1870,9 +1855,6 @@ namespace BanMod
 
         private void OnGUI()
         {
-            // IMPORTANT: OnGUI is already called during startup.
-            // Never query MenuRouter.Current or game options here unless
-            // the menu has explicitly been opened in a valid lobby.
             if (!showMenu)
                 return;
 
@@ -2453,8 +2435,6 @@ namespace BanMod
                 return;
             }
 
-            // Keep the custom visible name while replacing the actual
-            // default settings for the current GameMode.
             captured.PresetName = displayName;
 
             if (SetRecommendationsPatch.SaveGameModePreset(

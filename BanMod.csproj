@@ -65,6 +65,8 @@ namespace BanMod
 
 	<Target Name="Copy" AfterTargets="Build">
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\Among Us\BepInEx\plugins" UseSymboliclinksIfPossible="true" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sepe2\Desktop\BanMod-Steam-Itch\BepInEx\plugins" UseSymboliclinksIfPossible="true" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sepe2\Desktop\BanMod_MSStore-EpicGames-Xbox\BepInEx\plugins" UseSymboliclinksIfPossible="true" />
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sepe2\Desktop" UseSymboliclinksIfPossible="true" />
 	</Target>
 

@@ -1,21 +1,10 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace BanMod
 {
-    /// <summary>
-    /// Per-installation device identity for BanMod 3.6.9+.
-    ///
-    /// The private key is created locally and is never embedded in BanMod.dll or
-    /// sent to the server. BanMod prefers the Windows Platform Crypto Provider
-    /// (TPM-backed when available) and falls back to the Microsoft Software KSP.
-    /// In both cases the key is persisted as non-exportable.
-    ///
-    /// This prevents cloning an account to another PC merely by decompiling the
-    /// official DLL. It is not a kernel anti-cheat: code already running as the
-    /// same Windows user can still ask Windows to use that local key for signing.
-    /// </summary>
     internal static class BanModDeviceIdentity
     {
         private const string KeyName = "BanMod.DeviceIdentity.v1";
@@ -79,9 +68,6 @@ namespace BanMod
                 CngProvider platformProvider = new CngProvider(PlatformProviderName);
                 CngProvider softwareProvider = CngProvider.MicrosoftSoftwareKeyStorageProvider;
 
-                // Identity stability is more important than changing provider.
-                // Re-open an existing key first, regardless of provider. Only a
-                // completely new installation tries TPM creation before software.
                 if (TryInitializeWithProvider(platformProvider, "tpm", false))
                     return;
                 if (TryInitializeWithProvider(softwareProvider, "software-ksp", false))

@@ -27,13 +27,6 @@ namespace BanMod
         ToggleLobbyObject = 13
     }
 
-    /// <summary>
-    /// Authority for host-like moderator actions.
-    ///
-    /// The client-side moderator check is only for UI/shortcut visibility.
-    /// Security is enforced again on the HOST using the sender PlayerControl
-    /// received by PlayerControl.HandleRpc.
-    /// </summary>
     public static class ModeratorAuthority
     {
         private const string LogTag = "ModeratorAuthority";
@@ -89,7 +82,6 @@ namespace BanMod
             if (AmongUsClient.Instance == null || PlayerControl.LocalPlayer?.Data == null)
                 return;
 
-            // Convenience only. The real permission check is Receive() on the host.
             if (!CanUseLocal)
                 return;
 
@@ -112,10 +104,6 @@ namespace BanMod
             AmongUsClient.Instance.FinishRpcImmediately(writer);
         }
 
-        /// <summary>
-        /// Called by the host's CustomRPC dispatcher.
-        /// sender MUST be the PlayerControl (__instance) that emitted the RPC.
-        /// </summary>
         public static void Receive(PlayerControl sender, MessageReader reader)
         {
             if (AmongUsClient.Instance == null ||
@@ -139,8 +127,6 @@ namespace BanMod
             if (string.IsNullOrWhiteSpace(friendCode))
                 friendCode = senderClient.FriendCode;
 
-            // THIS is the authoritative permission check.
-            // Nothing sent in the RPC can grant moderator status.
             if (string.IsNullOrWhiteSpace(friendCode) ||
                 !AllowedManager.IsModerator(friendCode))
             {
@@ -259,7 +245,6 @@ namespace BanMod
                     if (GameStates.isLobby || moderator?.Data == null || moderator.Data.IsDead)
                         return;
 
-                    // Same behavior already used by the host-side vanilla moderator command.
                     moderator.CmdReportDeadBody(null);
                     break;
                 }
@@ -349,11 +334,9 @@ namespace BanMod
                     PlayerBodyTypes nextBody = Utils.GetNextBodyType(target);
                     float scale = Mathf.Clamp(target.transform.localScale.x, 0.25f, 2.0f);
 
-                    // Host applies the authoritative visual state.
                     target.transform.localScale = new Vector3(scale, scale, 1f);
                     Utils.SetPlayerBodyType(target, nextBody);
 
-                    // Then host broadcasts the resulting state.
                     var writer = AmongUsClient.Instance.StartRpcImmediately(
                         PlayerControl.LocalPlayer.NetId,
                         (byte)CustomRPC.SyncPlayerVisual,

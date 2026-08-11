@@ -1,4 +1,4 @@
-
+//credits and licenses in the resources folder/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,8 +20,6 @@ namespace BanMod
     public static class BanModApiConfig
     {
         public const string ApiBaseUrl = BanModCore.PublicApiBaseUrl;
-        // Per coprire anche IP bloccati da un firewall/reverse proxy esterno,
-        // impostare qui un host update separato che esponga /public/update/*.
         public const string UpdateApiBaseUrl = ApiBaseUrl;
         public const string TokenRequestUrl = ApiBaseUrl + "/api/token/request";
         public const string PlayerStatusUrl = ApiBaseUrl + "/api/lobby/status";
@@ -61,9 +59,6 @@ namespace BanMod
         {
             ClearLastTokenBlockState();
 
-            // Prima di chiedere qualsiasi token esegui il canale update pubblico.
-            // Questo ordine rende l'update indipendente da player bloccati,
-            // extra-mod non consentite e controllo integrità della DLL corrente.
             ModUpdater.StartupUpdateResult updateResult = null;
             yield return ModUpdater.EnsureStartupCheckCoroutine(value => updateResult = value);
 
@@ -81,8 +76,6 @@ namespace BanMod
             bool ok = false;
             string token = "";
 
-            // Delegare sempre al core: controlla anche la scadenza, non soltanto
-            // se la stringa del token è valorizzata.
             yield return BanModCore.EnsureActivationTokenForApi((success, value) =>
             {
                 ok = success;
@@ -260,11 +253,6 @@ namespace BanMod
 
     public static class BanModDeniedLists
     {
-        // Adapter di compatibilità: la gestione reale dei file è affidata
-        // esclusivamente a CheaterManager e TeamerManager, che usano:
-        // ./BAN_DATA/DENIED/Cheater.txt
-        // ./BAN_DATA/DENIED/Teamer.txt
-        // Non vengono cercati o creati altri file e non esiste polling periodico.
 
         public static List<BanModDeniedPlayer> Cheaters { get; private set; } =
             new List<BanModDeniedPlayer>();
@@ -405,8 +393,6 @@ namespace BanMod
 
         public static bool IsFeatureBlocked(ModFeature feature)
         {
-            // Compat con vecchio codice: alcune feature leggevano "blocked" come flag premium attivo.
-            // Qui ritorna true quando la feature è effettivamente presente nei flag premium.
             return IsFeaturePremiumLoaded(feature);
         }
 
@@ -474,9 +460,6 @@ namespace BanMod
                 switch (feature)
                 {
                     case ModFeature.ForceRole:
-                        // ForceRole/SetRole è parte della mod principale.
-                        // Il limite e l'eventuale sblocco permanente sono gestiti dal server,
-                        // non da un payload premium .bin.
                         return true;
                     case ModFeature.Translate:
                         return OptionalPluginAvailability.Translate;
@@ -575,8 +558,6 @@ namespace BanMod
             if (result != null && result.Checked && result.UpdateAvailable &&
                 result.Mandatory && !result.UpdateStarted)
             {
-                // Applicazione centrale del blocco: copre anche gli errori prima
-                // del download (URL/SHA mancanti), non soltanto il download fallito.
                 yield return new WaitForSeconds(1f);
                 Application.Quit();
             }
@@ -611,9 +592,6 @@ namespace BanMod
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Accept", "application/json");
             request.SetRequestHeader("Cache-Control", "no-cache");
-            // Canale update pubblico e anonimo: nessun bearer token e nessuna
-            // identità del player. In questo modo ForceDisable, denied list,
-            // extra-mod e stato premium non possono interferire col ripristino.
             request.SetRequestHeader("X-BANMOD-Version", currentVersion ?? "");
             request.SetRequestHeader("X-BANMOD-Sha256", currentSha256 ?? "");
             request.SetRequestHeader("X-BANMOD-Updater", "public-repair-v2");
@@ -701,16 +679,12 @@ namespace BanMod
             if (Version.TryParse(serverVersion, out parsedVersion))
                 latestVersion = parsedVersion;
 
-            // Aggiornamento facoltativo: memorizza lo stato, ma non interrompe l'avvio.
             if (!automaticMandatoryUpdate)
             {
                 callback?.Invoke(result);
                 yield break;
             }
 
-            // Aggiornamento obbligatorio: viene scaricato senza token e senza passare
-            // dai gate di attivazione/extra-mod. Il server deve lasciare pubblici gli
-            // endpoint /public/update/latest e /public/update/download.
             if (string.IsNullOrWhiteSpace(downloadUrl))
             {
                 result.Error = "Aggiornamento obbligatorio senza download_url";
@@ -756,10 +730,6 @@ namespace BanMod
         {
             isInstalling = true;
 
-            // Il controllo /public/update/latest resta su UnityWebRequest perché
-            // restituisce un piccolo JSON. Il payload binario della DLL invece viene
-            // scaricato con HttpClient: nella build IL2CPP DownloadHandlerBuffer.data
-            // può risultare vuoto anche dopo una risposta HTTP 2xx valida.
             byte[] bytes = null;
             Exception downloadError = null;
             bool downloadDone = false;
@@ -892,8 +862,6 @@ namespace BanMod
 
             callback?.Invoke(true, "");
 
-            // Il .bat aspetta la chiusura completa di Among Us, sostituisce
-            // la DLL e riavvia il gioco tramite Steam/Epic quando riconosciuti.
             yield return new WaitForSeconds(0.25f);
             Application.Quit();
         }
@@ -925,7 +893,6 @@ namespace BanMod
                     "echo [%date% %time%] Update BAT started. Waiting for shutdown.>>\"" +
                     updaterLog + "\"");
 
-                // Aspetta il processo che ha avviato l'update.
                 sb.AppendLine(":wait_for_pid");
                 sb.AppendLine(
                     "tasklist /FI \"PID eq %BANMOD_PID%\" /NH 2>NUL | " +
@@ -934,7 +901,6 @@ namespace BanMod
                 sb.AppendLine("timeout /t 1 /nobreak >NUL");
                 sb.AppendLine("goto wait_for_pid");
 
-                // Evita il riavvio finché esiste ancora QUALSIASI Among Us.exe.
                 sb.AppendLine(":wait_for_all_game");
                 sb.AppendLine(
                     "tasklist /FI \"IMAGENAME eq Among Us.exe\" /NH 2>NUL | " +
@@ -943,8 +909,6 @@ namespace BanMod
                 sb.AppendLine("timeout /t 1 /nobreak >NUL");
                 sb.AppendLine("goto wait_for_all_game");
 
-                // Nessuna attesa fissa prima della copia: prova immediatamente.
-                // Se Windows tiene ancora il file occupato, il retry lo gestisce.
                 sb.AppendLine(":replace_file");
                 sb.AppendLine(
                     "copy /Y \"" + target + "\" \"" + backup +
@@ -965,12 +929,8 @@ namespace BanMod
                     "echo [%date% %time%] BanMod.dll replaced successfully.>>\"" +
                     updaterLog + "\"");
 
-                // Breve margine per Steam/Epic dopo che il gioco risulta chiuso.
                 sb.AppendLine("timeout /t 2 /nobreak >NUL");
 
-                // Non riavviare automaticamente Among Us.
-                // Steam/Epic verranno avviati manualmente dall'utente dopo
-                // che BanMod.dll è stata sostituita con successo.
                 sb.AppendLine(
                     "echo [%date% %time%] Update installed. Automatic game restart disabled.>>\"" +
                     updaterLog + "\"");
@@ -1113,10 +1073,6 @@ namespace BanMod
 
         private static bool manualUpdateRunning;
 
-        // Compatibilità con i pulsanti/UI legacy. Il parametro viene ignorato di
-        // proposito: alcune UI passavano l'URL della pagina admin invece del file.
-        // Il client richiede nuovamente i metadati dal canale pubblico e installa
-        // direttamente la DLL, senza aprire browser o pagine web.
         public static void StartUpdate(string ignoredUrl)
         {
             StartManualUpdate();
@@ -1155,13 +1111,9 @@ namespace BanMod
         {
             StartupUpdateResult result = null;
 
-            // Evita due controlli concorrenti se il pulsante viene premuto proprio
-            // mentre è ancora in corso il controllo automatico di avvio.
             while (startupCheckRunning)
                 yield return null;
 
-            // Esegue sempre un controllo fresco. Non usa l'URL passato dalla UI e
-            // non usa il risultato memorizzato all'avvio, che potrebbe essere vecchio.
             yield return CheckAtStartupInternalCoroutine(value => result = value);
 
             if (result == null || !result.Checked)
@@ -1174,8 +1126,6 @@ namespace BanMod
                 yield break;
             }
 
-            // Per una release obbligatoria CheckAtStartupInternalCoroutine ha già
-            // avviato download, staging e sostituzione.
             if (result.UpdateStarted)
             {
                 manualUpdateRunning = false;
@@ -1231,10 +1181,6 @@ namespace BanMod
         }
     }
 
-    /// <summary>
-    /// Fallback del controllo update quando viene aperto il menu principale.
-    /// La patch viene applicata dal normale Harmony.PatchAll() della mod.
-    /// </summary>
     [HarmonyPatch(typeof(MainMenuManager), "Start")]
     internal static class BanModMandatoryUpdateBootstrapPatch
     {
@@ -1274,7 +1220,6 @@ namespace BanMod
 
             if (!result.Checked)
             {
-                // Consente un nuovo tentativo se il menu principale viene ricreato.
                 Debug.LogWarning("[BanMod Updater] Controllo fallito: " + (result.Error ?? "errore sconosciuto"));
                 yield break;
             }
@@ -1288,15 +1233,11 @@ namespace BanMod
                     Debug.LogError("[BanMod Updater] Aggiornamento obbligatorio non installato: " +
                                    (result.Error ?? "errore sconosciuto"));
 
-                    // La release è obbligatoria: non lasciare in esecuzione una
-                    // versione precedente se download, SHA256 o staging falliscono.
                     yield return new WaitForSeconds(1f);
                     Application.Quit();
                     yield break;
                 }
 
-                // Se UpdateStarted è true, ModUpdater chiude il gioco dopo aver
-                // avviato il processo esterno che sostituirà BanMod.dll.
                 yield break;
             }
 

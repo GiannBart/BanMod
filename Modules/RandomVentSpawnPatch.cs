@@ -78,10 +78,6 @@ internal static class RandomVentSpawnManager
     {
         try
         {
-            /*
-             * Lascia terminare completamente la distruzione
-             * dell'IntroCutscene.
-             */
             yield return null;
             yield return null;
 
@@ -126,18 +122,7 @@ internal static class RandomVentSpawnManager
                 byte ventId =
                     (byte)vent.Id;
 
-                /*
-                 * IMPORTANTE:
-                 *
-                 * NON impostiamo:
-                 *
-                 * player.inVent = true;
-                 *
-                 * NON facciamo CoEnterVent.
-                 *
-                 * Inseriamo soltanto temporaneamente il player
-                 * nello stato del VentilationSystem.
-                 */
+          
                 system.PlayersInsideVents[player.PlayerId] =
                     ventId;
 
@@ -147,17 +132,11 @@ internal static class RandomVentSpawnManager
                     $"from vent {vent.Id}"
                 );
 
-                /*
-                 * Stessa operazione utilizzata dalla FFA.
-                 */
                 VentilationSystem.Update(
                     VentilationSystem.Operation.BootImpostors,
                     vent.Id
                 );
 
-                /*
-                 * Piccolo intervallo come nella logica FFA.
-                 */
                 yield return new WaitForSeconds(
                     UnityEngine.Random.Range(
                         0.05f,
@@ -165,9 +144,6 @@ internal static class RandomVentSpawnManager
                     )
                 );
 
-                /*
-                 * Pulizia dello stato finto.
-                 */
                 try
                 {
                     if (system.PlayersInsideVents.ContainsKey(
@@ -225,9 +201,6 @@ internal static class RandomVentSpawnManager
         {
         }
 
-        /*
-         * Ordine stabile prima di assegnare le vent.
-         */
         result.Sort(
             (a, b) =>
                 a.PlayerId.CompareTo(b.PlayerId)
@@ -264,12 +237,6 @@ internal static class RandomVentSpawnManager
                 vents.Add(vent);
             }
 
-            /*
-             * Shuffle host-side.
-             *
-             * Non serve che i client modded scelgano la stessa
-             * vent: è solo l'host a eseguire questo codice.
-             */
             for (int i = vents.Count - 1;
                  i > 0;
                  i--)
@@ -322,9 +289,6 @@ internal static class RandomVentSpawnManager
 }
 
 
-/*
- * Reset quando entriamo in una nuova lobby.
- */
 [HarmonyPatch(
     typeof(GameStartManager),
     nameof(GameStartManager.Start)
@@ -338,12 +302,6 @@ internal static class RandomVentSpawnResetPatch
 }
 
 
-/*
- * L'intro viene distrutta appena il gameplay sta per diventare
- * realmente visibile.
- *
- * Quindi il boot viene eseguito UNA SOLA VOLTA qui.
- */
 [HarmonyPatch(
     typeof(IntroCutscene),
     "OnDestroy"

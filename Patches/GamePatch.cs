@@ -94,28 +94,6 @@ public static class GameStartPatch
 
         BanMod.IsFirstRound = true;
         BanMod.ProtectedPlayerIdThisMatch = 255;
-
-        //if (Options.ProtectFirst.GetBool())
-        //{
-        //    if (BanMod.FirstDeadFriendCode != null)
-        //    {
-        //        PlayerControl playerToProtect = BanMod.AllPlayerControls
-        //            .FirstOrDefault(p => p != null && p.Data != null && p.Data.FriendCode == BanMod.FirstDeadFriendCode);
-
-        //        if (playerToProtect != null && !playerToProtect.Data.IsDead)
-        //        {
-        //            if (!BanMod.ShieldedPlayers.Contains(playerToProtect.PlayerId))
-        //            {
-        //                BanMod.ShieldedPlayers.Add(playerToProtect.PlayerId);
-        //            }
-        //            BanMod.InitiallyProtectedFriendCode = playerToProtect.Data.FriendCode;
-
-        //            BanMod.ProtectedPlayerIdThisMatch = playerToProtect.PlayerId;
-        //        }
-        //    }
-        //}
-
-        //BanMod.FirstDeadFriendCode = null;
     
         if (Options.ProtectFirstHost.GetBool())
         {
@@ -598,9 +576,6 @@ public static class RoleSelectionPatch
             if (picked == null || picked.Object == null)
                 continue;
 
-            // Questo è il punto chiave:
-            // Seeker 1 = indice 0.
-            // Se scegli un nome in SetSeeker 1, quel player diventa il vero seeker principale.
             if (i == 0 && hnsOptions != null)
             {
                 hnsOptions.ImpostorPlayerID = picked.PlayerId;
@@ -649,7 +624,6 @@ public static class RoleSelectionPatch
             pseudoRandomList.Add(p);
         }
 
-        // Round-robin stabile per round + indice seeker.
         int skips = GameData.RoundsPlayedInSession + seekerIndex;
 
         for (int r = 0; r < skips; r++)

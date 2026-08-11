@@ -1,5 +1,5 @@
-// Sub-header interno per dividere le opzioni dentro lo stesso tab/categoria principale.
-// Uso: SubHeaderOptionItem.Create("AutoStart", OptionCategory.Game);
+//credits and licenses in the resources folder/
+
 using System;
 using TMPro;
 using UnityEngine;

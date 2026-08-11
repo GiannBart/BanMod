@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -155,8 +156,6 @@ namespace BanMod
                 if (BanMod.Instance == null)
                     return;
 
-                // Nella mod completa viene registrata con ClassInjector e aggiunta come componente tracciato in BanMod.Load().
-                // Questo fallback evita di creare GameObject separati e soprattutto evita spam continuo se IL2CPP non è pronto.
                 Instance = BanMod.Instance.AddComponent<BanModCommunicationUi>();
             }
             catch (Exception ex)
@@ -173,8 +172,6 @@ namespace BanMod
         {
             Instance = this;
 
-            // La UI completa è molto grande: viene costruita soltanto al primo F3
-            // o al primo popup, non durante il bootstrap del plugin.
         }
 
         private void OnDestroy()
@@ -199,8 +196,6 @@ namespace BanMod
             }
             catch { }
 
-            // Quando la UI è chiusa evitiamo drag, raycast e gestione scroll ogni frame.
-            // Rimane attivo soltanto il controllo del tasto F3.
             if (!showMenu && !popupVisible)
             {
                 if (Input.GetKeyDown(KeyCode.F3))
@@ -260,15 +255,10 @@ namespace BanMod
                 : title.Trim();
             string safeContent = content ?? "";
 
-            // Prepara prima il layout interno e soltanto dopo mostra il pannello.
-            // In questo modo ScrollRect e RectMask2D non conservano il clipping
-            // della precedente apertura.
             PrepareSimplePopupVisuals(safeTitle, safeContent);
             RefreshVisibility();
             PrepareSimplePopupVisuals(safeTitle, safeContent);
 
-            // Unity/TMP completa il ripristino del mask nel frame successivo.
-            // Ripetere il refresh evita il corpo vuoto dalla seconda apertura.
             RunCommunicationCoroutine(RefreshSimplePopupNextFrames(safeTitle, safeContent));
         }
 
@@ -350,8 +340,6 @@ namespace BanMod
             popupReportId = report.Id;
             popupReportIsOpen = IsReportOpen(report);
 
-            // Stesso motivo dei popup semplici: il layout TMP deve essere aggiornato
-            // soltanto dopo che il contenitore scrollabile è tornato attivo.
             RefreshVisibility();
 
             UpsertCachedReport(report);
@@ -660,7 +648,6 @@ namespace BanMod
                 new Vector2(0f, 334f)
             );
 
-            // Corpo normale dei popup semplici.
             popupBodyText = CreateScrollableLabel(
                 popupPanel.transform,
                 "PopupBody",
@@ -673,7 +660,6 @@ namespace BanMod
                 out popupBodyScrollRect
             );
 
-            // Layout dedicato ai report: dettagli a sinistra, chat scrollabile a destra.
             popupReportDetailsPanel = CreatePanel(
                 popupPanel.transform,
                 "PopupReportDetailsPanel",
@@ -1052,9 +1038,6 @@ namespace BanMod
 
             RefreshUnreadBadge();
 
-            // Configura prima i figli mentre il pannello può essere ancora nascosto.
-            // Il corpo semplice resta activeSelf=true anche quando il popup è chiuso:
-            // viene nascosto dal parent e TMP non perde il proprio stato di clipping.
             bool reportLayout = popupIsReportChat && popupReportId > 0;
 
             SetActive(GetScrollableRoot(popupBodyText), !reportLayout);
@@ -1100,7 +1083,6 @@ namespace BanMod
             SetInteractable(sentReportCloseButton, selectedOpenReport && !isSending);
             SetInteractable(sentReportDeleteButton, selectedReport && !isSending);
 
-            // Quando il popup è aperto, il pannello sotto resta visibile ma non deve ricevere click.
             try
             {
                 CanvasGroup mainGroup = mainPanel != null ? mainPanel.GetComponent<CanvasGroup>() : null;
@@ -1133,7 +1115,6 @@ namespace BanMod
                     blockerGroup.blocksRaycasts = showMenu || popupVisible;
                 }
 
-                // Ordine: blocker sopra il gioco, menu sopra blocker, popup sopra tutto.
                 if (inputBlocker != null)
                     inputBlocker.transform.SetAsLastSibling();
 
@@ -1376,7 +1357,6 @@ namespace BanMod
             if (report == null)
                 return;
 
-            // F3 -> Report inviati ora apre direttamente il popup interattivo.
             selectedSentReportId = 0;
             SetInputText(sentReportChatInput, "");
             SetText(sentReportDetailsText, T("Comm_SelectReport", "Select a report to view details."));
@@ -1946,7 +1926,6 @@ namespace BanMod
 
             int id = selectedSentReportId;
 
-            // Feedback immediato: così il player vede che il click è stato preso.
             SetText(statusText, T("Comm_Closing", "Closing..."));
 
             SetSending(true);

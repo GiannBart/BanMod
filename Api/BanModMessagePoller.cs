@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,9 +21,6 @@ namespace BanMod
         private static bool _pollReportsRequested = false;
         private const float FastReportPollIntervalSeconds = 15f;
 
-        // Dopo OK/Chiudi, lo stesso identico messaggio non viene più mostrato
-        // per l'intervallo scelto dal server: 1h, 3h, 5h, 9h, 12h o 24h.
-        // Se titolo/testo/severity cambiano, la firma cambia e il popup viene mostrato subito.
         private const double DefaultMessageAckCooldownSeconds = 24d * 60d * 60d;
         private const string LocalAckPrefsPrefix = "BANMOD_COMM_MESSAGE_ACK_";
         private const string LocalReportReplyAckPrefsPrefix = "BANMOD_REPORT_REPLY_ACK_";
@@ -148,8 +146,6 @@ namespace BanMod
         {
             try
             {
-                // Messaggi generali restano nella sezione Comunicazioni e usano il polling normale.
-                // Le risposte ai report invece vengono controllate più spesso, così il player online non aspetta 30 secondi.
                 if (AmongUsClient.Instance == null)
                     return;
 
@@ -230,15 +226,12 @@ namespace BanMod
             string responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
             request.Dispose();
 
-            // Accetta solo un comando forcedisable autenticato e targettizzato
-            // esplicitamente al Friend Code corrente. Un flag globale non basta.
             if (BanModCore.TryApplyServerForceDisable(responseText))
                 yield break;
 
             List<ServerMessage> messages = ParseMessages(responseText);
             UpdateUnreadMessages(messages);
 
-            // Mostriamo un solo popup alla volta. Se ce ne sono altri, arrivano al polling successivo.
             foreach (ServerMessage msg in messages)
             {
                 if (msg == null || msg.Id <= 0)

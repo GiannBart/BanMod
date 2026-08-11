@@ -1,5 +1,5 @@
-﻿// Created by GianniBart for BANMOD.
-// Portions of this code are derived from [TOHE/TOH/EHR] contributors.
+﻿//credits and licenses in the resources folder/
+
 using AmongUs.Data;
 using AmongUs.Data.Player;
 using AmongUs.GameOptions;
@@ -78,13 +78,11 @@ public static class PlayerControlStartUnifiedPatch
         if (__instance == null) return;
         int playerId = __instance.PlayerId;
         string friendCode = __instance.Data.FriendCode;
-        // Esegui il controllo dei limiti
         if (playerId > 15 || playerId < -2)
         {
             AmongUsClient.Instance.KickPlayer(playerId, true);
         }
 
-        // Invia handshake se siamo il player locale
         if (__instance.AmOwner && GameStates.isOnlineGame)
         {
             __instance.StartCoroutine(InitialHandshake());

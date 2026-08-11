@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using InnerNet;
 using System;
 using System.Collections;
@@ -44,7 +45,6 @@ namespace BanMod
             );
         }
 
-        // Compatibilità con chiamate vecchie: i log vengono comunque inviati sempre.
         public static IEnumerator SendBugReportCoroutine(string title, string message, bool includeFullLogs, Action<bool, string> callback)
         {
             yield return SendBugReportCoroutine(
@@ -90,7 +90,6 @@ namespace BanMod
             );
         }
 
-        // Compatibilità con chiamate vecchie: i log vengono comunque inviati sempre.
         public static IEnumerator SendPlayerReportCoroutine(string title, string message, string targetFriendCode, string targetName, bool includeFullLogs, Action<bool, string> callback)
         {
             yield return SendPlayerReportCoroutine(
@@ -164,7 +163,6 @@ namespace BanMod
                 yield break;
             }
 
-            // I log vengono inviati sempre: LogOutput.log + ErrorLog.log dentro uno ZIP.
             string zipPath = "";
             byte[] zipBytes = null;
             string logError;
@@ -487,7 +485,6 @@ namespace BanMod
 
             string responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
 
-            // Fallback per server vecchi/proxy: prova DELETE sull'endpoint item.
             if (request.responseCode == 404 || request.responseCode == 405)
             {
                 request.Dispose();
@@ -560,8 +557,6 @@ namespace BanMod
             long lastCode = 0;
             string lastError = "";
 
-            // 1) POST /close, 2) POST /resolve, 3) POST item action=close,
-            // 4) PATCH item status=closed, 5) PUT item status=closed.
             for (int attempt = 0; attempt < 5; attempt++)
             {
                 string url = attempt == 0 ? urls[0] : (attempt == 1 ? urls[1] : urls[2]);
@@ -604,7 +599,6 @@ namespace BanMod
                     }
 
                     string err = BanModApiTokenManager.ExtractJsonString(lastResponseText, "error", "");
-                    // Se il server vecchio risponde 400 unsupported, prova il metodo successivo.
                     if (!string.IsNullOrWhiteSpace(err) && err.IndexOf("already", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         request.Dispose();
@@ -615,7 +609,6 @@ namespace BanMod
 
                 request.Dispose();
 
-                // Prova il fallback solo per endpoint/metodi non supportati o risposta non-success.
                 yield return null;
             }
 
@@ -654,7 +647,6 @@ namespace BanMod
 
             string responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
 
-            // Fallback per endpoint plurale usato dalla versione precedente.
             if (request.responseCode == 404 || request.responseCode == 405)
             {
                 request.Dispose();

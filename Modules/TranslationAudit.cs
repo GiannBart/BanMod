@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,8 +17,6 @@ public static class TranslationAudit
     private static readonly OpCode[] OneByteOpCodes = new OpCode[0x100];
     private static readonly OpCode[] TwoByteOpCodes = new OpCode[0x100];
 
-    // Lingue che vuoi controllare.
-    // Aggiungi o rimuovi qui se la mod supporta altre lingue.
     private static readonly SupportedLangs[] LanguagesToCheck =
     [
         SupportedLangs.English,
@@ -169,14 +168,12 @@ public static class TranslationAudit
                 if (string.IsNullOrWhiteSpace(value))
                     continue;
 
-                // Caso classico: italiano/russo uguale all'inglese.
                 if (!string.IsNullOrWhiteSpace(english) && value == english)
                 {
                     foundAny = true;
                     report.AppendLine($"[{lang}] same as English: {key} = {value}");
                 }
 
-                // Caso classico: lingua non cinese con testo cinese dentro.
                 if (lang is not SupportedLangs.SChinese and not SupportedLangs.TChinese && ContainsChinese(value))
                 {
                     foundAny = true;
@@ -457,7 +454,6 @@ public static class TranslationAudit
         }
         catch
         {
-            // Non bloccare il gioco solo perché un metodo non è leggibile.
         }
     }
 

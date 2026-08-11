@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using BepInEx.Configuration;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace BanMod;
 
-//来源：https://github.com/tukasa0001/TownOfHost/pull/1265
 public class ClientOptionItem
 {
     public ConfigEntry<bool> Config;
@@ -27,7 +27,6 @@ public class ClientOptionItem
 
             var mouseMoveToggle = optionsMenuBehaviour.DisableMouseMovement;
 
-            // 1つ目のボタンの生成時に背景も生成
             if (CustomBackground == null)
             {
                 CustomBackground = Object.Instantiate(optionsMenuBehaviour.Background, optionsMenuBehaviour.transform);
@@ -85,7 +84,6 @@ public class ClientOptionItem
             }
 
 
-            // ボタン生成
             ToggleButton = Object.Instantiate(mouseMoveToggle, CustomBackground.transform);
             OptionButtons.Add(ToggleButton);
 

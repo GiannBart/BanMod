@@ -1,10 +1,10 @@
+//credits and licenses in the resources folder/
 using HarmonyLib;
 using Rewired.Utils.Platforms.Windows;
 using UnityEngine;
 
 namespace BanMod;
 
-//锟斤拷源锟斤拷https://github.com/tukasa0001/TownOfHost/pull/1265
 [HarmonyPatch(typeof(OptionsMenuBehaviour), nameof(OptionsMenuBehaviour.Start))]
 public static class OptionsMenuBehaviourStartPatch
 {

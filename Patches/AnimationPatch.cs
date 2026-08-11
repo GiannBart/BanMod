@@ -13,9 +13,6 @@ namespace BanMod
         private float timer;
         private bool loop = true;
 
-        /* =========================
-         *  API PUBBLICA
-         * ========================= */
 
         public static AnimationPatch Play(
             GameObject target,
@@ -48,9 +45,6 @@ namespace BanMod
                 Object.Destroy(anim);
         }
 
-        /* =========================
-         *  CORE
-         * ========================= */
 
         private static AnimationPatch GetOrCreate(GameObject target)
         {

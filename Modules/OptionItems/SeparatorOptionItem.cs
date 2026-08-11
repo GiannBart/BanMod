@@ -1,5 +1,5 @@
-// Separatore nero interno opzionale, da usare come linea tra sottocategorie.
-// Uso: SeparatorOptionItem.Create(OptionCategory.Game);
+//credits and licenses in the resources folder/
+
 using System;
 using UnityEngine;
 

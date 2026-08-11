@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Collections;
 using System.Reflection;
@@ -7,11 +8,6 @@ using UnityEngine;
 
 namespace BanMod
 {
-    /// <summary>
-    /// Managed-only bridge between login.bin and the IL2CPP UI component.
-    /// Action<string> never appears in the public API of BanModLoginUi, so
-    /// Il2CppInterop does not try to marshal an unsupported generic delegate.
-    /// </summary>
     internal static class BanModLoginSubmitBridge
     {
         private static readonly object Sync = new object();
@@ -45,10 +41,6 @@ namespace BanMod
         }
     }
 
-    /// <summary>
-    /// Host trusted by the mandatory login.bin module. The module is loaded from
-    /// memory and only receives this narrow API surface.
-    /// </summary>
     public sealed class BanModLoginRuntimeHost
     {
         public string GetSnapshotJson()

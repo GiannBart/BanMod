@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Linq;
 using System.Reflection;
@@ -275,9 +276,6 @@ public static class FfaExternalBridge
         }
     }
 
-    // =========================================================
-    // FFA TEAM MODE
-    // =========================================================
 
     public static void SyncTeamMode()
     {
@@ -289,13 +287,6 @@ public static class FfaExternalBridge
             if (TeamsEnabledField == null)
                 return;
 
-            /*
-             * 0 = FFA normale
-             * 1 = FFA a gruppi
-             *
-             * TeamsEnabled viene comunque forzato a false
-             * se la modalità di gioco attuale non è FFA.
-             */
             bool ffaEnabled =
                 Options.GameMode != null &&
                 Options.GameMode.GetValue() == 6;
@@ -338,12 +329,6 @@ public static class FfaExternalBridge
                 return;
             }
 
-            /*
-             * StringOptionItem:
-             *
-             * indice 0 = 2 squadre
-             * indice 1 = 3 squadre
-             */
             int selectedIndex =
                 Options.FfaTeamCount.GetValue();
 
@@ -380,7 +365,6 @@ public static class FfaExternalBridge
         MaxVentSecondsField = null;
         VentBootModeField = null;
 
-        // NUOVO.
         TeamsEnabledField = null;
         TeamCountField = null;
 

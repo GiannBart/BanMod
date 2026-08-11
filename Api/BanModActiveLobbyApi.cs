@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -72,8 +73,6 @@ namespace BanMod
                             lobbies = new List<BanModActiveLobbyInfo>();
                             HashSet<string> seenCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                            // I server legacy non valorizzano sempre is_public. Un codice
-                            // valido e non privato è sufficiente per considerarli compatibili.
                             for (int i = 0; i < received.Count; i++)
                             {
                                 BanModActiveLobbyInfo lobby = received[i];
@@ -109,9 +108,6 @@ namespace BanMod
                 }
             }
 
-            // Un breve problema di rete non deve svuotare il browser lobby già
-            // popolato. Restituiamo l'ultima cache valida e segnaliamo errore solo
-            // quando non abbiamo mai ricevuto alcun elenco.
             if (CachedLobbies.Count > 0)
             {
                 onSuccess?.Invoke(new List<BanModActiveLobbyInfo>(CachedLobbies));
@@ -189,7 +185,6 @@ namespace BanMod
 
     internal sealed class BanModActiveLobbyInfo
     {
-        // Nuovo formato /api/lobbies/active.
         public string lobby_code { get; set; }
         public string player_name { get; set; }
         public string friend_code { get; set; }
@@ -205,8 +200,6 @@ namespace BanMod
         public int impostor_count { get; set; }
         public string platform { get; set; }
         public int last_seen { get; set; }
-
-        // Alias compatibili con il vecchio browser.
         public string game_code { get; set; }
         public int players_count { get; set; }
         public string status { get; set; }

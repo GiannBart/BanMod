@@ -158,8 +158,6 @@ namespace BanMod
 
                 sb.Append("</size>");
 
-                // Lobby information is always shown. The old InfoLobby bool
-                // is intentionally not checked.
                 BanModActiveLobbyInfo banLobby = null;
 
                 try
@@ -258,10 +256,6 @@ namespace BanMod
     }
 
 
-    /// <summary>
-    /// Local lobby search used only inside FindAGame.
-    /// The active lobby patch calls ApplyToCurrentList after every refresh.
-    /// </summary>
     public static class BanModSearchInput
     {
         private const int MAX_SEARCH_LENGTH = 25;
@@ -303,10 +297,6 @@ namespace BanMod
             ApplyFilterAndUpdateCount();
         }
 
-        /// <summary>
-        /// Called by BanModFindAGameActiveLobbyPatch after the complete list
-        /// has been rendered. It preserves the current search after refresh.
-        /// </summary>
         internal static int ApplyToCurrentList(
             FindAGameManager manager,
             int renderedCount)
@@ -348,8 +338,6 @@ namespace BanMod
             string search =
                 ModdedLobby.SetupGameInfoPatchNoTooltip.CurrentSearch ?? "";
 
-            // With an empty search the search system must not move, hide,
-            // resize or otherwise touch any lobby row.
             if (string.IsNullOrWhiteSpace(search))
             {
                 SetFoundTexts(CurrentRows.Count);
@@ -398,7 +386,6 @@ namespace BanMod
             ordered.Sort((a, b) =>
                 a.OriginalIndex.CompareTo(b.OriginalIndex));
 
-            // Hide every rendered row first, keeping its canonical slot.
             for (int i = 0; i < CurrentRows.Count; i++)
             {
                 SearchRow row = CurrentRows[i];
@@ -422,7 +409,6 @@ namespace BanMod
 
             int visibleCount = 0;
 
-            // Matching rows occupy the first canonical slots.
             for (int i = 0; i < ordered.Count; i++)
             {
                 SearchRow row = ordered[i];
@@ -498,8 +484,6 @@ namespace BanMod
             }
             catch { }
 
-            // Status searches are handled explicitly so that searching "mod"
-            // never matches values such as "not modded" or "non moddato".
             if (IsModdedSearchTerm(normalizedSearch))
                 return isModded;
 
@@ -517,7 +501,6 @@ namespace BanMod
             searchable.Append(GetPlatformSearchText(listing)).Append(' ');
             searchable.Append(GetMapSearchText(listing)).Append(' ');
 
-            // Include the host and map supplied by the BanMod API as well.
             try
             {
                 BanModActiveLobbyInfo cached = GetCachedLobby(listing);
@@ -845,9 +828,6 @@ namespace BanMod
         }
     }
 
-    /// <summary>
-    /// IL2CPP-compatible search box. Input is accepted only while selected.
-    /// </summary>
     public class BanModGUI : MonoBehaviour
     {
         public static BanModGUI Instance;

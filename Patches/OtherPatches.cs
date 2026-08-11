@@ -473,7 +473,6 @@ public static class LogicOptionsNormal_GetAnonymousVotes
 [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.OnGameJoined))]
 public static class LobbyHistoryPatch
 {
-    // Contiene soltanto l'ultima lobby visitata.
     public static string LastLobbyCode { get; private set; } = string.Empty;
 
     public static void Postfix(AmongUsClient __instance)
@@ -489,7 +488,6 @@ public static class LobbyHistoryPatch
 
         if (!string.IsNullOrWhiteSpace(gameCode))
         {
-            // Aggiorna e copia soltanto quando la lobby cambia.
             if (!string.Equals(
                     LastLobbyCode,
                     gameCode,

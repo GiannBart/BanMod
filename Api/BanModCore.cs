@@ -1,3 +1,4 @@
+//credits and licenses in the resources folder/
 using HarmonyLib;
 using InnerNet;
 using System;
@@ -43,8 +44,6 @@ namespace BanMod
         private static bool _statusRunning;
         private static bool _lobbyListRunning;
 
-        // Heartbeat lobby supervisionato da AmongUsClient.Update.
-        // Non dipende da una coroutine lunga che può morire durante i cambi scena.
         private static float _nextLobbyStatusRealtime;
         private static string _lastLobbyStatusSnapshot = "";
         private static bool _premiumRefreshLoopStarted;
@@ -180,7 +179,6 @@ namespace BanMod
                 {
                     string fname = f.Name ?? "";
 
-                    // Niente UI scan: accettiamo solo campi dati con nome FriendCode/Friend.
                     if (fname.IndexOf("friend", StringComparison.OrdinalIgnoreCase) < 0 &&
                         fname.IndexOf("code", StringComparison.OrdinalIgnoreCase) < 0)
                         continue;
@@ -201,7 +199,6 @@ namespace BanMod
 
                     string pname = p.Name ?? "";
 
-                    // Niente UI scan: accettiamo solo proprietà dati con nome FriendCode/Friend.
                     if (pname.IndexOf("friend", StringComparison.OrdinalIgnoreCase) < 0 &&
                         pname.IndexOf("code", StringComparison.OrdinalIgnoreCase) < 0)
                         continue;
@@ -436,10 +433,7 @@ namespace BanMod
 
         public static IEnumerator EnsureActivationTokenForApi(Action<bool, string> callback)
         {
-            // Ogni nuova richiesta protetta deve rivalutare le DLL presenti. Le
-            // richieste concorrenti condividono il report già in corso, ma la
-            // richiesta successiva esegue una nuova scansione: nessuna blacklist
-            // permanente viene creata per le extra mod non consentite.
+
             long observedGeneration = _extraReportGeneration;
             float waitStarted = Time.realtimeSinceStartup;
 
@@ -456,8 +450,7 @@ namespace BanMod
                 yield return null;
             }
 
-            // Se un'altra coroutine ha appena terminato il report mentre questa
-            // aspettava, usa quel risultato senza eseguire una scansione duplicata.
+
             if (_extraReportGeneration != observedGeneration &&
                 HasConfirmedExtraReportForCurrentToken())
             {
@@ -538,7 +531,6 @@ namespace BanMod
                 bool explicitlyForCurrentPlayer =
                     ReadJsonBool(root, "force_disable_for_current_player");
 
-                // Il client non accetta più forcedisable globali o ambigui.
                 if (!force || !explicitlyForCurrentPlayer)
                     return false;
 
@@ -691,8 +683,6 @@ namespace BanMod
 
             if (bytes == null || bytes.Length == 0)
             {
-                // login.bin is deliberately never trusted from an offline/local cache.
-                // Every process start must receive the current server manifest and payload.
                 callback?.Invoke(false);
                 yield break;
             }
@@ -706,17 +696,12 @@ namespace BanMod
 
         private static IEnumerator StartupFlow()
         {
-            // L'updater deve partire prima di attivazione, token ed extra-mod gate.
-            // In questo modo anche un client marcato come modificato o con extra mod
-            // non consentite può sempre recuperare una release ufficiale obbligatoria.
             ModUpdater.StartupUpdateResult updateResult = null;
             yield return ModUpdater.CheckAtStartupCoroutine(result => updateResult = result);
 
             if (updateResult != null && updateResult.BlockStartup)
             {
 
-                // Non continuare con attivazione/premium usando una DLL che il server
-                // ha dichiarato da aggiornare obbligatoriamente.
                 yield break;
             }
 
@@ -762,9 +747,6 @@ namespace BanMod
                 yield break;
             }
 
-            // Un token normale deve essere accompagnato dal report extra-mod della
-            // stessa attivazione. Un token recovery, invece, serve soltanto a
-            // scaricare login.bin affinché il modulo possa eseguire disable_mod.
             if (!_activationTokenRecoveryOnly)
             {
                 bool reportReady = false;
@@ -779,28 +761,18 @@ namespace BanMod
                 }
             }
 
-            // login.bin contiene l'unico parser del comando disable_mod. Il server
-            // consente di scaricarlo anche con un token di recovery limitato quando
-            // la DLL principale risulta modificata, senza aprire i servizi premium.
             bool loginLoaded = false;
             yield return EnsureLoginBinLoaded(ok => loginLoaded = ok);
 
             if (!loginLoaded)
             {
-                // Un problema temporaneo di rete/manifest non è un comando server
-                // e non deve disabilitare un player attendibile.
                 Debug.LogWarning("[BANMOD][LOGIN] login.bin non disponibile; nessun forcedisable applicato.");
                 StartLobbyLoops();
                 yield break;
             }
 
-            // Una sola richiesta per sessione, dopo attivazione e controllo extra-mod.
-            // I manager uniscono i record del server esclusivamente ai file reali:
-            // ./BAN_DATA/DENIED/Cheater.txt e ./BAN_DATA/DENIED/Teamer.txt.
             yield return BanModDeniedLists.RefreshAllCoroutine();
 
-            // The base mod and lobby loops are never blocked by the login menu.
-            // Only optional services wait until login.bin confirms username and preferences.
             StartLobbyLoops();
 
             while (!BanModLoginRuntime.IsReady && !BanMod.IsBanModDisabled)
@@ -809,9 +781,6 @@ namespace BanMod
             if (BanMod.IsBanModDisabled)
                 yield break;
 
-            // login.bin può segnare il runtime come pronto mentre il menu è ancora aperto.
-            // Non caricare alcun modulo opzionale finché l'utente non ha salvato e il menu
-            // non è stato chiuso, altrimenti vengono caricati i valori precedenti/default.
             while (BanModLoginUi.IsOpen && !BanMod.IsBanModDisabled)
                 yield return null;
 
@@ -832,14 +801,10 @@ namespace BanMod
 
             _loopStarted = true;
 
-            // Lo stato lobby non usa più una coroutine infinita. Viene supervisionato
-            // da AmongUsClient.Update tramite TickLobbyStatus(), quindi continua a
-            // funzionare anche dopo cambi scena, uscita/entrata lobby o ricreazione lobby.
             _nextLobbyStatusRealtime = 0f;
             _lastLobbyStatusSnapshot = "";
             _lastLobbySceneHandle = SafeGetActiveSceneHandle();
 
-            // Il refresh della lista lobby può restare nel suo loop separato.
             AmongUsClient.Instance.StartCoroutine(LobbyListLoop().WrapToIl2Cpp());
         }
 
@@ -854,10 +819,6 @@ namespace BanMod
                 if (client == null)
                     return;
 
-                // Un cambio scena può distruggere/interrompere una coroutine Unity
-                // mentre la lobby e il GameId rimangono gli stessi. In quel caso
-                // invalidiamo immediatamente la richiesta precedente e forziamo un
-                // nuovo heartbeat nella nuova scena.
                 int sceneHandle = SafeGetActiveSceneHandle();
 
                 if (_lastLobbySceneHandle == int.MinValue)
@@ -872,7 +833,6 @@ namespace BanMod
                     _lastLobbyStatusSnapshot = "";
                     _nextLobbyStatusRealtime = 0f;
 
-                    // Non aspettiamo il watchdog della vecchia richiesta.
                     _statusRunning = false;
                     _statusStartedRealtime = 0f;
 
@@ -881,9 +841,6 @@ namespace BanMod
                     );
                 }
 
-                // Fuori da una lobby resettiamo completamente lo stato del sender.
-                // Appena GameId/NetworkMode tornano validi, anche nella stessa lobby,
-                // l'invio riparte immediatamente.
                 if (!IsInLobbyOrGame())
                 {
                     _lastLobbyStatusSnapshot = "";
@@ -902,8 +859,6 @@ namespace BanMod
                 bool shareLobby = SafeGetOldShareLobby();
                 bool isHost = SafeGetOldIsHost();
 
-                // Cambi importanti devono forzare subito un heartbeat:
-                // nuova lobby, pubblico/privato, condivisione codice e host/non-host.
                 string snapshot =
                     lobbyCode.Trim().ToUpperInvariant() + "|" +
                     (isPublic ? "1" : "0") + "|" +
@@ -922,9 +877,6 @@ namespace BanMod
 
                 float now = Time.realtimeSinceStartup;
 
-                // Se una richiesta è stata distrutta durante un cambio scena, il suo
-                // finally potrebbe non essere eseguito. Questo watchdog libera sempre
-                // il flag e permette al nuovo heartbeat di ripartire.
                 if (_statusRunning)
                 {
                     if (_statusStartedRealtime > 0f &&
@@ -945,8 +897,6 @@ namespace BanMod
                 if (now < _nextLobbyStatusRealtime)
                     return;
 
-                // Impostiamo subito la prossima scadenza. Se l'avvio fallisce,
-                // ritentiamo rapidamente invece di aspettare 20 secondi.
                 _nextLobbyStatusRealtime = now + LobbyStatusIntervalSeconds;
 
                 try
@@ -1007,15 +957,11 @@ namespace BanMod
             }
         }
 
-        // Lobby heartbeat gestito da TickLobbyStatus() via AmongUsClient.Update.
 
         private static IEnumerator LobbyListLoop()
         {
             while (true)
             {
-                // Primo caricamento immediato: il vecchio loop aspettava 30 secondi
-                // prima di popolare il browser e faceva sembrare intermittente la
-                // condivisione delle lobby appena aperte.
                 if (!_lobbyListRunning)
                     yield return FetchModdedLobbies();
 
@@ -1053,10 +999,6 @@ namespace BanMod
                 yield break;
             }
 
-            // BanMod 3.6.9 no longer embeds a universal activation secret.
-            // Every installation proves possession of its own non-exportable
-            // ECDSA key. BuildId/SHA remain release telemetry and are covered by
-            // the signature, but are not treated as secrets.
             if (!BanModDeviceIdentity.Available)
             {
                 Debug.LogError("[BANMOD][AUTH] Device identity unavailable. Windows CNG key creation failed.");
@@ -1230,8 +1172,6 @@ namespace BanMod
                 yield break;
             }
 
-            // Il server può decidere un blocco temporaneo sulla base di questa
-            // scansione. Il comando è valido solo se targettizzato al player corrente.
             if (TryApplyServerForceDisable(text))
             {
                 callback(false);
@@ -1251,8 +1191,6 @@ namespace BanMod
 
         private static List<DetectedModInfo> DetectExtraMods()
         {
-            // Report extra mod = DLL fisiche nella cartella BepInEx/plugins.
-            // Non conta gli assembly base caricati dal gioco, così non escono 30+ falsi positivi.
             List<DetectedModInfo> result = new List<DetectedModInfo>();
             HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1306,9 +1244,6 @@ namespace BanMod
 
         private static IEnumerator RequestPremiumAndLoadBins()
         {
-            // Tutte le API private richiedono un'attivazione recente.
-            // Rinnova il token prima di aggiornare i servizi premium, invece di
-            // continuare a usare per sempre il token creato all'avvio.
             bool tokenReady = false;
             string validToken = "";
 
@@ -1380,8 +1315,6 @@ namespace BanMod
 
                     string serviceKey = service.GetKey();
 
-                    // Difesa lato client: un servizio deve risultare consentito,
-                    // abilitato e selezionato. Non affidarsi soltanto ad allowed.
                     if (string.IsNullOrWhiteSpace(serviceKey) ||
                         !service.allowed ||
                         !service.enabled ||
@@ -1515,9 +1448,6 @@ namespace BanMod
             _statusRunning = true;
             _statusStartedRealtime = Time.realtimeSinceStartup;
 
-            // Il server considera valida l'attivazione solo per circa 300 secondi.
-            // Il vecchio heartbeat applicava direttamente il token iniziale e, una
-            // volta scaduto, riceveva 401 senza ottenere un nuovo token.
             bool tokenReady = false;
             string validToken = "";
 
@@ -1561,8 +1491,6 @@ namespace BanMod
             {
                 PlayerControl player = PlayerControl.LocalPlayer;
 
-                // Riferimenti presi dalle funzioni del vecchio PlayerStatusAutoSender.
-                // Non usiamo più le letture generiche del nuovo core per questi campi.
                 if (player != null)
                 {
                     string oldName = SafeGetOldPlayerName(player);
@@ -1623,7 +1551,6 @@ namespace BanMod
             string playersText = players > 0 ? players + "/" + maxPlayers : "0/" + maxPlayers;
 
             string body = "{"
-                // Nuovo formato server.
                 + "\"FriendCode\":" + JsonString(friendCode) + ","
                 + "\"PlayerName\":" + JsonString(playerName) + ","
                 + "\"LobbyCode\":" + JsonString(lobbyCode) + ","
@@ -1647,7 +1574,6 @@ namespace BanMod
                 + "\"IsPublic\":" + BoolJson(isPublic) + ","
                 + "\"IsPrivate\":" + BoolJson(isPrivate) + ","
 
-                // Alias compatibili con vecchio API/PlayerAPISend.
                 + "\"ModName\":" + JsonString("BanMod") + ","
                 + "\"GameCode\":" + JsonString(lobbyCode) + ","
                 + "\"PlayersInLobby\":" + players + ","
@@ -1667,7 +1593,6 @@ namespace BanMod
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
 
-                // Invia il token di attivazione e gli header identificativi BANMOD.
                 BanModApiTokenManager.ApplyAuthHeader(req);
 
                 operation = req.SendWebRequest();
@@ -1711,8 +1636,6 @@ namespace BanMod
 
                 if (TryApplyServerForceDisable(responseText))
                 {
-                    // La decisione automatica per extra mod resta temporanea lato
-                    // server e verrà rivalutata alla prossima esecuzione/richiesta.
                 }
                 else if (req.responseCode == 401)
                 {
@@ -1735,14 +1658,6 @@ namespace BanMod
                         " response=" + responseText
                     );
                 }
-                //else
-                //{
-                //    Debug.Log(
-                //        "[BANMOD][LOBBY] Heartbeat inviato: HTTP=" +
-                //        req.responseCode +
-                //        " response=" + responseText
-                //    );
-                //}
             }
             catch (Exception ex)
             {
@@ -2013,8 +1928,6 @@ namespace BanMod
                                 if (lobby == null || lobby.is_private)
                                     continue;
 
-                                // I feed legacy non valorizzano sempre is_public:
-                                // un codice non vuoto resta una lobby compatibile.
                                 if (!lobby.is_public && string.IsNullOrWhiteSpace(lobby.lobby_code))
                                     continue;
 
@@ -2035,8 +1948,6 @@ namespace BanMod
                 try { req.Dispose(); } catch { }
             }
 
-            // In caso di errore conserviamo LastModdedLobbies invece di svuotarlo:
-            // un singolo timeout non deve far sparire tutte le lobby dalla UI.
             _lobbyListRunning = false;
         }
 
@@ -2214,8 +2125,6 @@ namespace BanMod
         {
             GameIdentity identity = new GameIdentity();
 
-            // Fonte primaria corretta:
-            // FriendsListManager.CheckFriendCodeOnLogin salva il codice in EOSManager.Instance.FriendCode.
             try
             {
                 if (DestroyableSingleton<EOSManager>.InstanceExists)
@@ -2232,8 +2141,6 @@ namespace BanMod
             }
             catch { }
 
-            // 1) Prima fonte: cache catturata dal constructor di InnerNet.ClientData.
-            // Questo avviene prima dello startup generale della mod.
             if (!string.IsNullOrWhiteSpace(_capturedFriendCode))
             {
                 identity.FriendCode = _capturedFriendCode;
@@ -2241,7 +2148,6 @@ namespace BanMod
                 return identity;
             }
 
-            // 2) Seconda fonte: ClientData locale già esistente.
             try
             {
                 ClientData localClient = GetLocalClientData();
@@ -2260,7 +2166,6 @@ namespace BanMod
             }
             catch { }
 
-            // 3) Fallback vecchio: PlayerControl.LocalPlayer.Data.
             try
             {
                 if (PlayerControl.LocalPlayer != null && PlayerControl.LocalPlayer.Data != null)
@@ -2391,9 +2296,6 @@ namespace BanMod
                 if (client == null)
                     return false;
 
-                // GameState passa per stati transitori durante i cambi scena.
-                // Usare la modalità online + un GameId valido è molto più stabile
-                // e mantiene attivo l'heartbeat tra lobby, partita e ritorno lobby.
                 if (client.NetworkMode != NetworkModes.OnlineGame)
                     return false;
 
@@ -2489,7 +2391,6 @@ namespace BanMod
 
         private static string SafeGetHostName()
         {
-            // Prima fonte: ClientData dell'host.
             try
             {
                 if (AmongUsClient.Instance != null)
@@ -2504,7 +2405,6 @@ namespace BanMod
             }
             catch { }
 
-            // Fallback: PlayerControl.
             try
             {
                 if (PlayerControl.AllPlayerControls == null)
@@ -2597,14 +2497,12 @@ namespace BanMod
             StringBuilder sb = new StringBuilder();
             sb.Append("{");
 
-            // Formato nuovo usato dal server attuale.
             sb.Append("\"FriendCode\":").Append(JsonString(_friendCode)).Append(",");
             sb.Append("\"PlayerName\":").Append(JsonString(_playerName)).Append(",");
             sb.Append("\"Reason\":").Append(JsonString(reason)).Append(",");
             sb.Append("\"ScanSuccess\":").Append(BoolJson(scanSuccess)).Append(",");
             sb.Append("\"ScanError\":").Append(JsonString(scanError)).Append(",");
 
-            // Formato compatibile con BanModExtraModsReporter.cs che mi hai mandato.
             sb.Append("\"mod_name\":").Append(JsonString("BanMod")).Append(",");
             sb.Append("\"player_name\":").Append(JsonString(_playerName)).Append(",");
             sb.Append("\"friend_code\":").Append(JsonString(_friendCode)).Append(",");
