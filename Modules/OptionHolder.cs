@@ -1,4 +1,3 @@
-//credits and licenses in the resources folder
 using AmongUs.GameOptions;
 using HarmonyLib;
 using InnerNet;
@@ -400,7 +399,9 @@ namespace BanMod
         public static OptionItem Profiler;
         public static StringOptionItem ProfilerHintMode;
         public static StringOptionItem ProtectFirstPlayer;
-
+        public static StringOptionItem FfaTeamMode;
+        public static StringOptionItem FfaTeamCount;
+        public static OptionItem RandomVentSpawn;
 
         public static bool IsLoaded = false;
         private static bool _reOpenSettingsScheduled = false;
@@ -456,18 +457,53 @@ namespace BanMod
             PresetSelection.RegisterUpdateValueEvent((sender, args) =>
             {
                 FfaExternalBridge.SyncGameMode();
+                FfaExternalBridge.SyncVentSeconds();
+                FfaExternalBridge.SyncVentMode();
+                FfaExternalBridge.SyncTeamMode();
+                FfaExternalBridge.SyncTeamCount();
                 ReOpenSettings();
             });
 
             FfaVentMaxSeconds = (IntegerOptionItem)IntegerOptionItem.Create("FfaVentMaxSeconds", new(0, 30, 1), 5, OptionCategory.FFA, true).SetColor(new Color32(0, 153, 255, 255));
             FfaVentMaxSeconds.RegisterUpdateValueEvent((sender, args) =>
             {
+                FfaExternalBridge.SyncGameMode();
                 FfaExternalBridge.SyncVentSeconds();
+                FfaExternalBridge.SyncVentMode();
+                FfaExternalBridge.SyncTeamMode();
+                FfaExternalBridge.SyncTeamCount();
             });
             FFAVentTeleportMode = (StringOptionItem)StringOptionItem.Create("FFAVentTeleportMode", new[] { "Always", "RandomEvery15Seconds", "Never" }, 0, OptionCategory.FFA, true, true).SetColor(new Color32(255, 204, 0, 255));
             FFAVentTeleportMode.RegisterUpdateValueEvent((sender, args) =>
             {
+                FfaExternalBridge.SyncGameMode();
+                FfaExternalBridge.SyncVentSeconds();
                 FfaExternalBridge.SyncVentMode();
+                FfaExternalBridge.SyncTeamMode();
+                FfaExternalBridge.SyncTeamCount();
+
+            });
+
+            FfaTeamMode = (StringOptionItem)StringOptionItem.Create("FfaTeamMode", new[]{"Normal","Team"},0,OptionCategory.FFA,true,false).SetColor(new Color32(255, 80, 80, 255));
+
+            FfaTeamMode.RegisterUpdateValueEvent((sender, args) =>
+            {
+                FfaExternalBridge.SyncGameMode();
+                FfaExternalBridge.SyncVentSeconds();
+                FfaExternalBridge.SyncVentMode();
+                FfaExternalBridge.SyncTeamMode();
+                FfaExternalBridge.SyncTeamCount();
+            });
+
+            FfaTeamCount = (StringOptionItem)StringOptionItem.Create("FfaTeamCount",new[]{"2 Team","3 Team"},0,OptionCategory.FFA,true,false).SetParent(FfaTeamMode).SetColor(new Color32(255, 80, 80, 255));
+
+            FfaTeamCount.RegisterUpdateValueEvent((sender, args) =>
+            {
+                FfaExternalBridge.SyncGameMode();
+                FfaExternalBridge.SyncVentSeconds();
+                FfaExternalBridge.SyncVentMode();
+                FfaExternalBridge.SyncTeamMode();
+                FfaExternalBridge.SyncTeamCount();
             });
             MisfiresToSuicide = (IntegerOptionItem)IntegerOptionItem.Create("SuicideAfterMisfiresAmount", new(1, 10, 1), 2, OptionCategory.SNS, false).SetColor(new Color32(0, 153, 255, 255));
             CantKillTime = (IntegerOptionItem)IntegerOptionItem.Create("MisfireKillCooldown", new(0, 60, 5), 20, OptionCategory.SNS, false).SetColor(new Color32(0, 153, 255, 255));
@@ -483,6 +519,7 @@ namespace BanMod
 
             // GAMEPLAY
             DisableRole = BooleanOptionItem.Create("DisableRole", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
+            RandomVentSpawn = BooleanOptionItem.Create("RandomVentSpawn", false,OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             randomMap = BooleanOptionItem.Create("Opt_RandomMap", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             TrackImpostorTeammate = BooleanOptionItem.Create("TrackImpostorTeammate", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             MoreImp = BooleanOptionItem.Create("MoreImpostors", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
