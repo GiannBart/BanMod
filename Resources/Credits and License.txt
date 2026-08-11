@@ -13,6 +13,7 @@ CREDITS:
 - MalumMenu (https://github.com/scp222thj/MalumMenu)
 - TheotherRoles (https://github.com/TheOtherRolesAU/TheOtherRoles)
 - BetterAmongUs (https://github.com/D1GQ/BetterAmongUs-Public)
+- NLayer components and contributors, under the MIT License where indicated
 
 Since this mod was developed through reverse engineering (extracting, modifying, and patching code from the game's original DLL file),
 the logical structure of certain functions is constrained by the base architecture of Among Us. For this reason,
