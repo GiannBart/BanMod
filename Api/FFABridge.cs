@@ -36,7 +36,6 @@ public static class OptionalPluginAvailability
         "Chat",
         "chat"
     );
-
 }
 
 public static class FfaExternalBridge
@@ -46,6 +45,10 @@ public static class FfaExternalBridge
     private static FieldInfo EnabledField;
     private static FieldInfo MaxVentSecondsField;
     private static FieldInfo VentBootModeField;
+
+    // NUOVO: modalità a gruppi.
+    private static FieldInfo TeamsEnabledField;
+    private static FieldInfo TeamCountField;
 
     private static Type VentBootModeEnumType;
 
@@ -123,6 +126,22 @@ public static class FfaExternalBridge
                 BindingFlags.Static
             );
 
+            // NUOVO.
+            TeamsEnabledField = ffaOptionsType?.GetField(
+                "TeamsEnabled",
+                BindingFlags.Public |
+                BindingFlags.NonPublic |
+                BindingFlags.Static
+            );
+
+            // NUOVO.
+            TeamCountField = ffaOptionsType?.GetField(
+                "TeamCount",
+                BindingFlags.Public |
+                BindingFlags.NonPublic |
+                BindingFlags.Static
+            );
+
             MaxVentSecondsField =
                 ventOptionsType?.GetField(
                     "MaxVentSeconds",
@@ -162,6 +181,10 @@ public static class FfaExternalBridge
         SyncGameMode();
         SyncVentSeconds();
         SyncVentMode();
+
+        // NUOVO.
+        SyncTeamMode();
+        SyncTeamCount();
     }
 
     public static void SyncGameMode()
@@ -252,12 +275,115 @@ public static class FfaExternalBridge
         }
     }
 
+    // =========================================================
+    // FFA TEAM MODE
+    // =========================================================
+
+    public static void SyncTeamMode()
+    {
+        try
+        {
+            if (!TryResolve())
+                return;
+
+            if (TeamsEnabledField == null)
+                return;
+
+            /*
+             * 0 = FFA normale
+             * 1 = FFA a gruppi
+             *
+             * TeamsEnabled viene comunque forzato a false
+             * se la modalità di gioco attuale non è FFA.
+             */
+            bool ffaEnabled =
+                Options.GameMode != null &&
+                Options.GameMode.GetValue() == 6;
+
+            bool teamModeEnabled = false;
+
+            if (ffaEnabled &&
+                Options.FfaTeamMode != null)
+            {
+                teamModeEnabled =
+                    Options.FfaTeamMode.GetValue() == 1;
+            }
+
+            object convertedValue =
+                Convert.ChangeType(
+                    teamModeEnabled,
+                    TeamsEnabledField.FieldType
+                );
+
+            TeamsEnabledField.SetValue(
+                null,
+                convertedValue
+            );
+        }
+        catch
+        {
+        }
+    }
+
+    public static void SyncTeamCount()
+    {
+        try
+        {
+            if (!TryResolve())
+                return;
+
+            if (Options.FfaTeamCount == null ||
+                TeamCountField == null)
+            {
+                return;
+            }
+
+            /*
+             * StringOptionItem:
+             *
+             * indice 0 = 2 squadre
+             * indice 1 = 3 squadre
+             */
+            int selectedIndex =
+                Options.FfaTeamCount.GetValue();
+
+            int teamCount =
+                selectedIndex + 2;
+
+            if (teamCount < 2)
+                teamCount = 2;
+
+            if (teamCount > 3)
+                teamCount = 3;
+
+            object convertedValue =
+                Convert.ChangeType(
+                    teamCount,
+                    TeamCountField.FieldType
+                );
+
+            TeamCountField.SetValue(
+                null,
+                convertedValue
+            );
+        }
+        catch
+        {
+        }
+    }
+
     public static void ResetCache()
     {
         FfaAssembly = null;
+
         EnabledField = null;
         MaxVentSecondsField = null;
         VentBootModeField = null;
+
+        // NUOVO.
+        TeamsEnabledField = null;
+        TeamCountField = null;
+
         VentBootModeEnumType = null;
     }
 }
