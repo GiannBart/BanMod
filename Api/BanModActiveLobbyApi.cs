@@ -9,6 +9,7 @@ namespace BanMod
     internal static class BanModActiveLobbyApi
     {
         private const string ActiveLobbiesUrl = BanModCore.PublicApiBaseUrl + "/api/lobbies/active";
+        private const string PublicLobbiesUrl = BanModCore.PublicApiBaseUrl + "/api/lobbies/public";
         private const int TimeoutSeconds = 10;
 
         private static readonly List<BanModActiveLobbyInfo> CachedLobbies =
@@ -23,69 +24,112 @@ namespace BanMod
             Action<List<BanModActiveLobbyInfo>> onSuccess,
             Action<string> onError)
         {
-            UnityWebRequest request = UnityWebRequest.Get(ActiveLobbiesUrl);
-            request.timeout = TimeoutSeconds;
-            request.downloadHandler = new DownloadHandlerBuffer();
+            string[] urls = new string[] { ActiveLobbiesUrl, PublicLobbiesUrl };
+            string lastError = "";
 
-            yield return request.SendWebRequest();
+            for (int attempt = 0; attempt < urls.Length; attempt++)
+            {
+                UnityWebRequest request = UnityWebRequest.Get(urls[attempt]);
+                request.timeout = TimeoutSeconds;
+                request.downloadHandler = new DownloadHandlerBuffer();
 
-            string text = "";
-            try
-            {
-                text = request.downloadHandler != null ? request.downloadHandler.text : "";
-            }
-            catch
-            {
-                text = "";
-            }
+                yield return request.SendWebRequest();
 
-            try
-            {
-                if (request.result != UnityWebRequest.Result.Success ||
-                    request.responseCode < 200 ||
-                    request.responseCode >= 300)
+                string text = "";
+                try
                 {
-                    onError?.Invoke("HTTP=" + request.responseCode + " " + text);
+                    text = request.downloadHandler != null ? request.downloadHandler.text : "";
+                }
+                catch
+                {
+                    text = "";
+                }
+
+                bool accepted = false;
+                List<BanModActiveLobbyInfo> lobbies = null;
+
+                try
+                {
+                    if (request.result != UnityWebRequest.Result.Success ||
+                        request.responseCode < 200 ||
+                        request.responseCode >= 300)
+                    {
+                        lastError = "HTTP=" + request.responseCode + " " + text;
+                    }
+                    else
+                    {
+                        BanModActiveLobbiesResponse response =
+                            JsonSerializer.Deserialize<BanModActiveLobbiesResponse>(text, JsonOptions);
+
+                        if (response == null || !response.success)
+                        {
+                            lastError = "Risposta lobby non valida";
+                        }
+                        else
+                        {
+                            List<BanModActiveLobbyInfo> received =
+                                response.lobbies ?? new List<BanModActiveLobbyInfo>();
+                            lobbies = new List<BanModActiveLobbyInfo>();
+                            HashSet<string> seenCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                            // I server legacy non valorizzano sempre is_public. Un codice
+                            // valido e non privato è sufficiente per considerarli compatibili.
+                            for (int i = 0; i < received.Count; i++)
+                            {
+                                BanModActiveLobbyInfo lobby = received[i];
+                                if (!IsVisibleLobby(lobby))
+                                    continue;
+
+                                string code = lobby.GetCode();
+                                if (!string.IsNullOrWhiteSpace(code) && !seenCodes.Add(code.Trim()))
+                                    continue;
+
+                                lobbies.Add(lobby);
+                            }
+
+                            accepted = true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex.Message;
+                }
+                finally
+                {
+                    try { request.Dispose(); } catch { }
+                }
+
+                if (accepted)
+                {
+                    CachedLobbies.Clear();
+                    CachedLobbies.AddRange(lobbies ?? new List<BanModActiveLobbyInfo>());
+                    onSuccess?.Invoke(new List<BanModActiveLobbyInfo>(CachedLobbies));
                     yield break;
                 }
-
-                BanModActiveLobbiesResponse response =
-                    JsonSerializer.Deserialize<BanModActiveLobbiesResponse>(text, JsonOptions);
-
-                if (response == null || !response.success)
-                {
-                    onError?.Invoke("Risposta lobby non valida");
-                    yield break;
-                }
-
-                List<BanModActiveLobbyInfo> received =
-                    response.lobbies ?? new List<BanModActiveLobbyInfo>();
-                List<BanModActiveLobbyInfo> lobbies = new List<BanModActiveLobbyInfo>();
-
-                // La mod mostra tutte le lobby pubbliche e non private.
-                // ShareLobby riguarda soltanto la vetrina web e NON deve filtrare
-                // FindAGameManager / ModdedLobby.
-                for (int i = 0; i < received.Count; i++)
-                {
-                    BanModActiveLobbyInfo lobby = received[i];
-                    if (lobby == null || !lobby.is_public || lobby.is_private)
-                        continue;
-                    lobbies.Add(lobby);
-                }
-
-                CachedLobbies.Clear();
-                CachedLobbies.AddRange(lobbies);
-
-                onSuccess?.Invoke(new List<BanModActiveLobbyInfo>(lobbies));
             }
-            catch (Exception ex)
+
+            // Un breve problema di rete non deve svuotare il browser lobby già
+            // popolato. Restituiamo l'ultima cache valida e segnaliamo errore solo
+            // quando non abbiamo mai ricevuto alcun elenco.
+            if (CachedLobbies.Count > 0)
             {
-                onError?.Invoke(ex.Message);
+                onSuccess?.Invoke(new List<BanModActiveLobbyInfo>(CachedLobbies));
+                yield break;
             }
-            finally
-            {
-                try { request.Dispose(); } catch { }
-            }
+
+            onError?.Invoke(string.IsNullOrWhiteSpace(lastError) ? "Lobby API non disponibile" : lastError);
+        }
+
+        private static bool IsVisibleLobby(BanModActiveLobbyInfo lobby)
+        {
+            if (lobby == null || lobby.is_private)
+                return false;
+
+            if (lobby.is_public)
+                return true;
+
+            return !string.IsNullOrWhiteSpace(lobby.GetCode());
         }
 
         public static List<BanModActiveLobbyInfo> GetCachedLobbies()
