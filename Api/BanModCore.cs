@@ -42,10 +42,19 @@ namespace BanMod
         private static bool _loopStarted;
         private static bool _statusRunning;
         private static bool _lobbyListRunning;
+
+        // Heartbeat lobby supervisionato da AmongUsClient.Update.
+        // Non dipende da una coroutine lunga che può morire durante i cambi scena.
+        private static float _nextLobbyStatusRealtime;
+        private static string _lastLobbyStatusSnapshot = "";
         private static bool _premiumRefreshLoopStarted;
         private static bool _premiumRefreshRunning;
         private static bool _premiumRefreshRequested;
         private static bool _activationRefreshRunning;
+        private static float _activationRefreshStartedRealtime;
+        private static long _extraReportGeneration;
+        private static float _statusStartedRealtime;
+        private static int _lastLobbySceneHandle = int.MinValue;
         private static string _extraReportConfirmedToken = "";
 
         private static string _friendCode = "";
@@ -427,19 +436,37 @@ namespace BanMod
 
         public static IEnumerator EnsureActivationTokenForApi(Action<bool, string> callback)
         {
-            // Lobby, comunicazioni e premium possono richiedere il rinnovo nello
-            // stesso frame. Una sola coroutine esegue attivazione + report; le altre
-            // aspettano il risultato, evitando activation_at concorrenti sul server.
-            while (_activationRefreshRunning)
-                yield return null;
+            // Ogni nuova richiesta protetta deve rivalutare le DLL presenti. Le
+            // richieste concorrenti condividono il report già in corso, ma la
+            // richiesta successiva esegue una nuova scansione: nessuna blacklist
+            // permanente viene creata per le extra mod non consentite.
+            long observedGeneration = _extraReportGeneration;
+            float waitStarted = Time.realtimeSinceStartup;
 
-            if (HasConfirmedExtraReportForCurrentToken())
+            while (_activationRefreshRunning)
+            {
+                if (Time.realtimeSinceStartup - waitStarted > RequestTimeoutSeconds + 20f)
+                {
+                    Debug.LogWarning("[BANMOD][AUTH] Reset watchdog activation/extra-mod gate.");
+                    _activationRefreshRunning = false;
+                    _activationRefreshStartedRealtime = 0f;
+                    break;
+                }
+
+                yield return null;
+            }
+
+            // Se un'altra coroutine ha appena terminato il report mentre questa
+            // aspettava, usa quel risultato senza eseguire una scansione duplicata.
+            if (_extraReportGeneration != observedGeneration &&
+                HasConfirmedExtraReportForCurrentToken())
             {
                 callback?.Invoke(true, _activationToken);
                 yield break;
             }
 
             _activationRefreshRunning = true;
+            _activationRefreshStartedRealtime = Time.realtimeSinceStartup;
 
             if (!HasUsableActivationToken())
             {
@@ -449,6 +476,7 @@ namespace BanMod
                 if (string.IsNullOrWhiteSpace(_friendCode))
                 {
                     _activationRefreshRunning = false;
+                    _activationRefreshStartedRealtime = 0f;
                     callback?.Invoke(false, "");
                     yield break;
                 }
@@ -460,18 +488,17 @@ namespace BanMod
                 {
                     ClearCurrentActivationToken();
                     _activationRefreshRunning = false;
+                    _activationRefreshStartedRealtime = 0f;
                     callback?.Invoke(false, "");
                     yield break;
                 }
             }
 
-            // Non rendere utilizzabile il token finché il server non conferma di
-            // avere accettato il report extra-mod appartenente proprio a quel token.
             string tokenForReport = _activationToken;
             bool reportOk = false;
 
             yield return SendExtraModsReport(
-                "activation_refresh",
+                "protected_api_request",
                 tokenForReport,
                 success => reportOk = success
             );
@@ -482,12 +509,97 @@ namespace BanMod
             {
                 _extraReportConfirmedToken = tokenForReport;
             }
+            else
+            {
+                _extraReportConfirmedToken = "";
+            }
 
-            bool ready = HasConfirmedExtraReportForCurrentToken();
+            _extraReportGeneration++;
+            bool ready = reportOk && HasConfirmedExtraReportForCurrentToken() && !BanMod.IsBanModDisabled;
             string readyToken = ready ? _activationToken : "";
 
             _activationRefreshRunning = false;
+            _activationRefreshStartedRealtime = 0f;
             callback?.Invoke(ready, readyToken);
+        }
+
+        public static bool TryApplyServerForceDisable(string responseText)
+        {
+            if (string.IsNullOrWhiteSpace(responseText))
+                return false;
+
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(responseText);
+                JsonElement root = document.RootElement;
+
+                bool force = ReadJsonBool(root, "force_disable_mod") ||
+                             ReadJsonBool(root, "force_disable");
+                bool explicitlyForCurrentPlayer =
+                    ReadJsonBool(root, "force_disable_for_current_player");
+
+                // Il client non accetta più forcedisable globali o ambigui.
+                if (!force || !explicitlyForCurrentPlayer)
+                    return false;
+
+                string targetFriendCode = ReadJsonString(root, "target_friend_code");
+                string currentFriendCode = GetCurrentFriendCode();
+
+                if (!string.IsNullOrWhiteSpace(targetFriendCode) &&
+                    !string.Equals(
+                        targetFriendCode.Trim(),
+                        (currentFriendCode ?? "").Trim(),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                string reason = ReadJsonString(root, "force_disable_reason");
+                if (string.IsNullOrWhiteSpace(reason))
+                    reason = ReadJsonString(root, "reason");
+                if (string.IsNullOrWhiteSpace(reason))
+                    reason = "BanMod disabilitata temporaneamente dal server.";
+
+                BanMod.ForceDisableMod(reason);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool ReadJsonBool(JsonElement root, string name)
+        {
+            try
+            {
+                foreach (JsonProperty property in root.EnumerateObject())
+                {
+                    if (!string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (property.Value.ValueKind == JsonValueKind.True) return true;
+                    if (property.Value.ValueKind == JsonValueKind.False) return false;
+                    if (property.Value.ValueKind == JsonValueKind.Number && property.Value.TryGetInt32(out int n)) return n != 0;
+                    if (property.Value.ValueKind == JsonValueKind.String && bool.TryParse(property.Value.GetString(), out bool b)) return b;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private static string ReadJsonString(JsonElement root, string name)
+        {
+            try
+            {
+                foreach (JsonProperty property in root.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                        return property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() ?? "" : property.Value.ToString();
+                }
+            }
+            catch { }
+            return "";
         }
 
         public static void Init(ManualLogSource log)
@@ -675,7 +787,10 @@ namespace BanMod
 
             if (!loginLoaded)
             {
-                BanMod.ForceDisableMod("Required login.bin could not be downloaded or verified.");
+                // Un problema temporaneo di rete/manifest non è un comando server
+                // e non deve disabilitare un player attendibile.
+                Debug.LogWarning("[BANMOD][LOGIN] login.bin non disponibile; nessun forcedisable applicato.");
+                StartLobbyLoops();
                 yield break;
             }
 
@@ -709,12 +824,154 @@ namespace BanMod
 
         private static void StartLobbyLoops()
         {
-            if (_loopStarted || AmongUsClient.Instance == null)
+            if (AmongUsClient.Instance == null)
+                return;
+
+            if (_loopStarted)
                 return;
 
             _loopStarted = true;
-            AmongUsClient.Instance.StartCoroutine(LobbyStatusLoop().WrapToIl2Cpp());
+
+            // Lo stato lobby non usa più una coroutine infinita. Viene supervisionato
+            // da AmongUsClient.Update tramite TickLobbyStatus(), quindi continua a
+            // funzionare anche dopo cambi scena, uscita/entrata lobby o ricreazione lobby.
+            _nextLobbyStatusRealtime = 0f;
+            _lastLobbyStatusSnapshot = "";
+            _lastLobbySceneHandle = SafeGetActiveSceneHandle();
+
+            // Il refresh della lista lobby può restare nel suo loop separato.
             AmongUsClient.Instance.StartCoroutine(LobbyListLoop().WrapToIl2Cpp());
+        }
+
+        internal static void TickLobbyStatus()
+        {
+            try
+            {
+                if (!_loopStarted || BanMod.IsBanModDisabled)
+                    return;
+
+                AmongUsClient client = AmongUsClient.Instance;
+                if (client == null)
+                    return;
+
+                // Un cambio scena può distruggere/interrompere una coroutine Unity
+                // mentre la lobby e il GameId rimangono gli stessi. In quel caso
+                // invalidiamo immediatamente la richiesta precedente e forziamo un
+                // nuovo heartbeat nella nuova scena.
+                int sceneHandle = SafeGetActiveSceneHandle();
+
+                if (_lastLobbySceneHandle == int.MinValue)
+                {
+                    _lastLobbySceneHandle = sceneHandle;
+                }
+                else if (sceneHandle != int.MinValue &&
+                         sceneHandle != _lastLobbySceneHandle)
+                {
+                    _lastLobbySceneHandle = sceneHandle;
+
+                    _lastLobbyStatusSnapshot = "";
+                    _nextLobbyStatusRealtime = 0f;
+
+                    // Non aspettiamo il watchdog della vecchia richiesta.
+                    _statusRunning = false;
+                    _statusStartedRealtime = 0f;
+
+                    Debug.Log(
+                        "[BANMOD][LOBBY] Cambio scena rilevato: heartbeat forzato."
+                    );
+                }
+
+                // Fuori da una lobby resettiamo completamente lo stato del sender.
+                // Appena GameId/NetworkMode tornano validi, anche nella stessa lobby,
+                // l'invio riparte immediatamente.
+                if (!IsInLobbyOrGame())
+                {
+                    _lastLobbyStatusSnapshot = "";
+                    _nextLobbyStatusRealtime = 0f;
+                    _statusRunning = false;
+                    _statusStartedRealtime = 0f;
+                    return;
+                }
+
+                string lobbyCode = SafeGetOldGameCode();
+                if (string.IsNullOrWhiteSpace(lobbyCode))
+                    return;
+
+                bool isPublic = SafeGetOldIsPublic();
+                bool isPrivate = !isPublic;
+                bool shareLobby = SafeGetOldShareLobby();
+                bool isHost = SafeGetOldIsHost();
+
+                // Cambi importanti devono forzare subito un heartbeat:
+                // nuova lobby, pubblico/privato, condivisione codice e host/non-host.
+                string snapshot =
+                    lobbyCode.Trim().ToUpperInvariant() + "|" +
+                    (isPublic ? "1" : "0") + "|" +
+                    (isPrivate ? "1" : "0") + "|" +
+                    (shareLobby ? "1" : "0") + "|" +
+                    (isHost ? "1" : "0");
+
+                if (!string.Equals(
+                        snapshot,
+                        _lastLobbyStatusSnapshot,
+                        StringComparison.Ordinal))
+                {
+                    _lastLobbyStatusSnapshot = snapshot;
+                    _nextLobbyStatusRealtime = 0f;
+                }
+
+                float now = Time.realtimeSinceStartup;
+
+                // Se una richiesta è stata distrutta durante un cambio scena, il suo
+                // finally potrebbe non essere eseguito. Questo watchdog libera sempre
+                // il flag e permette al nuovo heartbeat di ripartire.
+                if (_statusRunning)
+                {
+                    if (_statusStartedRealtime > 0f &&
+                        now - _statusStartedRealtime > RequestTimeoutSeconds + 20f)
+                    {
+                        Debug.LogWarning(
+                            "[BANMOD][LOBBY] Watchdog Update: heartbeat precedente sbloccato.");
+                        _statusRunning = false;
+                        _statusStartedRealtime = 0f;
+                        _nextLobbyStatusRealtime = 0f;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+
+                if (now < _nextLobbyStatusRealtime)
+                    return;
+
+                // Impostiamo subito la prossima scadenza. Se l'avvio fallisce,
+                // ritentiamo rapidamente invece di aspettare 20 secondi.
+                _nextLobbyStatusRealtime = now + LobbyStatusIntervalSeconds;
+
+                try
+                {
+                    client.StartCoroutine(SendLobbyStatus().WrapToIl2Cpp());
+                }
+                catch (Exception ex)
+                {
+                    _statusRunning = false;
+                    _statusStartedRealtime = 0f;
+                    _nextLobbyStatusRealtime = now + 1f;
+
+                    Debug.LogError(
+                        "[BANMOD][LOBBY] Impossibile avviare heartbeat da Update: " +
+                        ex.GetType().Name + ": " + ex.Message
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(
+                    "[BANMOD][LOBBY] Tick heartbeat fallito: " +
+                    ex.GetType().Name + ": " + ex.Message
+                );
+            }
         }
 
         private static void StartPremiumRefreshLoop()
@@ -750,30 +1007,7 @@ namespace BanMod
             }
         }
 
-        private static IEnumerator LobbyStatusLoop()
-        {
-            while (true)
-            {
-                // Controlla rapidamente finché il giocatore non entra in una lobby.
-                // Appena la lobby è disponibile, invia subito lo stato al server.
-                if (!IsInLobbyOrGame())
-                {
-                    yield return new WaitForSeconds(1f);
-                    continue;
-                }
-
-                if (_statusRunning)
-                {
-                    yield return new WaitForSeconds(1f);
-                    continue;
-                }
-
-                yield return SendLobbyStatus();
-
-                // Dopo il primo invio aggiorna la lobby con l'intervallo normale.
-                yield return new WaitForSeconds(LobbyStatusIntervalSeconds);
-            }
-        }
+        // Lobby heartbeat gestito da TickLobbyStatus() via AmongUsClient.Update.
 
         private static IEnumerator LobbyListLoop()
         {
@@ -800,8 +1034,11 @@ namespace BanMod
             yield return c.SendWebRequest();
 
             string challengeText = c.downloadHandler != null ? c.downloadHandler.text : "";
+            UnityWebRequest.Result challengeResult = c.result;
+            long challengeCode = c.responseCode;
+            try { c.Dispose(); } catch { }
 
-            if (c.result != UnityWebRequest.Result.Success || c.responseCode < 200 || c.responseCode >= 300)
+            if (challengeResult != UnityWebRequest.Result.Success || challengeCode < 200 || challengeCode >= 300)
             {
                 callback(false);
                 yield break;
@@ -816,16 +1053,47 @@ namespace BanMod
                 yield break;
             }
 
-            string proof = Sha256Hex(Encoding.UTF8.GetBytes(challenge.nonce + ":" + _friendCode + ":" + BanModBuildSecret.GetActivationCode()));
+            // BanMod 3.6.9 no longer embeds a universal activation secret.
+            // Every installation proves possession of its own non-exportable
+            // ECDSA key. BuildId/SHA remain release telemetry and are covered by
+            // the signature, but are not treated as secrets.
+            if (!BanModDeviceIdentity.Available)
+            {
+                Debug.LogError("[BANMOD][AUTH] Device identity unavailable. Windows CNG key creation failed.");
+                callback(false);
+                yield break;
+            }
+
+            string buildId = BanModBuildSecret.BuildId ?? "";
+            string banModSha256 = SafeGetOwnBanModSha256();
+            string clientVersion = GetCurrentClientVersion();
+            string deviceSignature = BanModDeviceIdentity.SignActivation(
+                challenge.nonce,
+                _friendCode,
+                buildId,
+                banModSha256,
+                clientVersion
+            );
+
+            if (string.IsNullOrWhiteSpace(deviceSignature))
+            {
+                Debug.LogError("[BANMOD][AUTH] Device challenge signing failed.");
+                callback(false);
+                yield break;
+            }
 
             string body = "{"
                 + "\"FriendCode\":" + JsonString(_friendCode) + ","
                 + "\"PlayerName\":" + JsonString(_playerName) + ","
                 + "\"Nonce\":" + JsonString(challenge.nonce) + ","
-                + "\"Proof\":" + JsonString(proof) + ","
-                + "\"BuildId\":" + JsonString(BanModBuildSecret.BuildId) + ","
-                + "\"BanModSha256\":" + JsonString(SafeGetOwnBanModSha256()) + ","
-                + "\"BuildCodeWasMissing\":" + BoolJson(BanModBuildSecret.BuildCodeWasMissing)
+                + "\"ClientVersion\":" + JsonString(clientVersion) + ","
+                + "\"BuildId\":" + JsonString(buildId) + ","
+                + "\"BanModSha256\":" + JsonString(banModSha256) + ","
+                + "\"DeviceProtocol\":1,"
+                + "\"DeviceKeyId\":" + JsonString(BanModDeviceIdentity.KeyId) + ","
+                + "\"DevicePublicKey\":" + JsonString(BanModDeviceIdentity.PublicKey) + ","
+                + "\"DeviceProvider\":" + JsonString(BanModDeviceIdentity.Provider) + ","
+                + "\"DeviceSignature\":" + JsonString(deviceSignature)
                 + "}";
 
             UnityWebRequest v = new UnityWebRequest(ActivationVerifyUrl, "POST");
@@ -837,8 +1105,11 @@ namespace BanMod
             yield return v.SendWebRequest();
 
             string verifyText = v.downloadHandler != null ? v.downloadHandler.text : "";
+            UnityWebRequest.Result verifyResult = v.result;
+            long verifyCode = v.responseCode;
+            try { v.Dispose(); } catch { }
 
-            if (v.result != UnityWebRequest.Result.Success || v.responseCode < 200 || v.responseCode >= 300)
+            if (verifyResult != UnityWebRequest.Result.Success || verifyCode < 200 || verifyCode >= 300)
             {
                 callback(false);
                 yield break;
@@ -853,15 +1124,55 @@ namespace BanMod
                 yield break;
             }
 
+            if (TryApplyServerForceDisable(verifyText))
+            {
+                callback(false);
+                yield break;
+            }
+
             _activationToken = response.activation_token;
             _activationTokenRecoveryOnly = response.recovery_only;
             _extraReportConfirmedToken = "";
+
+            if (string.Equals(response.device_status, "pending", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning(
+                    "[BANMOD][AUTH] Device registered and pending admin approval. " +
+                    "Base BanMod/login remain available; premium modules stay locked."
+                );
+            }
+            else if (string.Equals(response.device_status, "revoked", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogError("[BANMOD][AUTH] This BanMod device key was revoked by the server.");
+            }
+
             int lifetime = response.expires_in_seconds > 0
                 ? response.expires_in_seconds
                 : 300;
             _activationTokenExpiresAtUnix =
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Math.Max(30, lifetime);
-            callback(true);
+            callback(!_activationTokenRecoveryOnly);
+        }
+
+        private static string GetCurrentClientVersion()
+        {
+            try
+            {
+                string value = Convert.ToString(BanMod.PluginVersion) ?? "";
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value.Trim();
+            }
+            catch { }
+
+            try
+            {
+                Version version = typeof(BanModCore).Assembly.GetName().Version;
+                if (version != null)
+                    return version.ToString();
+            }
+            catch { }
+
+            return "3.6.9";
         }
 
         private static IEnumerator SendExtraModsReport(string reason, Action<bool> callback)
@@ -909,8 +1220,19 @@ namespace BanMod
             yield return req.SendWebRequest();
 
             string text = req.downloadHandler != null ? req.downloadHandler.text : "";
+            UnityWebRequest.Result requestResult = req.result;
+            long responseCode = req.responseCode;
+            try { req.Dispose(); } catch { }
 
-            if (req.result != UnityWebRequest.Result.Success || req.responseCode < 200 || req.responseCode >= 300)
+            if (requestResult != UnityWebRequest.Result.Success || responseCode < 200 || responseCode >= 300)
+            {
+                callback(false);
+                yield break;
+            }
+
+            // Il server può decidere un blocco temporaneo sulla base di questa
+            // scansione. Il comando è valido solo se targettizzato al player corrente.
+            if (TryApplyServerForceDisable(text))
             {
                 callback(false);
                 yield break;
@@ -1039,17 +1361,8 @@ namespace BanMod
                 yield break;
             }
 
-            if (access.force_disable_mod || access.force_disable)
-            {
-                string disableReason = string.IsNullOrWhiteSpace(access.force_disable_reason)
-                    ? (string.IsNullOrWhiteSpace(access.reason)
-                        ? "BanMod disabilitata temporaneamente dal server."
-                        : access.reason)
-                    : access.force_disable_reason;
-
-                BanMod.ForceDisableMod(disableReason);
+            if (TryApplyServerForceDisable(text))
                 yield break;
-            }
 
             if (!access.premium_gate_ok)
             {
@@ -1200,6 +1513,7 @@ namespace BanMod
         private static IEnumerator SendLobbyStatus()
         {
             _statusRunning = true;
+            _statusStartedRealtime = Time.realtimeSinceStartup;
 
             // Il server considera valida l'attivazione solo per circa 300 secondi.
             // Il vecchio heartbeat applicava direttamente il token iniziale e, una
@@ -1370,7 +1684,15 @@ namespace BanMod
                 yield break;
             }
 
-            yield return operation;
+            float requestDeadline = Time.realtimeSinceStartup + RequestTimeoutSeconds + 5f;
+            while (operation != null && !operation.isDone && Time.realtimeSinceStartup < requestDeadline)
+                yield return null;
+
+            if (operation != null && !operation.isDone)
+            {
+                try { req.Abort(); } catch { }
+                Debug.LogWarning("[BANMOD][LOBBY] Heartbeat abortito dal watchdog.");
+            }
 
             try
             {
@@ -1387,7 +1709,12 @@ namespace BanMod
                     responseText = "";
                 }
 
-                if (req.responseCode == 401)
+                if (TryApplyServerForceDisable(responseText))
+                {
+                    // La decisione automatica per extra mod resta temporanea lato
+                    // server e verrà rivalutata alla prossima esecuzione/richiesta.
+                }
+                else if (req.responseCode == 401)
                 {
                     Debug.LogWarning(
                         "[BANMOD][LOBBY] Token non valido o scaduto."
@@ -1408,14 +1735,14 @@ namespace BanMod
                         " response=" + responseText
                     );
                 }
-                else
-                {
-                    Debug.Log(
-                        "[BANMOD][LOBBY] Heartbeat inviato: HTTP=" +
-                        req.responseCode +
-                        " response=" + responseText
-                    );
-                }
+                //else
+                //{
+                //    Debug.Log(
+                //        "[BANMOD][LOBBY] Heartbeat inviato: HTTP=" +
+                //        req.responseCode +
+                //        " response=" + responseText
+                //    );
+                //}
             }
             catch (Exception ex)
             {
@@ -1428,6 +1755,7 @@ namespace BanMod
             {
                 try { req?.Dispose(); } catch { }
                 _statusRunning = false;
+                _statusStartedRealtime = 0f;
             }
         }
 
@@ -1527,27 +1855,12 @@ namespace BanMod
         {
             try
             {
-                Type t = typeof(BanMod);
-
-                PropertyInfo p = t.GetProperty("sharelobby", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase);
-                if (p != null)
-                {
-                    object value = p.GetValue(null, null);
-                    if (value is bool b)
-                        return b;
-                }
-
-                FieldInfo f = t.GetField("sharelobby", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase);
-                if (f != null)
-                {
-                    object value = f.GetValue(null);
-                    if (value is bool b)
-                        return b;
-                }
+                return Options.ShareLobbyCode != null && Options.ShareLobbyCode.GetBool();
             }
-            catch { }
-
-            return true;
+            catch
+            {
+                return false;
+            }
         }
 
         private static int SafeGetOldCurrentLobbyPlayerCount()
@@ -2056,17 +2369,39 @@ namespace BanMod
                 yield return item;
         }
 
+        private static int SafeGetActiveSceneHandle()
+        {
+            try
+            {
+                return UnityEngine.SceneManagement.SceneManager
+                    .GetActiveScene()
+                    .handle;
+            }
+            catch
+            {
+                return int.MinValue;
+            }
+        }
+
         private static bool IsInLobbyOrGame()
         {
             try
             {
-                if (AmongUsClient.Instance == null)
+                AmongUsClient client = AmongUsClient.Instance;
+                if (client == null)
                     return false;
 
-                string state = AmongUsClient.Instance.GameState.ToString();
+                // GameState passa per stati transitori durante i cambi scena.
+                // Usare la modalità online + un GameId valido è molto più stabile
+                // e mantiene attivo l'heartbeat tra lobby, partita e ritorno lobby.
+                if (client.NetworkMode != NetworkModes.OnlineGame)
+                    return false;
 
-                return state.IndexOf("Joined", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                       state.IndexOf("Started", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (client.GameId == 0)
+                    return false;
+
+                string code = GameCode.IntToGameName(client.GameId);
+                return !string.IsNullOrWhiteSpace(code);
             }
             catch
             {
@@ -2506,6 +2841,13 @@ namespace BanMod
             public string activation_token { get; set; }
             public int expires_in_seconds { get; set; }
             public bool recovery_only { get; set; }
+            public string auth_level { get; set; }
+            public bool device_required { get; set; }
+            public string device_status { get; set; }
+            public string device_key_id { get; set; }
+            public string device_reason { get; set; }
+            public bool update_required { get; set; }
+            public string minimum_version { get; set; }
         }
         public sealed class ExtraReportResponse
         {
@@ -2673,6 +3015,7 @@ namespace BanMod
         public static void Postfix()
         {
             try { BanModCore.TryStart(); } catch { }
+            try { BanModCore.TickLobbyStatus(); } catch { }
         }
     }
 }
