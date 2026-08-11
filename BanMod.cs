@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.6.9";
+    public static string modVersion = "3.7.0";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.6.9";
+    public const string PluginVersion = "3.7.0";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.6.5" };
