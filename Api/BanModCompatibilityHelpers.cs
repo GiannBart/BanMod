@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using InnerNet;
+using HarmonyLib;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -19,6 +20,9 @@ namespace BanMod
     public static class BanModApiConfig
     {
         public const string ApiBaseUrl = BanModCore.PublicApiBaseUrl;
+        // Per coprire anche IP bloccati da un firewall/reverse proxy esterno,
+        // impostare qui un host update separato che esponga /public/update/*.
+        public const string UpdateApiBaseUrl = ApiBaseUrl;
         public const string TokenRequestUrl = ApiBaseUrl + "/api/token/request";
         public const string PlayerStatusUrl = ApiBaseUrl + "/api/lobby/status";
         public const string LobbyStatusUrl = ApiBaseUrl + "/api/lobby/status";
@@ -56,26 +60,46 @@ namespace BanMod
         public static IEnumerator EnsureTokenCoroutine(Action<bool, string> callback)
         {
             ClearLastTokenBlockState();
-            string current = BanModCore.GetCurrentActivationToken();
-            if (!string.IsNullOrWhiteSpace(current))
+
+            // Prima di chiedere qualsiasi token esegui il canale update pubblico.
+            // Questo ordine rende l'update indipendente da player bloccati,
+            // extra-mod non consentite e controllo integrità della DLL corrente.
+            ModUpdater.StartupUpdateResult updateResult = null;
+            yield return ModUpdater.EnsureStartupCheckCoroutine(value => updateResult = value);
+
+            if (updateResult != null && updateResult.UpdateAvailable && updateResult.Mandatory)
             {
-                Token = current;
-                callback?.Invoke(true, Token);
+                Token = "";
+                LastTokenRequestWasBlocked = true;
+                LastTokenBlockReason = updateResult.UpdateStarted
+                    ? "Aggiornamento obbligatorio in installazione."
+                    : "Aggiornamento obbligatorio non installato: " + (updateResult.Error ?? "errore sconosciuto");
+                callback?.Invoke(false, "");
                 yield break;
             }
 
             bool ok = false;
             string token = "";
-            yield return BanModCore.EnsureActivationTokenForApi((success, value) => { ok = success; token = value ?? ""; });
-            if (ok && !string.IsNullOrWhiteSpace(token))
-                Token = token;
-            else
+
+            // Delegare sempre al core: controlla anche la scadenza, non soltanto
+            // se la stringa del token è valorizzata.
+            yield return BanModCore.EnsureActivationTokenForApi((success, value) =>
             {
-                LastTokenRequestWasBlocked = true;
-                LastTokenBlockReason = "Activation token non disponibile.";
+                ok = success;
+                token = value ?? "";
+            });
+
+            if (ok && !string.IsNullOrWhiteSpace(token))
+            {
+                Token = token;
+                callback?.Invoke(true, Token);
+                yield break;
             }
 
-            callback?.Invoke(ok && !string.IsNullOrWhiteSpace(Token), Token);
+            Token = "";
+            LastTokenRequestWasBlocked = true;
+            LastTokenBlockReason = "Activation token non disponibile.";
+            callback?.Invoke(false, "");
         }
 
         public static void ApplyAuthHeader(UnityWebRequest request)
@@ -436,7 +460,7 @@ namespace BanMod
                 if (lower.Contains("premium_gate_ok\":false") || lower.Contains("access_denied") || lower.Contains("blocked") || lower.Contains("extra_report_invalid"))
                 {
                     IsModBlocked = true;
-                    ModBlockReason = "Accesso premium negato dal server.";
+                    ModBlockReason = "Premium Access denied from server.";
                     BanModCore.StopAllPremiumModules();
                 }
             }
@@ -467,7 +491,7 @@ namespace BanMod
     public static class ModUpdater
     {
         private const int UpdateTimeoutSeconds = 60;
-        private const string UpdateLatestUrl = BanModApiConfig.ApiBaseUrl + "/api/update/latest";
+        private const string UpdateLatestUrl = BanModApiConfig.UpdateApiBaseUrl + "/public/update/latest";
 
         public static bool hasUpdate = false;
         public static bool hasOptionalUpdate = false;
@@ -481,6 +505,10 @@ namespace BanMod
         public static string latestSha256 = "";
         public static string lastError = "";
 
+        private static bool startupCheckRunning;
+        private static bool startupCheckFinished;
+        private static StartupUpdateResult cachedStartupResult;
+
         public sealed class StartupUpdateResult
         {
             public bool Checked { get; set; }
@@ -488,6 +516,7 @@ namespace BanMod
             public bool Mandatory { get; set; }
             public bool UpdateStarted { get; set; }
             public bool BlockStartup { get; set; }
+            public bool RepairRequired { get; set; }
             public string Error { get; set; } = "";
         }
 
@@ -497,7 +526,13 @@ namespace BanMod
             public bool update_available { get; set; }
             public string latest_version { get; set; }
             public string release_version { get; set; }
+            public bool? enabled { get; set; }
             public bool mandatory { get; set; }
+            public bool required { get; set; }
+            public bool force_update { get; set; }
+            public bool auto_update { get; set; }
+            public bool repair_required { get; set; }
+            public bool integrity_mismatch { get; set; }
             public string sha256 { get; set; }
             public long size_bytes { get; set; }
             public string release_notes { get; set; }
@@ -506,6 +541,48 @@ namespace BanMod
         }
 
         public static IEnumerator CheckAtStartupCoroutine(Action<StartupUpdateResult> callback)
+        {
+            yield return EnsureStartupCheckCoroutine(callback);
+        }
+
+        public static IEnumerator EnsureStartupCheckCoroutine(Action<StartupUpdateResult> callback)
+        {
+            if (startupCheckFinished && cachedStartupResult != null)
+            {
+                callback?.Invoke(cachedStartupResult);
+                yield break;
+            }
+
+            if (startupCheckRunning)
+            {
+                while (startupCheckRunning)
+                    yield return null;
+
+                callback?.Invoke(cachedStartupResult);
+                yield break;
+            }
+
+            startupCheckRunning = true;
+            StartupUpdateResult result = null;
+
+            yield return CheckAtStartupInternalCoroutine(value => result = value);
+
+            cachedStartupResult = result;
+            startupCheckFinished = result != null && result.Checked;
+            startupCheckRunning = false;
+            callback?.Invoke(result);
+
+            if (result != null && result.Checked && result.UpdateAvailable &&
+                result.Mandatory && !result.UpdateStarted)
+            {
+                // Applicazione centrale del blocco: copre anche gli errori prima
+                // del download (URL/SHA mancanti), non soltanto il download fallito.
+                yield return new WaitForSeconds(1f);
+                Application.Quit();
+            }
+        }
+
+        private static IEnumerator CheckAtStartupInternalCoroutine(Action<StartupUpdateResult> callback)
         {
             StartupUpdateResult result = new StartupUpdateResult();
 
@@ -532,6 +609,14 @@ namespace BanMod
             UnityWebRequest request = UnityWebRequest.Get(url);
             request.timeout = UpdateTimeoutSeconds;
             request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Accept", "application/json");
+            request.SetRequestHeader("Cache-Control", "no-cache");
+            // Canale update pubblico e anonimo: nessun bearer token e nessuna
+            // identità del player. In questo modo ForceDisable, denied list,
+            // extra-mod e stato premium non possono interferire col ripristino.
+            request.SetRequestHeader("X-BANMOD-Version", currentVersion ?? "");
+            request.SetRequestHeader("X-BANMOD-Sha256", currentSha256 ?? "");
+            request.SetRequestHeader("X-BANMOD-Updater", "public-repair-v2");
 
             yield return request.SendWebRequest();
 
@@ -589,14 +674,22 @@ namespace BanMod
                 ? response.release_version.Trim()
                 : (response.latest_version ?? "").Trim();
 
-            result.Checked = true;
-            result.UpdateAvailable = response.update_available;
-            result.Mandatory = response.mandatory;
-            result.BlockStartup = response.update_available && response.mandatory;
+            bool releaseEnabled = !response.enabled.HasValue || response.enabled.Value;
+            bool mandatoryByServer = response.mandatory || response.required ||
+                                     response.force_update || response.auto_update;
+            bool automaticMandatoryUpdate = response.update_available &&
+                                            releaseEnabled &&
+                                            mandatoryByServer;
 
-            hasUpdate = response.update_available;
-            isMandatory = response.update_available && response.mandatory;
-            hasOptionalUpdate = response.update_available && !response.mandatory;
+            result.Checked = true;
+            result.UpdateAvailable = response.update_available && releaseEnabled;
+            result.Mandatory = automaticMandatoryUpdate;
+            result.BlockStartup = automaticMandatoryUpdate;
+            result.RepairRequired = response.repair_required || response.integrity_mismatch;
+
+            hasUpdate = result.UpdateAvailable;
+            isMandatory = automaticMandatoryUpdate;
+            hasOptionalUpdate = result.UpdateAvailable && !automaticMandatoryUpdate;
             downloadUrl = response.download_url ?? "";
             latestSha256 = (response.sha256 ?? "").Trim().ToLowerInvariant();
             latestTitle = string.IsNullOrWhiteSpace(serverVersion)
@@ -609,7 +702,7 @@ namespace BanMod
                 latestVersion = parsedVersion;
 
             // Aggiornamento facoltativo: memorizza lo stato, ma non interrompe l'avvio.
-            if (!response.update_available || !response.mandatory)
+            if (!automaticMandatoryUpdate)
             {
                 callback?.Invoke(result);
                 yield break;
@@ -617,7 +710,7 @@ namespace BanMod
 
             // Aggiornamento obbligatorio: viene scaricato senza token e senza passare
             // dai gate di attivazione/extra-mod. Il server deve lasciare pubblici gli
-            // endpoint /api/update/latest e /api/update/download.
+            // endpoint /public/update/latest e /public/update/download.
             if (string.IsNullOrWhiteSpace(downloadUrl))
             {
                 result.Error = "Aggiornamento obbligatorio senza download_url";
@@ -663,25 +756,66 @@ namespace BanMod
         {
             isInstalling = true;
 
-            UnityWebRequest request = UnityWebRequest.Get(url);
-            request.timeout = UpdateTimeoutSeconds;
-            request.downloadHandler = new DownloadHandlerBuffer();
+            // Il controllo /public/update/latest resta su UnityWebRequest perché
+            // restituisce un piccolo JSON. Il payload binario della DLL invece viene
+            // scaricato con HttpClient: nella build IL2CPP DownloadHandlerBuffer.data
+            // può risultare vuoto anche dopo una risposta HTTP 2xx valida.
+            byte[] bytes = null;
+            Exception downloadError = null;
+            bool downloadDone = false;
 
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success ||
-                request.responseCode < 200 || request.responseCode >= 300)
+            try
             {
-                string error = "Download update fallito HTTP=" + request.responseCode + " " + (request.error ?? "");
-                request.Dispose();
-                isInstalling = false;
-                callback?.Invoke(false, error);
-                yield break;
+                System.Threading.Tasks.Task.Run(async () =>
+                {
+                    try
+                    {
+                        using (System.Net.Http.HttpClient client = new System.Net.Http.HttpClient())
+                        {
+                            client.Timeout = TimeSpan.FromSeconds(UpdateTimeoutSeconds);
+
+                            using (System.Net.Http.HttpResponseMessage response = await client.GetAsync(url))
+                            {
+                                if (!response.IsSuccessStatusCode)
+                                {
+                                    downloadError = new Exception(
+                                        "HTTP " + (int)response.StatusCode + " " + (response.ReasonPhrase ?? ""));
+                                    return;
+                                }
+
+                                bytes = await response.Content.ReadAsByteArrayAsync();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        downloadError = ex;
+                    }
+                    finally
+                    {
+                        System.Threading.Volatile.Write(ref downloadDone, true);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                downloadError = ex;
+                downloadDone = true;
             }
 
-            byte[] bytes = null;
-            try { bytes = request.downloadHandler != null ? request.downloadHandler.data : null; } catch { }
-            request.Dispose();
+            while (!System.Threading.Volatile.Read(ref downloadDone))
+                yield return null;
+
+            if (downloadError != null)
+            {
+                isInstalling = false;
+                callback?.Invoke(
+                    false,
+                    "Download update fallito: " +
+                    downloadError.GetType().Name + ": " +
+                    downloadError.Message);
+                yield break;
+            }
 
             if (bytes == null || bytes.Length == 0)
             {
@@ -758,9 +892,9 @@ namespace BanMod
 
             callback?.Invoke(true, "");
 
-            // Il .bat aspetta la chiusura di questo processo e poi sostituisce
-            // esattamente la DLL da cui BanMod è stata caricata.
-            yield return new WaitForSeconds(0.5f);
+            // Il .bat aspetta la chiusura completa di Among Us, sostituisce
+            // la DLL e riavvia il gioco tramite Steam/Epic quando riconosciuti.
+            yield return new WaitForSeconds(0.25f);
             Application.Quit();
         }
 
@@ -775,26 +909,128 @@ namespace BanMod
 
                 string target = EscapeBatchValue(targetPath);
                 string staged = EscapeBatchValue(stagedPath);
+                string backup = EscapeBatchValue(targetPath + ".backup");
+
+                string updaterLog = EscapeBatchValue(
+                    Path.Combine(
+                        Path.GetDirectoryName(targetPath) ?? Path.GetTempPath(),
+                        "BanModUpdater.log"));
 
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("@echo off");
                 sb.AppendLine("setlocal");
                 sb.AppendLine("set \"BANMOD_PID=" + pid + "\"");
-                sb.AppendLine(":wait_for_game");
-                sb.AppendLine("tasklist /FI \"PID eq %BANMOD_PID%\" 2>NUL | find /I \"%BANMOD_PID%\" >NUL");
-                sb.AppendLine("if not errorlevel 1 (");
-                sb.AppendLine("  timeout /t 1 /nobreak >NUL");
-                sb.AppendLine("  goto wait_for_game");
-                sb.AppendLine(")");
-                sb.AppendLine("copy /Y \"" + staged + "\" \"" + target + "\" >NUL");
-                sb.AppendLine("if errorlevel 1 (");
-                sb.AppendLine("  exit /b 1");
-                sb.AppendLine(")");
+                sb.AppendLine("set \"BANMOD_TRIES=0\"");
+                sb.AppendLine(
+                    "echo [%date% %time%] Update BAT started. Waiting for shutdown.>>\"" +
+                    updaterLog + "\"");
+
+                // Aspetta il processo che ha avviato l'update.
+                sb.AppendLine(":wait_for_pid");
+                sb.AppendLine(
+                    "tasklist /FI \"PID eq %BANMOD_PID%\" /NH 2>NUL | " +
+                    "find /I \"%BANMOD_PID%\" >NUL");
+                sb.AppendLine("if errorlevel 1 goto wait_for_all_game");
+                sb.AppendLine("timeout /t 1 /nobreak >NUL");
+                sb.AppendLine("goto wait_for_pid");
+
+                // Evita il riavvio finché esiste ancora QUALSIASI Among Us.exe.
+                sb.AppendLine(":wait_for_all_game");
+                sb.AppendLine(
+                    "tasklist /FI \"IMAGENAME eq Among Us.exe\" /NH 2>NUL | " +
+                    "find /I \"Among Us.exe\" >NUL");
+                sb.AppendLine("if errorlevel 1 goto replace_file");
+                sb.AppendLine("timeout /t 1 /nobreak >NUL");
+                sb.AppendLine("goto wait_for_all_game");
+
+                // Nessuna attesa fissa prima della copia: prova immediatamente.
+                // Se Windows tiene ancora il file occupato, il retry lo gestisce.
+                sb.AppendLine(":replace_file");
+                sb.AppendLine(
+                    "copy /Y \"" + target + "\" \"" + backup +
+                    "\" >NUL 2>&1");
+                sb.AppendLine(
+                    "copy /Y \"" + staged + "\" \"" + target + "\" >NUL");
+
+                sb.AppendLine("if not errorlevel 1 goto verify_replaced");
+                sb.AppendLine("set /A BANMOD_TRIES+=1");
+                sb.AppendLine("if %BANMOD_TRIES% GEQ 30 goto replace_failed");
+                sb.AppendLine("timeout /t 1 /nobreak >NUL");
+                sb.AppendLine("goto replace_file");
+
+                sb.AppendLine(":verify_replaced");
+                sb.AppendLine("if not exist \"" + target + "\" goto replace_failed");
                 sb.AppendLine("del /Q \"" + staged + "\" >NUL 2>&1");
+                sb.AppendLine(
+                    "echo [%date% %time%] BanMod.dll replaced successfully.>>\"" +
+                    updaterLog + "\"");
+
+                // Breve margine per Steam/Epic dopo che il gioco risulta chiuso.
+                sb.AppendLine("timeout /t 2 /nobreak >NUL");
+
+                // Non riavviare automaticamente Among Us.
+                // Steam/Epic verranno avviati manualmente dall'utente dopo
+                // che BanMod.dll è stata sostituita con successo.
+                sb.AppendLine(
+                    "echo [%date% %time%] Update installed. Automatic game restart disabled.>>\"" +
+                    updaterLog + "\"");
+
+                sb.AppendLine("goto cleanup");
+
+                sb.AppendLine(":replace_failed");
+                sb.AppendLine(
+                    "echo [%date% %time%] ERROR: BanMod.dll replacement failed.>>\"" +
+                    updaterLog + "\"");
+                sb.AppendLine("exit /b 1");
+
+                sb.AppendLine(":cleanup");
+                sb.AppendLine("timeout /t 1 /nobreak >NUL");
                 sb.AppendLine("del /Q \"%~f0\" >NUL 2>&1");
 
                 File.WriteAllText(scriptPath, sb.ToString(), Encoding.ASCII);
                 return scriptPath;
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static string GetGameDirectoryFromTargetPath(string targetPath)
+        {
+            try
+            {
+                DirectoryInfo pluginDir =
+                    new DirectoryInfo(Path.GetDirectoryName(targetPath) ?? "");
+
+                DirectoryInfo bepinexDir = pluginDir.Parent;
+                DirectoryInfo gameDir = bepinexDir != null ? bepinexDir.Parent : null;
+
+                if (gameDir == null)
+                    return "";
+
+                string exe = Path.Combine(gameDir.FullName, "Among Us.exe");
+                return File.Exists(exe) ? gameDir.FullName : "";
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static string GetPreferredRestartTarget(
+            string gameDirectory,
+            out bool isProtocol)
+        {
+            isProtocol = false;
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(gameDirectory))
+                    return "";
+
+                string exe = Path.Combine(gameDirectory, "Among Us.exe");
+                return File.Exists(exe) ? exe : "";
             }
             catch
             {
@@ -875,16 +1111,198 @@ namespace BanMod
             }
         }
 
-        // Compatibilità con eventuali pulsanti/UI legacy: per un update facoltativo
-        // apre il download URL pubblicato dal server.
-        public static void StartUpdate(string url)
+        private static bool manualUpdateRunning;
+
+        // Compatibilità con i pulsanti/UI legacy. Il parametro viene ignorato di
+        // proposito: alcune UI passavano l'URL della pagina admin invece del file.
+        // Il client richiede nuovamente i metadati dal canale pubblico e installa
+        // direttamente la DLL, senza aprire browser o pagine web.
+        public static void StartUpdate(string ignoredUrl)
         {
+            StartManualUpdate();
+        }
+
+        public static void StartManualUpdate()
+        {
+            if (manualUpdateRunning || isInstalling)
+                return;
+
+            lastError = "";
+            isBroken = false;
+
             try
             {
-                if (!string.IsNullOrWhiteSpace(url))
-                    Application.OpenURL(url);
+                if (AmongUsClient.Instance == null)
+                {
+                    lastError = "Impossibile avviare l'aggiornamento manuale: client di gioco non disponibile";
+                    isBroken = true;
+                    return;
+                }
+
+                manualUpdateRunning = true;
+                AmongUsClient.Instance.StartCoroutine(ManualUpdateCoroutine().WrapToIl2Cpp());
             }
-            catch { }
+            catch (Exception ex)
+            {
+                manualUpdateRunning = false;
+                isBroken = true;
+                lastError = "Avvio aggiornamento manuale fallito: " + ex.GetType().Name + ": " + ex.Message;
+                Debug.LogError("[BanMod Updater] " + lastError);
+            }
+        }
+
+        private static IEnumerator ManualUpdateCoroutine()
+        {
+            StartupUpdateResult result = null;
+
+            // Evita due controlli concorrenti se il pulsante viene premuto proprio
+            // mentre è ancora in corso il controllo automatico di avvio.
+            while (startupCheckRunning)
+                yield return null;
+
+            // Esegue sempre un controllo fresco. Non usa l'URL passato dalla UI e
+            // non usa il risultato memorizzato all'avvio, che potrebbe essere vecchio.
+            yield return CheckAtStartupInternalCoroutine(value => result = value);
+
+            if (result == null || !result.Checked)
+            {
+                manualUpdateRunning = false;
+                isBroken = true;
+                if (string.IsNullOrWhiteSpace(lastError))
+                    lastError = result != null ? (result.Error ?? "Controllo update fallito") : "Controllo update senza risposta";
+                Debug.LogError("[BanMod Updater] Aggiornamento manuale non disponibile: " + lastError);
+                yield break;
+            }
+
+            // Per una release obbligatoria CheckAtStartupInternalCoroutine ha già
+            // avviato download, staging e sostituzione.
+            if (result.UpdateStarted)
+            {
+                manualUpdateRunning = false;
+                yield break;
+            }
+
+            if (!result.UpdateAvailable)
+            {
+                manualUpdateRunning = false;
+                isBroken = false;
+                lastError = "Nessun aggiornamento disponibile";
+                Debug.Log("[BanMod Updater] " + lastError);
+                yield break;
+            }
+
+            if (string.IsNullOrWhiteSpace(downloadUrl))
+            {
+                manualUpdateRunning = false;
+                isBroken = true;
+                lastError = "Aggiornamento manuale senza download_url";
+                Debug.LogError("[BanMod Updater] " + lastError);
+                yield break;
+            }
+
+            if (string.IsNullOrWhiteSpace(latestSha256) ||
+                !Regex.IsMatch(latestSha256, "^[0-9a-f]{64}$", RegexOptions.IgnoreCase))
+            {
+                manualUpdateRunning = false;
+                isBroken = true;
+                lastError = "Aggiornamento manuale senza SHA256 ufficiale valido";
+                Debug.LogError("[BanMod Updater] " + lastError);
+                yield break;
+            }
+
+            bool started = false;
+            string installError = "";
+
+            yield return DownloadStageAndLaunchCoroutine(
+                downloadUrl,
+                latestSha256,
+                (ok, error) =>
+                {
+                    started = ok;
+                    installError = error ?? "";
+                });
+
+            manualUpdateRunning = false;
+            isBroken = !started;
+            lastError = installError;
+
+            if (!started)
+                Debug.LogError("[BanMod Updater] Aggiornamento manuale fallito: " + lastError);
         }
     }
+
+    /// <summary>
+    /// Fallback del controllo update quando viene aperto il menu principale.
+    /// La patch viene applicata dal normale Harmony.PatchAll() della mod.
+    /// </summary>
+    [HarmonyPatch(typeof(MainMenuManager), "Start")]
+    internal static class BanModMandatoryUpdateBootstrapPatch
+    {
+        private static bool checkRunning;
+        private static bool checkCompleted;
+
+        private static void Postfix(MainMenuManager __instance)
+        {
+            if (__instance == null || checkRunning || checkCompleted)
+                return;
+
+            try
+            {
+                checkRunning = true;
+                __instance.StartCoroutine(RunStartupUpdateCheck().WrapToIl2Cpp());
+            }
+            catch (Exception ex)
+            {
+                checkRunning = false;
+                Debug.LogError("[BanMod Updater] Impossibile avviare il controllo: " + ex.Message);
+            }
+        }
+
+        private static IEnumerator RunStartupUpdateCheck()
+        {
+            ModUpdater.StartupUpdateResult result = null;
+
+            yield return ModUpdater.EnsureStartupCheckCoroutine(value => result = value);
+
+            checkRunning = false;
+
+            if (result == null)
+            {
+                Debug.LogError("[BanMod Updater] Il controllo non ha restituito alcun risultato.");
+                yield break;
+            }
+
+            if (!result.Checked)
+            {
+                // Consente un nuovo tentativo se il menu principale viene ricreato.
+                Debug.LogWarning("[BanMod Updater] Controllo fallito: " + (result.Error ?? "errore sconosciuto"));
+                yield break;
+            }
+
+            checkCompleted = true;
+
+            if (result.UpdateAvailable && result.Mandatory)
+            {
+                if (!result.UpdateStarted)
+                {
+                    Debug.LogError("[BanMod Updater] Aggiornamento obbligatorio non installato: " +
+                                   (result.Error ?? "errore sconosciuto"));
+
+                    // La release è obbligatoria: non lasciare in esecuzione una
+                    // versione precedente se download, SHA256 o staging falliscono.
+                    yield return new WaitForSeconds(1f);
+                    Application.Quit();
+                    yield break;
+                }
+
+                // Se UpdateStarted è true, ModUpdater chiude il gioco dopo aver
+                // avviato il processo esterno che sostituirà BanMod.dll.
+                yield break;
+            }
+
+            if (result.UpdateAvailable)
+                Debug.Log("[BanMod Updater] Aggiornamento facoltativo disponibile: " + ModUpdater.latestTitle);
+        }
+    }
+
 }
