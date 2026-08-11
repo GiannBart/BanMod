@@ -18,7 +18,7 @@ namespace BanMod
         private static bool _pollRunning = false;
         private static bool _pollMessagesRequested = false;
         private static bool _pollReportsRequested = false;
-        private const float FastReportPollIntervalSeconds = 4f;
+        private const float FastReportPollIntervalSeconds = 15f;
 
         // Dopo OK/Chiudi, lo stesso identico messaggio non viene più mostrato
         // per l'intervallo scelto dal server: 1h, 3h, 5h, 9h, 12h o 24h.
@@ -29,6 +29,105 @@ namespace BanMod
 
         private static readonly HashSet<string> _visibleMessageKeys = new HashSet<string>();
         private static readonly HashSet<string> _visibleReportReplyKeys = new HashSet<string>();
+        private static readonly HashSet<string> _unreadMessageKeys = new HashSet<string>();
+        private static readonly HashSet<int> _unreadReportIds = new HashSet<int>();
+
+        public static int UnreadCount
+        {
+            get
+            {
+                try { return _unreadMessageKeys.Count + _unreadReportIds.Count; }
+                catch { return 0; }
+            }
+        }
+
+        public static void MarkReportReadFromUi(int reportId)
+        {
+            if (reportId <= 0)
+                return;
+
+            try
+            {
+                _unreadReportIds.Remove(reportId);
+                PublishUnreadCount();
+
+                if (AmongUsClient.Instance != null)
+                {
+                    AmongUsClient.Instance.StartCoroutine(
+                        BanModCommunicationManager.MarkReportReadCoroutine(reportId).WrapToIl2Cpp()
+                    );
+                }
+            }
+            catch { }
+        }
+
+        private static void PublishUnreadCount()
+        {
+            try { BanModCommunicationUi.SetUnreadCount(UnreadCount); }
+            catch { }
+        }
+
+        private static void UpdateUnreadMessages(List<ServerMessage> messages)
+        {
+            try
+            {
+                _unreadMessageKeys.Clear();
+                if (messages != null)
+                {
+                    for (int i = 0; i < messages.Count; i++)
+                    {
+                        ServerMessage msg = messages[i];
+                        if (msg == null || !ShouldShowMessage(msg))
+                            continue;
+
+                        string key = GetMessageAckKey(msg);
+                        if (!string.IsNullOrWhiteSpace(key))
+                            _unreadMessageKeys.Add(key);
+                    }
+                }
+                PublishUnreadCount();
+            }
+            catch { }
+        }
+
+        private static void UpdateUnreadReports(List<BanModCommunicationManager.ReportSummary> reports)
+        {
+            try
+            {
+                _unreadReportIds.Clear();
+                if (reports != null)
+                {
+                    for (int i = 0; i < reports.Count; i++)
+                    {
+                        BanModCommunicationManager.ReportSummary report = reports[i];
+                        if (report == null || report.Id <= 0 || report.DeletedByPlayer)
+                            continue;
+
+                        bool unread = report.UnreadKnown && report.IsUnread;
+                        if (!report.UnreadKnown)
+                        {
+                            BanModCommunicationManager.ReportChatMessage latest = GetLatestAdminReportMessage(report);
+                            if (latest != null)
+                            {
+                                string signature = BuildReportReplySignature(report, latest);
+                                unread = !string.IsNullOrWhiteSpace(signature) &&
+                                         !string.Equals(GetLocalReportReplyAck(report.Id), signature, StringComparison.Ordinal);
+                            }
+                        }
+
+                        if (unread)
+                            _unreadReportIds.Add(report.Id);
+                    }
+                }
+                PublishUnreadCount();
+            }
+            catch { }
+        }
+
+        public static void RefreshUnreadReportsFromUi(List<BanModCommunicationManager.ReportSummary> reports)
+        {
+            UpdateUnreadReports(reports);
+        }
 
         public static void RequestImmediateReportPoll()
         {
@@ -131,25 +230,13 @@ namespace BanMod
             string responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
             request.Dispose();
 
-            bool forceDisable =
-                ExtractJsonBool(responseText, "force_disable_mod", false) ||
-                ExtractJsonBool(responseText, "force_disable", false);
-
-            if (forceDisable)
-            {
-                string disableReason = BanModApiTokenManager.ExtractJsonString(
-                    responseText,
-                    "force_disable_reason",
-                    BanModApiTokenManager.ExtractJsonString(
-                        responseText,
-                        "reason",
-                        "BanMod disabilitata temporaneamente dal server."));
-
-                BanMod.ForceDisableMod(disableReason);
+            // Accetta solo un comando forcedisable autenticato e targettizzato
+            // esplicitamente al Friend Code corrente. Un flag globale non basta.
+            if (BanModCore.TryApplyServerForceDisable(responseText))
                 yield break;
-            }
 
             List<ServerMessage> messages = ParseMessages(responseText);
+            UpdateUnreadMessages(messages);
 
             // Mostriamo un solo popup alla volta. Se ce ne sono altri, arrivano al polling successivo.
             foreach (ServerMessage msg in messages)
@@ -179,13 +266,23 @@ namespace BanMod
                 error = err ?? "";
             });
 
-            if (!string.IsNullOrWhiteSpace(error) || reports == null || reports.Count <= 0)
+            if (!string.IsNullOrWhiteSpace(error))
+                yield break;
+
+            if (reports == null)
+                reports = new List<BanModCommunicationManager.ReportSummary>();
+
+            UpdateUnreadReports(reports);
+
+            if (reports.Count <= 0)
                 yield break;
 
             for (int i = 0; i < reports.Count; i++)
             {
                 BanModCommunicationManager.ReportSummary report = reports[i];
                 if (report == null || report.Id <= 0 || report.DeletedByPlayer)
+                    continue;
+                if (report.UnreadKnown && !report.IsUnread)
                     continue;
 
                 BanModCommunicationManager.ReportChatMessage adminMessage = GetLatestAdminReportMessage(report);
@@ -239,6 +336,8 @@ namespace BanMod
             {
                 SaveLocalAck(key);
                 _visibleMessageKeys.Remove(key);
+                _unreadMessageKeys.Remove(key);
+                PublishUnreadCount();
             }
 
             try
@@ -363,6 +462,7 @@ namespace BanMod
         private static void AcknowledgeReportReply(int reportId, string signature, string visibleKey)
         {
             SaveLocalReportReplyAck(reportId, signature);
+            MarkReportReadFromUi(reportId);
 
             if (!string.IsNullOrWhiteSpace(visibleKey))
                 _visibleReportReplyKeys.Remove(visibleKey);
