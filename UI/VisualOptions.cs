@@ -86,7 +86,7 @@ namespace BanMod
         {
             menuItems.Clear();
             AddToggle(GetString("Vis_CustomNames"), "UseCustomNames", () => BanMod.UseCustomNames, v => BanMod.UseCustomNames = v);
-            AddToggle(GetString("Vis_ShowInfo"), "ShowInfo", () => BanMod.ShowInfo, v => BanMod.ShowInfo = v);
+            //AddToggle(GetString("Vis_ShowInfo"), "ShowInfo", () => BanMod.ShowInfo, v => BanMod.ShowInfo = v);
             AddToggle(GetString("Vis_NoName"), "ShowNoName", () => BanMod.ShowNoName, v => BanMod.ShowNoName = v);
             AddToggle(GetString("Vis_VipModTag"), "ShowVipModTag", () => BanMod.ShowVipModTag, v => BanMod.ShowVipModTag = v);
             AddToggle(GetString("Vis_ColorName"), "ShowColorName", () => BanMod.ShowColorName, v => BanMod.ShowColorName = v);
@@ -166,7 +166,7 @@ namespace BanMod
         private void ApplyValueToVariable(string name, bool value)
         {
             if (name == "UseCustomNames") BanMod.UseCustomNames = value;
-            if (name == "ShowInfo") BanMod.ShowInfo = value;
+            //if (name == "ShowInfo") BanMod.ShowInfo = value;
             if (name == "ShowVipModTag") BanMod.ShowVipModTag = value;
             if (name == "ShowIdInMeeting") BanMod.namewithid = value;
             if (name == "level") BanMod.level = value;

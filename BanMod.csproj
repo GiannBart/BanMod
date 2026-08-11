@@ -6,7 +6,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Il2CppInteropVerbose>true</Il2CppInteropVerbose>
 		<Optimize>True</Optimize>
-		<VersionPrefix>3.7.0</VersionPrefix>
+		<VersionPrefix>3.6.9</VersionPrefix>
 		<Description>Ban automatico</Description>
 		<Authors>Gianni</Authors>
 		<AssemblyName>BanMod</AssemblyName>

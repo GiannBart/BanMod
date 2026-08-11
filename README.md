@@ -1,3 +1,102 @@
+> [!WARNING]
+> ## Project status update — August 11, 2026
+>
+> BanMod is currently undergoing a technical and policy review in relation to the [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/). Please read this notice before downloading or using the mod.
+
+### What happened
+
+I was recently contacted by a person who stated that they knew of an exploit affecting BanMod. During the conversation, information about the exploit was accompanied by repeated requests for the source code of FFA, a separate private project that is not included in this repository.
+
+I explained that I would not provide FFA's source code in exchange for information about a vulnerability. Additional concerns were subsequently raised regarding BanMod's licensing, optional components, and general compliance with Innersloth's Mod Policy.
+
+The sequence of these events gave me the personal impression that security information and legal concerns might have been used as leverage to obtain private source code.
+
+I want to make it completely clear that this is only my perception of the conversation. It may be partially or entirely incorrect, and I am not claiming to know or establish the intentions of the person involved.
+
+This notice is not intended as a personal accusation. Its purpose is to explain the circumstances that prompted the current review and to keep BanMod users informed.
+
+The concerns that were raised will not be ignored. Regardless of how the requests were presented, they may identify genuine issues. I am therefore reviewing BanMod's code, licensing information, documentation, and compliance in good faith.
+
+### GPL code and separately distributed optional components
+
+To avoid further misunderstandings, I would like to clarify the following.
+
+The public BanMod core remains available under GPLv3. Additional features—historically called “Premium” even though they are currently provided free of charge—are optional components distributed separately from this repository:
+
+- they are not included in this repository;
+- they are not required for the public core to operate or compile;
+- they are delivered as separate DLLs through the official services;
+- they are subject to the terms described in [LICENSE](LICENSE) and [LICENSES.md](LICENSES.md).
+
+The project's position is that these separately distributed components are independent works and are not part of the GPL-covered code published in this repository.
+
+This position and the boundaries between the different licenses are described in the repository's two licensing documents: [LICENSE](LICENSE), containing GPLv3 for the public core, and [LICENSES.md](LICENSES.md), describing the licenses applicable to the individual components.
+
+In particular, the final paragraph of [section 5 of GPLv3](https://www.gnu.org/licenses/gpl-3.0.html#section5) addresses an “aggregate”: a compilation in which a covered work is placed alongside separate and independent works that are not, by their nature, extensions of the covered work and are not combined with it into a larger program.
+
+Section 5 states that including such independent works in an aggregate does not, by itself, cause GPLv3 to apply to the other parts of the aggregate.
+
+On this basis, the project considers the separately distributed optional DLLs to be outside the GPL license applicable to the public BanMod core.
+
+Nothing in this notice is intended to restrict the rights granted by GPLv3 over code that is actually covered by that license.
+
+The Premium features are independent components under a private license and are not required for the operation or compilation of the mod published in this repository.
+
+### Official servers and modded-lobby registration
+
+After reviewing Innersloth's updated policy and its [official technical documentation](https://github.com/Innersloth-LLC/AmongUsModdingInformation), it appears that mods may use the official Among Us backend.
+
+However, a mod that changes gameplay, custom-role behavior, another player's experience, or other game functionality must identify and register itself when the lobby is created.
+
+BanMod will be updated so that the appropriate mode can be selected during lobby creation:
+
+- features that modify gameplay or affect the experience of other participants will require the lobby to be registered as modded;
+- if only visual modifications and anti-cheat features that do not change gameplay or another player's experience are used, it appears possible to continue using the official servers without registering the lobby as modded.
+
+However, Innersloth states that not every edge case involving anti-cheat functionality can be classified in advance and recommends registering the mod when there is uncertainty.
+
+BanMod will provide the tools needed to make the appropriate selection. Users will be responsible for selecting the correct lobby mode and for not using features that are not permitted on the official servers.
+
+### Features under review
+
+The review will include removing or limiting features that could be misused to gain an unfair advantage.
+
+In particular, the following will be removed or restricted:
+
+- automatic task animations;
+- teleportation features;
+- actions that may improperly alter another player's experience;
+- testing or debugging tools that could be used outside a controlled environment.
+
+Host, moderation, and anti-cheat tools will also be reviewed to determine which may be used on official servers and which require the lobby to be registered as modded.
+
+Until the review is complete, BanMod should be used only in private, consensual, or clearly identified modded lobbies.
+
+This is a precaution adopted by the BanMod project and is not presented as a general policy requirement applying to every Among Us mod.
+
+### Reporting problems
+
+Anyone who believes that BanMod violates a specific provision of the Mod Policy is encouraged to provide:
+
+1. the exact provision believed to have been violated;
+2. the affected feature or behavior;
+3. the technical steps needed to verify or reproduce the issue;
+4. any relevant technical information.
+
+Concrete, complete, and responsible reports will be reviewed seriously.
+
+I will not provide the source code of FFA or other private projects as a condition for receiving information about a vulnerability.
+
+At the same time, I will not ignore a technical report simply because I disagree with the way it was presented. If the issue can be verified, I will try to correct it.
+
+### Future of the project
+
+If reasonable compliance cannot be achieved or substantial problems remain, the repository and related services may be suspended or closed.
+
+Thank you to everyone who reports problems, vulnerabilities, or possible violations responsibly, completely, and constructively.
+
+---
+
 <div align="center">
 
 <img src="docs/images/image.png" alt="BanMod banner" width="100%">

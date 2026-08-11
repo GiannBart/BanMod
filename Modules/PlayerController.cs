@@ -58,7 +58,7 @@ namespace BanMod
 
             fixedCounter = 0;
 
-            HandleDrag();
+            //HandleDrag();
         }
 
 
@@ -290,24 +290,24 @@ namespace BanMod
         }
 
 
-        private void HandleDrag()
-        {
-            if (selectedPlayer == null)
-                return;
-            if (!BanMod.Teleport.Value)
-                return;
-            if (selectedPlayer != PlayerControl.LocalPlayer)
-                return;
+        //private void HandleDrag()
+        //{
+        //    if (selectedPlayer == null)
+        //        return;
+        //    if (!BanMod.Teleport.Value)
+        //        return;
+        //    if (selectedPlayer != PlayerControl.LocalPlayer)
+        //        return;
 
-            if (!Input.GetMouseButton(0))
-                return;
+        //    if (!Input.GetMouseButton(0))
+        //        return;
 
-            Vector2 pos = GetMouseWorld();
-            if (selectedPlayer.NetTransform == null)
-                return;
+        //    Vector2 pos = GetMouseWorld();
+        //    if (selectedPlayer.NetTransform == null)
+        //        return;
 
-            selectedPlayer.NetTransform.RpcSnapTo(pos);
-        }
+        //    selectedPlayer.NetTransform.RpcSnapTo(pos);
+        //}
 
         public static void ReceiveSyncPlayerVisual(MessageReader reader, int senderId)
         {

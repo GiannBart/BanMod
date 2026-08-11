@@ -433,143 +433,143 @@ namespace BanMod
                 }
             });
 
-            CategoryBlock cheatCat = null;
-            if (selectedIsHost)
-            {
-                cheatCat = new CategoryBlock(GetString("PUI_Cat_Cheat"), () =>
-                {
-                    if (GUILayout.Button(GetString("PUI_Sabotage"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
-                    {
-                        DestroyableSingleton<HudManager>.Instance.ToggleMapVisible(new MapOptions
-                        {
-                            Mode = MapOptions.Modes.Sabotage
-                        });
-                        CloseActionMenu();
-                    }
+            //CategoryBlock cheatCat = null;
+            //if (selectedIsHost)
+            //{
+            //    cheatCat = new CategoryBlock(GetString("PUI_Cat_Cheat"), () =>
+            //    {
+            //        if (GUILayout.Button(GetString("PUI_Sabotage"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
+            //        {
+            //            DestroyableSingleton<HudManager>.Instance.ToggleMapVisible(new MapOptions
+            //            {
+            //                Mode = MapOptions.Modes.Sabotage
+            //            });
+            //            CloseActionMenu();
+            //        }
 
-                    if (GUILayout.Button(GetString("PUI_CompleteTasks"), buttonStyle, GUILayout.Height(45)))
-                    {
-                        bool isHost = AmongUsClient.Instance.AmHost;
-                        bool canExecute = false;
-                        string reason = "Unknown";
+            //        if (GUILayout.Button(GetString("PUI_CompleteTasks"), buttonStyle, GUILayout.Height(45)))
+            //        {
+            //            bool isHost = AmongUsClient.Instance.AmHost;
+            //            bool canExecute = false;
+            //            string reason = "Unknown";
 
-                        if (isHost)
-                        {
-                            bool immOpt = Options.EnableImmortal.GetBool();
-                            bool immAssigned = ImmortalManager.immortalAssigned;
-                            bool engFixer = Options.EngineerFixer.GetBool();
-                            bool isEng = Utils.Engineer(PlayerControl.LocalPlayer);
+            //            if (isHost)
+            //            {
+            //                bool immOpt = Options.EnableImmortal.GetBool();
+            //                bool immAssigned = ImmortalManager.immortalAssigned;
+            //                bool engFixer = Options.EngineerFixer.GetBool();
+            //                bool isEng = Utils.Engineer(PlayerControl.LocalPlayer);
 
-                            BMLogger.LogInfo($"[TaskLog] HOST - ImmOpt: {immOpt}, Assigned: {immAssigned}, EngFix: {engFixer}");
+            //                BMLogger.LogInfo($"[TaskLog] HOST - ImmOpt: {immOpt}, Assigned: {immAssigned}, EngFix: {engFixer}");
 
-                            if (!immOpt || (immOpt && immAssigned) || PlayerControl.LocalPlayer.Data.IsDead)
-                            {
-                                canExecute = true;
-                                if (engFixer && isEng)
-                                {
-                                    canExecute = false;
-                                    reason = "Engineer Fixer attivo (Host)";
-                                }
-                            }
-                            else
-                            {
-                                reason = "Immortal non ancora assegnato (Host)";
-                            }
-                        }
-                        else
-                        {
-                            bool hImmEnabled = HostOptionStatus.ImmortalEnabled;
-                            bool hImmAdded = HostOptionStatus.ImmortalAdded;
-                            bool hEngEnabled = HostOptionStatus.EngineerEnabled;
+            //                if (!immOpt || (immOpt && immAssigned) || PlayerControl.LocalPlayer.Data.IsDead)
+            //                {
+            //                    canExecute = true;
+            //                    if (engFixer && isEng)
+            //                    {
+            //                        canExecute = false;
+            //                        reason = "Engineer Fixer attivo (Host)";
+            //                    }
+            //                }
+            //                else
+            //                {
+            //                    reason = "Immortal non ancora assegnato (Host)";
+            //                }
+            //            }
+            //            else
+            //            {
+            //                bool hImmEnabled = HostOptionStatus.ImmortalEnabled;
+            //                bool hImmAdded = HostOptionStatus.ImmortalAdded;
+            //                bool hEngEnabled = HostOptionStatus.EngineerEnabled;
 
-                            BMLogger.LogInfo($"[TaskLog] CLIENT - ImmEnabled: {hImmEnabled}, ImmAdded: {hImmAdded}, EngEnabled: {hEngEnabled}");
+            //                BMLogger.LogInfo($"[TaskLog] CLIENT - ImmEnabled: {hImmEnabled}, ImmAdded: {hImmAdded}, EngEnabled: {hEngEnabled}");
 
-                            if (!hImmEnabled)
-                            {
-                                canExecute = true;
-                                BMLogger.LogInfo("[TaskLog] Lobby Vanilla o Opzione Off: Procedo.");
-                            }
-                            else
-                            {
-                                if (hImmAdded)
-                                {
-                                    canExecute = true;
-                                }
-                                else
-                                {
-                                    reason = "Immortal attivo ma non aggiunto (Client)";
-                                }
-                            }
+            //                if (!hImmEnabled)
+            //                {
+            //                    canExecute = true;
+            //                    BMLogger.LogInfo("[TaskLog] Lobby Vanilla o Opzione Off: Procedo.");
+            //                }
+            //                else
+            //                {
+            //                    if (hImmAdded)
+            //                    {
+            //                        canExecute = true;
+            //                    }
+            //                    else
+            //                    {
+            //                        reason = "Immortal attivo ma non aggiunto (Client)";
+            //                    }
+            //                }
 
-                            if (canExecute && hEngEnabled && Utils.Engineer(PlayerControl.LocalPlayer))
-                            {
-                                canExecute = false;
-                                reason = "Engineer Fixer attivo (Client)";
-                            }
-                        }
+            //                if (canExecute && hEngEnabled && Utils.Engineer(PlayerControl.LocalPlayer))
+            //                {
+            //                    canExecute = false;
+            //                    reason = "Engineer Fixer attivo (Client)";
+            //                }
+            //            }
 
-                        if (canExecute)
-                        {
-                            BMLogger.LogInfo("[TaskLog] ESECUZIONE COROUTINE AVVIATA");
-                            HudManager.Instance.StartCoroutine(CheatUtils.CompletaTutteLeTaskConDelay(1.5f));
-                        }
-                        else
-                        {
-                            BMLogger.LogWarning($"[TaskLog] BLOCCHETTO: {reason}");
-                        }
-                    }
+            //            if (canExecute)
+            //            {
+            //                BMLogger.LogInfo("[TaskLog] ESECUZIONE COROUTINE AVVIATA");
+            //                HudManager.Instance.StartCoroutine(CheatUtils.CompletaTutteLeTaskConDelay(1.5f));
+            //            }
+            //            else
+            //            {
+            //                BMLogger.LogWarning($"[TaskLog] BLOCCHETTO: {reason}");
+            //            }
+            //        }
 
-                    if (GUILayout.Button("Scanner", buttonStyle, GUILayout.Height(45)))
-                    {
-                        PlayerControl.LocalPlayer.StartCoroutine(CheatUtils.BypassScannerWithTimeout(10f));
-                    }
+            //        if (GUILayout.Button("Scanner", buttonStyle, GUILayout.Height(45)))
+            //        {
+            //            PlayerControl.LocalPlayer.StartCoroutine(CheatUtils.BypassScannerWithTimeout(10f));
+            //        }
 
-                    if (GUILayout.Button("Cams ON", buttonStyle, GUILayout.Height(45)))
-                    {
-                        CheatUtils.CamsOn();
-                    }
+            //        if (GUILayout.Button("Cams ON", buttonStyle, GUILayout.Height(45)))
+            //        {
+            //            CheatUtils.CamsOn();
+            //        }
 
-                    if (GUILayout.Button("Cams OFF", buttonStyle, GUILayout.Height(45)))
-                    {
-                        CheatUtils.CamsOff();
-                    }
+            //        if (GUILayout.Button("Cams OFF", buttonStyle, GUILayout.Height(45)))
+            //        {
+            //            CheatUtils.CamsOff();
+            //        }
 
-                    if (GUILayout.Button("Shield", buttonStyle, GUILayout.Height(45)))
-                    {
-                        CheatUtils.AnimShields();
-                    }
+            //        if (GUILayout.Button("Shield", buttonStyle, GUILayout.Height(45)))
+            //        {
+            //            CheatUtils.AnimShields();
+            //        }
 
-                    if (GUILayout.Button("Asteroid", buttonStyle, GUILayout.Height(45)))
-                    {
-                        CheatUtils.AnimAsteroids();
-                    }
+            //        if (GUILayout.Button("Asteroid", buttonStyle, GUILayout.Height(45)))
+            //        {
+            //            CheatUtils.AnimAsteroids();
+            //        }
 
-                    if (GUILayout.Button("Trash ", buttonStyle, GUILayout.Height(45)))
-                    {
-                        CheatUtils.AnimEmptyGarbage();
-                    }
-                });
-            }
+            //        if (GUILayout.Button("Trash ", buttonStyle, GUILayout.Height(45)))
+            //        {
+            //            CheatUtils.AnimEmptyGarbage();
+            //        }
+            //    });
+            //}
 
             CategoryBlock hostCat = new CategoryBlock(GetString("PUI_Cat_Host"), () =>
             {
-                if (GUILayout.Button(GetString("KillPlayerAction"), buttonStyle, GUILayout.Height(45)))
-                {
-                    if (AmongUsClient.Instance.AmHost)
-                    {
-                        Utils.KillPlayer(selectedPlayer);
-                        DeadBody[] allBodies = UnityEngine.Object.FindObjectsOfType<DeadBody>();
-                        foreach (DeadBody body in allBodies)
-                        {
-                            if (body.ParentId == selectedPlayer.PlayerId)
-                            {
-                                UnityEngine.Object.Destroy(body.gameObject);
-                                break;
-                            }
-                        }
-                        CloseActionMenu();
-                    }
-                }
+                //if (GUILayout.Button(GetString("KillPlayerAction"), buttonStyle, GUILayout.Height(45)))
+                //{
+                //    if (AmongUsClient.Instance.AmHost)
+                //    {
+                //        Utils.KillPlayer(selectedPlayer);
+                //        DeadBody[] allBodies = UnityEngine.Object.FindObjectsOfType<DeadBody>();
+                //        foreach (DeadBody body in allBodies)
+                //        {
+                //            if (body.ParentId == selectedPlayer.PlayerId)
+                //            {
+                //                UnityEngine.Object.Destroy(body.gameObject);
+                //                break;
+                //            }
+                //        }
+                //        CloseActionMenu();
+                //    }
+                //}
 
                 if (GUILayout.Button(GetString("PUI_Eject"), buttonStyle, GUILayout.Height(45)))
                 {
@@ -757,7 +757,7 @@ namespace BanMod
 
             leftColumn.Add(rolesCat);
             leftColumn.Add(outfitCat);
-            if (cheatCat != null) leftColumn.Add(cheatCat);
+            //if (cheatCat != null) leftColumn.Add(cheatCat);
 
             centerColumn.Add(hostCat);
             centerColumn.Add(colorCat);

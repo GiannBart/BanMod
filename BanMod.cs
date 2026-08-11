@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.7.0";
+    public static string modVersion = "3.6.9";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.7.0";
+    public const string PluginVersion = "3.6.9";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.6.5" };
@@ -513,7 +513,7 @@ public partial class BanMod : BasePlugin
     public static ConfigEntry<bool> AddBanToList { get; private set; }
     public static ConfigEntry<bool> NoGameEnd { get; private set; }
     public static ConfigEntry<bool> EnableZoom { get; private set; }
-    public static ConfigEntry<bool> Teleport { get; private set; }
+    //public static ConfigEntry<bool> Teleport { get; private set; }
     public static ConfigEntry<bool> SwitchVanilla { get; private set; }
     public static ConfigEntry<bool> SeeRoleMeeting { get; private set; }
     public static ConfigEntry<bool> VoteLockEnabled { get; private set; }
@@ -593,7 +593,7 @@ public partial class BanMod : BasePlugin
         AddBanToList = Config.Bind("Client Options", "AddBanToList", true);
         NoGameEnd = Config.Bind("Client Options", "NoGameEnd", false);
         EnableZoom = Config.Bind("Client Options", "EnableZoom", false);
-        Teleport = Config.Bind("Client Options", "Teleport", true);
+        //Teleport = Config.Bind("Client Options", "Teleport", true);
         SeeRoleMeeting = Config.Bind("Client Options", "SeeRoleMeeting", true);
         VoteLockEnabled = Config.Bind("Client Options", "VoteLockEnabled", true);
         SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", true);
@@ -635,6 +635,7 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<BanModCommunicationUi>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModLoginUi>();
         ClassInjector.RegisterTypeInIl2Cpp<PresetMenuUi>();
+        ClassInjector.RegisterTypeInIl2Cpp<ServerSelectionMenu>();
 
 
         TemplateLoader.InitTemplates();
@@ -687,6 +688,7 @@ public partial class BanMod : BasePlugin
         AddTrackedComponent<BanModLoginUi>();
         AddTrackedComponent<CustomHatSceneRenderer>();
         AddTrackedComponent<PresetMenuUi>();
+        AddTrackedComponent<ServerSelectionMenu>();
 
         BMLogger.LogInfo("[BanMod] BanModManager creato e avviato correttamente ✅");
         TracersHandler.ArrowSprite = LoadSprite("BanMod.Resources.image.Arrow.png", 100f);
