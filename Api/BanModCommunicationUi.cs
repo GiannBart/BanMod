@@ -45,6 +45,9 @@ namespace BanMod
         private TextMeshProUGUI sentReportsInfoText;
         private TextMeshProUGUI sentReportDetailsText;
         private TextMeshProUGUI sentReportChatText;
+        private TextMeshProUGUI communicationsUnreadBadgeText;
+        private TextMeshProUGUI sentReportsUnreadBadgeText;
+        private TextMeshProUGUI floatingUnreadBadgeText;
 
         private TMP_InputField bugTitleInput;
         private TMP_InputField bugGameModeInput;
@@ -68,6 +71,7 @@ namespace BanMod
         private Button popupReportSendButton;
         private Button popupReportCloseButton;
         private Button popupReportDeleteButton;
+        private Button floatingUnreadButton;
         private Button bugCustomYesButton;
         private Button bugCustomNoButton;
         private Button bugOtherYesButton;
@@ -100,6 +104,7 @@ namespace BanMod
         private bool draggingMainPanel = false;
         private bool draggingPopupPanel = false;
         private Vector2 lastDragMousePosition = Vector2.zero;
+        private static int pendingUnreadCount = 0;
 
         private enum PanelMode
         {
@@ -119,6 +124,23 @@ namespace BanMod
                 try { return Instance != null && (Instance.showMenu || Instance.popupVisible); }
                 catch { return false; }
             }
+        }
+
+        public static void SetUnreadCount(int count)
+        {
+            pendingUnreadCount = Mathf.Max(0, count);
+            try
+            {
+                if (pendingUnreadCount > 0)
+                {
+                    EnsureCreated();
+                    Instance?.BuildUiIfNeeded();
+                }
+
+                Instance?.RefreshUnreadBadge();
+                Instance?.RefreshVisibility();
+            }
+            catch { }
         }
 
         private static bool ensureCreateErrorLogged = false;
@@ -150,9 +172,9 @@ namespace BanMod
         private void Awake()
         {
             Instance = this;
-            BuildUiIfNeeded();
-            RefreshTexts();
-            RefreshVisibility();
+
+            // La UI completa è molto grande: viene costruita soltanto al primo F3
+            // o al primo popup, non durante il bootstrap del plugin.
         }
 
         private void OnDestroy()
@@ -176,6 +198,15 @@ namespace BanMod
                     return;
             }
             catch { }
+
+            // Quando la UI è chiusa evitiamo drag, raycast e gestione scroll ogni frame.
+            // Rimane attivo soltanto il controllo del tasto F3.
+            if (!showMenu && !popupVisible)
+            {
+                if (Input.GetKeyDown(KeyCode.F3))
+                    OpenMenu();
+                return;
+            }
 
             HandleWindowDrag();
             HandlePopupBodyManualScroll();
@@ -224,14 +255,84 @@ namespace BanMod
             popupReportId = 0;
             popupReportIsOpen = false;
 
-            SetText(popupTitleText, string.IsNullOrWhiteSpace(title) ? T("Comm_ServerMessageTitle", "BANMOD Message") : title.Trim());
-            SetScrollableText(popupBodyText, content ?? "", true);
-            SetText(popupReportDetailsText, "");
-            SetScrollableText(popupReportChatText, "", true);
-            SetText(popupStatusText, "");
-            SetInputText(popupReportChatInput, "");
+            string safeTitle = string.IsNullOrWhiteSpace(title)
+                ? T("Comm_ServerMessageTitle", "BANMOD Message")
+                : title.Trim();
+            string safeContent = content ?? "";
 
+            // Prepara prima il layout interno e soltanto dopo mostra il pannello.
+            // In questo modo ScrollRect e RectMask2D non conservano il clipping
+            // della precedente apertura.
+            PrepareSimplePopupVisuals(safeTitle, safeContent);
             RefreshVisibility();
+            PrepareSimplePopupVisuals(safeTitle, safeContent);
+
+            // Unity/TMP completa il ripristino del mask nel frame successivo.
+            // Ripetere il refresh evita il corpo vuoto dalla seconda apertura.
+            RunCommunicationCoroutine(RefreshSimplePopupNextFrames(safeTitle, safeContent));
+        }
+
+        private void PrepareSimplePopupVisuals(string title, string content)
+        {
+            try
+            {
+                GameObject bodyRoot = GetScrollableRoot(popupBodyText);
+                SetActive(bodyRoot, true);
+
+                SetText(popupTitleText, title ?? "");
+                SetText(popupReportDetailsText, "");
+                SetScrollableText(popupReportChatText, "", true);
+                SetText(popupStatusText, "");
+                SetInputText(popupReportChatInput, "");
+                SetScrollableText(popupBodyText, content ?? "", true);
+
+                if (popupBodyText != null)
+                {
+                    popupBodyText.enabled = true;
+                    popupBodyText.SetLayoutDirty();
+                    popupBodyText.SetVerticesDirty();
+                    popupBodyText.ForceMeshUpdate(true, true);
+                }
+
+                if (bodyRoot != null)
+                {
+                    RectMask2D mask = bodyRoot.GetComponentInChildren<RectMask2D>(true);
+                    if (mask != null)
+                    {
+                        mask.enabled = false;
+                        mask.enabled = true;
+                    }
+                }
+
+                if (popupBodyScrollRect != null)
+                {
+                    popupBodyScrollRect.enabled = false;
+                    popupBodyScrollRect.enabled = true;
+                    popupBodyScrollRect.StopMovement();
+                    popupBodyScrollRect.verticalNormalizedPosition = 1f;
+                }
+
+                Canvas.ForceUpdateCanvases();
+            }
+            catch { }
+        }
+
+        [HideFromIl2Cpp]
+        private IEnumerator RefreshSimplePopupNextFrames(string title, string content)
+        {
+            yield return null;
+
+            if (!popupVisible || popupIsReportChat)
+                yield break;
+
+            PrepareSimplePopupVisuals(title, content);
+
+            yield return null;
+
+            if (!popupVisible || popupIsReportChat)
+                yield break;
+
+            PrepareSimplePopupVisuals(title, content);
         }
 
         [HideFromIl2Cpp]
@@ -248,6 +349,10 @@ namespace BanMod
             popupIsReportChat = true;
             popupReportId = report.Id;
             popupReportIsOpen = IsReportOpen(report);
+
+            // Stesso motivo dei popup semplici: il layout TMP deve essere aggiornato
+            // soltanto dopo che il contenitore scrollabile è tornato attivo.
+            RefreshVisibility();
 
             UpsertCachedReport(report);
 
@@ -266,7 +371,12 @@ namespace BanMod
                 : T("Comm_ReportClosedHint", "This report is closed/resolved. You can delete it from your list or close the popup."));
             SetInputText(popupReportChatInput, "");
 
-            RefreshVisibility();
+            report.IsUnread = false;
+            report.UnreadCount = 0;
+            BanModMessagePoller.MarkReportReadFromUi(report.Id);
+            RefreshUnreadBadge();
+
+            Canvas.ForceUpdateCanvases();
             FocusPopupReportInput();
         }
 
@@ -320,6 +430,7 @@ namespace BanMod
             uiRoot.AddComponent<GraphicRaycaster>();
 
             CreateInputBlocker();
+            CreateFloatingUnreadBadge();
             CreateMainPanel();
             CreatePopupPanel();
         }
@@ -379,10 +490,37 @@ namespace BanMod
             }
         }
 
+        private void CreateFloatingUnreadBadge()
+        {
+            floatingUnreadButton = CreateButton(
+                uiRoot.transform,
+                "FloatingUnreadBadge",
+                "",
+                new Vector2(92f, 48f),
+                new Vector2(850f, 485f),
+                new Color(0.92f, 0.04f, 0.04f, 0.96f),
+                OpenMenu
+            );
+            floatingUnreadBadgeText = floatingUnreadButton != null
+                ? floatingUnreadButton.GetComponentInChildren<TextMeshProUGUI>(true)
+                : null;
+            SetActive(floatingUnreadButton != null ? floatingUnreadButton.gameObject : null, false);
+        }
+
         private void CreateMainPanel()
         {
             mainPanel = CreatePanel(uiRoot.transform, "MainPanel", new Vector2(900f, 820f), Vector2.zero, new Color(0f, 0f, 0f, 0.90f));
             mainTitleText = CreateLabel(mainPanel.transform, "MainTitle", "", 30, TextAlignmentOptions.Center, Color.cyan, new Vector2(820f, 50f), new Vector2(0f, 360f));
+            communicationsUnreadBadgeText = CreateLabel(
+                mainPanel.transform,
+                "CommunicationsUnreadBadge",
+                "",
+                23,
+                TextAlignmentOptions.Center,
+                new Color(1f, 0.12f, 0.12f, 1f),
+                new Vector2(105f, 38f),
+                new Vector2(352f, 360f)
+            );
 
             homePanel = CreateEmpty(mainPanel.transform, "HomePanel", new Vector2(820f, 620f), new Vector2(0f, 25f));
             CreateHomePanel();
@@ -410,6 +548,16 @@ namespace BanMod
             CreateButton(homePanel.transform, "PlayerReportButton", T("Comm_ReportPlayer", "Report Player"), new Vector2(330f, 60f), new Vector2(185f, 145f), new Color(0.45f, 0.22f, 0.12f, 1f), () => OpenPanel(PanelMode.PlayerReport));
             CreateButton(homePanel.transform, "SupportButton", T("Comm_SupportRequest", "Support Request"), new Vector2(330f, 60f), new Vector2(0f, 60f), new Color(0.18f, 0.42f, 0.18f, 1f), () => OpenPanel(PanelMode.Support));
             CreateButton(homePanel.transform, "SentReportsButton", T("Comm_SentReports", "Sent Reports"), new Vector2(330f, 60f), new Vector2(0f, -25f), new Color(0.22f, 0.22f, 0.50f, 1f), () => OpenPanel(PanelMode.SentReports));
+            sentReportsUnreadBadgeText = CreateLabel(
+                homePanel.transform,
+                "SentReportsUnreadBadge",
+                "",
+                22,
+                TextAlignmentOptions.Center,
+                new Color(1f, 0.12f, 0.12f, 1f),
+                new Vector2(90f, 34f),
+                new Vector2(142f, -6f)
+            );
             CreateLabel(homePanel.transform, "Info", T("Comm_LogsAutoInfo", "Full BepInEx logs will be sent automatically with every report: LogOutput.log and ErrorLog.log."), 18, TextAlignmentOptions.Center, new Color(0.86f, 0.86f, 0.86f, 1f), new Vector2(760f, 100f), new Vector2(0f, -135f));
         }
 
@@ -880,13 +1028,50 @@ namespace BanMod
             SetSending(false);
         }
 
+        private void RefreshUnreadBadge()
+        {
+            try
+            {
+                int count = Mathf.Max(0, pendingUnreadCount);
+                bool visible = count > 0;
+                string label = count > 99 ? "● 99+" : "● " + count.ToString();
+
+                SetText(communicationsUnreadBadgeText, visible ? label : "");
+                SetText(sentReportsUnreadBadgeText, visible ? label : "");
+                SetText(floatingUnreadBadgeText, visible ? label : "");
+                SetActive(communicationsUnreadBadgeText != null ? communicationsUnreadBadgeText.gameObject : null, visible);
+                SetActive(sentReportsUnreadBadgeText != null ? sentReportsUnreadBadgeText.gameObject : null, visible);
+            }
+            catch { }
+        }
+
         private void RefreshVisibility()
         {
             if (uiRoot == null)
                 return;
 
-            uiRoot.SetActive(showMenu || popupVisible);
+            RefreshUnreadBadge();
+
+            // Configura prima i figli mentre il pannello può essere ancora nascosto.
+            // Il corpo semplice resta activeSelf=true anche quando il popup è chiuso:
+            // viene nascosto dal parent e TMP non perde il proprio stato di clipping.
+            bool reportLayout = popupIsReportChat && popupReportId > 0;
+
+            SetActive(GetScrollableRoot(popupBodyText), !reportLayout);
+            SetActive(popupReportDetailsPanel, reportLayout);
+            SetActive(GetScrollableRoot(popupReportChatText), reportLayout);
+
+            SetActive(popupStatusText != null ? popupStatusText.gameObject : null, true);
+            SetActive(popupReportInputLabel != null ? popupReportInputLabel.gameObject : null, reportLayout);
+            SetActive(popupReportChatInput != null ? popupReportChatInput.gameObject : null, reportLayout);
+            SetActive(popupReportSendButton != null ? popupReportSendButton.gameObject : null, reportLayout);
+            SetActive(popupReportCloseButton != null ? popupReportCloseButton.gameObject : null, reportLayout);
+            SetActive(popupReportDeleteButton != null ? popupReportDeleteButton.gameObject : null, reportLayout);
+
+            bool showFloatingUnread = !showMenu && !popupVisible && pendingUnreadCount > 0;
+            uiRoot.SetActive(showMenu || popupVisible || showFloatingUnread);
             SetActive(inputBlocker, showMenu || popupVisible);
+            SetActive(floatingUnreadButton != null ? floatingUnreadButton.gameObject : null, showFloatingUnread);
             SetActive(mainPanel, showMenu);
             SetActive(homePanel, showMenu && currentPanel == PanelMode.Home);
             SetActive(bugPanel, showMenu && currentPanel == PanelMode.BugReport);
@@ -895,18 +1080,7 @@ namespace BanMod
             SetActive(sentReportsPanel, showMenu && currentPanel == PanelMode.SentReports);
             SetActive(popupPanel, popupVisible);
 
-            bool reportPopup = popupVisible && popupIsReportChat && popupReportId > 0;
-
-            SetActive(GetScrollableRoot(popupBodyText), popupVisible && !reportPopup);
-            SetActive(popupReportDetailsPanel, reportPopup);
-            SetActive(GetScrollableRoot(popupReportChatText), reportPopup);
-
-            SetActive(popupStatusText != null ? popupStatusText.gameObject : null, popupVisible);
-            SetActive(popupReportInputLabel != null ? popupReportInputLabel.gameObject : null, reportPopup);
-            SetActive(popupReportChatInput != null ? popupReportChatInput.gameObject : null, reportPopup);
-            SetActive(popupReportSendButton != null ? popupReportSendButton.gameObject : null, reportPopup);
-            SetActive(popupReportCloseButton != null ? popupReportCloseButton.gameObject : null, reportPopup);
-            SetActive(popupReportDeleteButton != null ? popupReportDeleteButton.gameObject : null, reportPopup);
+            bool reportPopup = popupVisible && reportLayout;
             SetInteractable(popupReportSendButton, reportPopup && popupReportIsOpen && !isSending);
             SetInteractable(popupReportCloseButton, reportPopup && popupReportIsOpen && !isSending);
             SetInteractable(popupReportDeleteButton, reportPopup && !isSending);
@@ -1146,6 +1320,7 @@ namespace BanMod
             {
                 SetText(statusText, "");
                 sentReports = reports ?? new List<BanModCommunicationManager.ReportSummary>();
+                BanModMessagePoller.RefreshUnreadReportsFromUi(sentReports);
             }
 
             int keepId = pendingSelectSentReportId;
@@ -1187,7 +1362,8 @@ namespace BanMod
                     int col = i % 2;
                     float x = col == 0 ? -200f : 200f;
                     float y = 50f - row * 48f;
-                    string label = "#" + report.Id + " " + ShortText(report.Title, 28) + " [" + report.Status + "]";
+                    string unreadPrefix = report.IsUnread ? "<color=#ff3030>●</color> " : "";
+                    string label = unreadPrefix + "#" + report.Id + " " + ShortText(report.Title, 28) + " [" + report.Status + "]";
                     CreateButton(sentReportsListPanel.transform, "SentReport_" + id, label, new Vector2(370f, 40f), new Vector2(x, y), new Color(0.18f, 0.28f, 0.42f, 1f), () => SelectSentReport(id));
                 }
             }
@@ -2321,11 +2497,15 @@ namespace BanMod
                     ? viewportRect.parent.GetComponent<ScrollRect>()
                     : null;
 
+                text.gameObject.SetActive(true);
+                text.enabled = true;
                 text.enableWordWrapping = true;
                 text.overflowMode = TextOverflowModes.Overflow;
+                text.SetLayoutDirty();
+                text.SetVerticesDirty();
 
                 Canvas.ForceUpdateCanvases();
-                text.ForceMeshUpdate();
+                text.ForceMeshUpdate(true, true);
 
                 float viewportHeight = 410f;
                 if (viewportRect != null && viewportRect.rect.height > 1f)
@@ -2357,9 +2537,17 @@ namespace BanMod
 
                 Canvas.ForceUpdateCanvases();
 
+                if (contentRect != null)
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
                 if (scroll != null)
                 {
+                    scroll.enabled = false;
+                    scroll.content = contentRect;
+                    scroll.viewport = viewportRect;
+                    scroll.enabled = true;
                     scroll.StopMovement();
+                    scroll.velocity = Vector2.zero;
                     scroll.vertical = true;
                     scroll.horizontal = false;
                     scroll.inertia = false;
@@ -2368,6 +2556,9 @@ namespace BanMod
                     scroll.verticalNormalizedPosition = scrollToTop ? 1f : 0f;
                 }
 
+                text.SetLayoutDirty();
+                text.SetVerticesDirty();
+                text.ForceMeshUpdate(true, true);
                 Canvas.ForceUpdateCanvases();
             }
             catch { }
