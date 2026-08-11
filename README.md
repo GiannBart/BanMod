@@ -17,6 +17,22 @@
 </div>
 
 > [!IMPORTANT]
+> ## Please read before using BanMod
+>
+> Before downloading, using the official BanMod build, connecting to BanMod online services, or opening an issue, please read the following:
+>
+> - [Important Information & Rules](IMPORTANT_INFO_AND_RULES.md)
+> - [Official Rules](https://banmod.online/rules)
+> - [Privacy Policy](https://banmod.online/policy/privacy)
+> - [Cookie Policy](https://banmod.online/policy/cookies)
+>
+> BanMod is optional. Use of the official servers, APIs, verification systems, and optional features is not required.
+>
+> If you do not agree with the rules or privacy conditions governing the official services, you may fork the GPL-licensed source code and use your own backend, replace the official APIs, or use no backend at all.
+>
+> Questions and criticism are welcome, but please read the documentation above before making claims or opening complaints about data processing, DLL/plugin checks, activation, modified builds, or access to the official infrastructure.
+
+> [!IMPORTANT]
 > BanMod is an unofficial community-made modification. Use it only in fair, consensual, or clearly modded lobbies. Host and testing tools must not be used to deceive other players, disrupt public games, or gain unfair advantages.
 
 ## Description
