@@ -219,6 +219,10 @@ See [LICENSE](LICENSE) for GPLv3 and [LICENSES.md](LICENSES.md) for component-le
 
 BanMod is an unofficial fan-made modification for Among Us. It is not affiliated with, endorsed by, sponsored by, or otherwise authorized by Innersloth LLC. Among Us, related names, logos, characters, and materials belong to Innersloth LLC or their respective owners.
 
+## EDIT 11.08.2026:
+## This mod is not affiliated with Among Us or Innersloth LLC, and the content contained therein is not endorsed or otherwise sponsored by Innersloth LLC. Portions of the materials contained herein are property of Innersloth LLC. © Innersloth LLC.
+
+
 The mod must retain the in-game identification stamp required by the [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/). BanMod releases must not contain the Among Us base game or unauthorized copies of game files.
 
 The software is provided **as is**, without warranties. To the maximum extent permitted by law, the authors are not responsible for bans, account restrictions, data loss, incompatibility, crashes, service interruptions, or damages caused by misuse, unsupported configurations, modified builds, or violations of third-party rules.
