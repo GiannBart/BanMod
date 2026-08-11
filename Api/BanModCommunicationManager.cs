@@ -255,6 +255,7 @@ namespace BanMod
             public string AuthorType;
             public string AuthorName;
             public string Message;
+            public bool ReadByPlayer;
             public double CreatedAt;
         }
 
@@ -273,6 +274,9 @@ namespace BanMod
             public double UpdatedAt;
             public bool DeletedByPlayer;
             public double ClosedByPlayerAt;
+            public bool IsUnread;
+            public bool UnreadKnown;
+            public int UnreadCount;
             public List<ReportChatMessage> Chat = new List<ReportChatMessage>();
         }
 
@@ -368,6 +372,47 @@ namespace BanMod
             }
 
             callback?.Invoke(ParseReports(responseText), "");
+        }
+
+        public static IEnumerator MarkReportReadCoroutine(int reportId, Action<bool, string> callback = null)
+        {
+            if (reportId <= 0)
+            {
+                callback?.Invoke(false, "Invalid report id.");
+                yield break;
+            }
+
+            bool hasToken = false;
+            yield return BanModApiTokenManager.EnsureTokenCoroutine((success, token) => { hasToken = success; });
+
+            if (!hasToken)
+            {
+                callback?.Invoke(false, "Token unavailable.");
+                yield break;
+            }
+
+            UnityWebRequest request = CreateJsonRequest(
+                BanModCommunicationConfig.ReportReadUrl(reportId),
+                "POST",
+                "{}"
+            );
+
+            yield return request.SendWebRequest();
+
+            string responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
+            bool success = request.result == UnityWebRequest.Result.Success &&
+                           request.responseCode >= 200 && request.responseCode < 300 &&
+                           ExtractJsonBool(responseText, "success", true);
+
+            if (request.responseCode == 401)
+                BanModApiTokenManager.ClearToken();
+
+            string message = success
+                ? "Read."
+                : BuildHttpResultMessage(request, responseText, "Could not mark report as read.");
+
+            request.Dispose();
+            callback?.Invoke(success, message);
         }
 
         public static IEnumerator UpdateReportCoroutine(int reportId, string title, string message, Action<bool, string> callback)
@@ -688,6 +733,10 @@ namespace BanMod
                     report.UpdatedAt = ExtractJsonDouble(obj, "updated_at", 0);
                     report.DeletedByPlayer = ExtractJsonBool(obj, "deleted_by_player", false);
                     report.ClosedByPlayerAt = ExtractJsonDouble(obj, "closed_by_player_at", 0);
+                    report.UnreadKnown = obj.IndexOf("\"is_unread\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                         obj.IndexOf("\"unread\"", StringComparison.OrdinalIgnoreCase) >= 0;
+                    report.IsUnread = ExtractJsonBool(obj, "is_unread", ExtractJsonBool(obj, "unread", false));
+                    report.UnreadCount = ExtractJsonInt(obj, "unread_count", report.IsUnread ? 1 : 0);
                     report.Chat = ParseReportChatMessages(obj);
 
                     if (report.Chat == null || report.Chat.Count <= 0)
@@ -758,6 +807,7 @@ namespace BanMod
                     message.AuthorType = BanModApiTokenManager.ExtractJsonString(obj, "author_type", "player");
                     message.AuthorName = BanModApiTokenManager.ExtractJsonString(obj, "author_name", "");
                     message.Message = BanModApiTokenManager.ExtractJsonString(obj, "message", "");
+                    message.ReadByPlayer = ExtractJsonBool(obj, "read_by_player", false);
                     message.CreatedAt = ExtractJsonDouble(obj, "created_at", 0);
 
                     if (!string.IsNullOrWhiteSpace(message.Message))
