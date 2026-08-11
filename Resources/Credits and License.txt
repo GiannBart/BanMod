@@ -1,0 +1,36 @@
+                                         ----------------------------------------
+                                         ------------IMPORTANT NOTICE------------
+                                         ----------------------------------------
+
+This Mod may contain code derived from other mods and their respective contributors, licensed under the GNU GPL v3.0.
+Many parts of the code were created by drawing inspiration from the aforementioned mods, rewriting and implementing new functions to fit the goals of this project.
+
+CREDITS:
+- Town of Host (https://github.com/tukasa0001/TownOfHost)
+- TownofHost-Enhanced (https://github.com/EnhancedNetwork/TownofHost-Enhanced)
+- EndlessHostRoles (https://github.com/Gurge44/EndlessHostRoles)
+- AmongUsRevamped (https://github.com/ApeMV/AmongUsRevamped)
+- MalumMenu (https://github.com/scp222thj/MalumMenu)
+- TheotherRoles (https://github.com/TheOtherRolesAU/TheOtherRoles)
+- BetterAmongUs (https://github.com/D1GQ/BetterAmongUs-Public)
+
+Since this mod was developed through reverse engineering (extracting, modifying, and patching code from the game's original DLL file),
+the logical structure of certain functions is constrained by the base architecture of Among Us. For this reason,
+some code segments may appear similar to those of other mods not explicitly mentioned, even though they were independently developed or adapted.
+
+                                         ----------------------------------------
+                                         --------LICENSE GNU GPL v3.0------------
+                                         ----------------------------------------
+
+This project is distributed under the GNU GPL v3.0.
+In compliance with the license, the source code is available for review and modification.
+All original copyrights belong to their respective owners.
+Use of this mod implies acceptance of the GPL v3.0 terms, ensuring that derivative works also remain free and open source.
+
+                                         ----------------------------------------
+                                         --------------MIT LICENSE---------------
+                                         ----------------------------------------
+
+This Mod includes code from:
+Copyright(c) 2018 Mark Heath, Andrew Ward & Contributors
+Licensed under the MIT License (Nlayer fold for MusicPlayer)

@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<DebugType>none</DebugType>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Il2CppInteropVerbose>true</Il2CppInteropVerbose>
+		<Optimize>True</Optimize>
+		<VersionPrefix>3.7.0</VersionPrefix>
+		<Description>Ban automatico</Description>
+		<Authors>Gianni</Authors>
+		<AssemblyName>BanMod</AssemblyName>
+		<GeneratedSecretFile>$(MSBuildProjectDirectory)\Generated\BanModBuildSecret.g.cs</GeneratedSecretFile>
+
+	</PropertyGroup>
+
+
+	<PropertyGroup>
+		<BuildId>$([System.Guid]::NewGuid().ToString('N'))</BuildId>
+	</PropertyGroup>
+
+	<UsingTask TaskName="GenerateBanModBuildSecretTask" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<BuildId ParameterType="System.String" Required="true" />
+			<OutputFile ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System.IO" />
+			<Using Namespace="System.Text" />
+			<Code Type="Fragment" Language="cs"><![CDATA[
+                Directory.CreateDirectory(Path.GetDirectoryName(OutputFile));
+                string code =
+@"// Auto-generated. Do not edit.
+namespace BanMod
+{
+    internal static class BanModBuildSecret
+    {
+        // BuildId is a release identifier, not a secret. Device Auth provides
+        // the actual per-installation proof starting with BanMod 3.6.9.
+        public const string BuildId = """ + BuildId.Replace("\"", "\"\"") + @""";
+    }
+}
+";
+                File.WriteAllText(OutputFile, code, new UTF8Encoding(false));
+            ]]></Code>
+		</Task>
+	</UsingTask>
+
+	<Target Name="GenerateBanModBuildSecret" BeforeTargets="BeforeCompile">
+		<MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
+		<GenerateBanModBuildSecretTask BuildId="$(BuildId)" OutputFile="$(GeneratedSecretFile)" />
+		<WriteLinesToFile File="$(MSBuildProjectDirectory)\Generated\BanModBuildId.txt" Lines="$(BuildId)" Overwrite="true" Encoding="UTF-8" />
+		<Message Importance="high" Text="BanMod 3.6.9 BuildId=$(BuildId). No universal activation secret is embedded." />
+	</Target>
+
+	<ItemGroup>
+		<EmbeddedResource Include=".\Resources\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AmongUs.GameLibs.Steam" Version="2026.6.5" />
+		<PackageReference Include="BepInEx.IL2CPP.MSBuild" Version="2.1.0-rc.1" PrivateAssets="all" ExcludeAssets="runtime" />
+		<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.735" ExcludeAssets="runtime;native" />
+	</ItemGroup>
+
+	<Target Name="Copy" AfterTargets="Build">
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\Among Us\BepInEx\plugins" UseSymboliclinksIfPossible="true" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sepe2\Desktop" UseSymboliclinksIfPossible="true" />
+	</Target>
+
+	<PropertyGroup>
+		<Il2CppAssemblyName>Assembly-CSharp</Il2CppAssemblyName>
+		<Il2CppGameAssemblyPath>C:\Program Files (x86)\Steam\steamapps\common\Among Us\GameAssembly.dll</Il2CppGameAssemblyPath>
+		<Il2CppMetadataPath>C:\Program Files (x86)\Steam\steamapps\common\Among Us\Among Us_Data\il2cpp_data\Metadata\global-metadata.dat</Il2CppMetadataPath>
+	</PropertyGroup>
+	<ProjectExtensions>
+		<VisualStudio>
+			<UserProperties />
+		</VisualStudio>
+	</ProjectExtensions>
+</Project>
