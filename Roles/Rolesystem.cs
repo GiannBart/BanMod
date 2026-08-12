@@ -55,7 +55,6 @@ namespace BanMod
         private static string _selfRoleAuthorizationId = "";
         private static byte _authorizedSelfRolePlayerId = byte.MaxValue;
         private static RoleTypes _authorizedSelfRole = default;
-        private static bool _authorizedSelfRolePremium = false;
         private static bool _selfRoleCommitStarted = false;
 
         // Stato dell'ultimo controllo server. Serve soltanto a validare SetRole.
@@ -83,7 +82,6 @@ namespace BanMod
             _selfRoleAuthorizationId = "";
             _authorizedSelfRolePlayerId = byte.MaxValue;
             _authorizedSelfRole = default;
-            _authorizedSelfRolePremium = false;
 
             if (clearAttemptId)
                 _selfRoleAttemptId = "";
@@ -113,9 +111,6 @@ namespace BanMod
 
             public bool committed { get; set; }
 
-            // Proprietà locale: non viene letta né scritta nel JSON del server.
-            // true significa timeout, errore di connessione, HTTP 5xx, risposta vuota
-            // o JSON non valido. Un JSON valido con allowed=false è invece un diniego.
             [JsonIgnore]
             public bool no_response { get; set; }
         }
@@ -424,7 +419,6 @@ namespace BanMod
                 _selfRoleAuthorizationId = authorizationId;
                 _authorizedSelfRolePlayerId = playerId;
                 _authorizedSelfRole = role;
-                _authorizedSelfRolePremium = decision.premium;
 
                 ForcedRoles[playerId] = role;
 
@@ -986,12 +980,6 @@ namespace BanMod
                     " | role=" + requestedRole
                 );
 
-                if (_authorizedSelfRolePremium)
-                {
-                    _selfRoleCommitSucceeded = true;
-                    ForcedRoleLog("SetRole permanente: nessun utilizzo da incrementare");
-                    return;
-                }
 
                 bool authorizationMatches =
                     _authorizedSelfRolePlayerId == local.PlayerId &&

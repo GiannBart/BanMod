@@ -531,7 +531,7 @@ namespace BanMod
             DisableDeviceAdminPanel = BooleanOptionItem.Create("DisableDeviceAdminPanel", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             DisableDeviceVitals = BooleanOptionItem.Create("DisableDeviceVitals", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             EnableGameTimer = (BooleanOptionItem)BooleanOptionItem.Create("EnableGameTimer", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
-            GameTimerMinutes = (IntegerOptionItem)IntegerOptionItem.Create("GameTimerMinutes", new(5, 60, 5), 30, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
+            GameTimerMinutes = (IntegerOptionItem)IntegerOptionItem.Create("GameTimerMinutes", new(5, 60, 1), 30, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
             GameTimerMessage = BooleanOptionItem.Create("GameTimerMessage", false, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
 
             // MEETINGS
