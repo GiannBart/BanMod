@@ -2315,20 +2315,12 @@ namespace BanMod
         {
             try
             {
-                object gameId = ReadInstanceObject(AmongUsClient.Instance, "GameId");
-                if (gameId == null)
+                AmongUsClient client = AmongUsClient.Instance;
+
+                if (client == null || client.GameId == 0)
                     return "";
 
-                Type t = FindType("GameCode");
-                MethodInfo m = t != null ? t.GetMethod("IntToGameName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static) : null;
-
-                if (m != null)
-                {
-                    object value = m.Invoke(null, new object[] { gameId });
-                    return value as string ?? value?.ToString() ?? "";
-                }
-
-                return gameId.ToString();
+                return GameCode.IntToGameName(client.GameId) ?? "";
             }
             catch
             {
