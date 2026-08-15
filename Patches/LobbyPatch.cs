@@ -50,7 +50,7 @@ public class LobbyStartPatch
             yield break;
 
         string report1 = "";
-        if (Options.SendSummary.GetBool() )
+        if (Options.SendSummary.GetBool())
         {
             report1 = MatchSummary1.GetLastSavedReport();
 
@@ -67,6 +67,7 @@ public class LobbyStartPatch
 public static class LobbyStairsColliderFix
 {
     private static GameObject CustomColliderRoot;
+    private static int AppliedLobbyInstanceId = int.MinValue;
 
     public static IEnumerator ApplyDelayed(LobbyBehaviour lobby)
     {
@@ -81,12 +82,19 @@ public static class LobbyStairsColliderFix
     {
         if (lobby == null)
             return;
-        if (BanMod.AktiveLobby.Value)
-        {
-            DisableOriginalMainCollider(lobby);
-        
-            CreateCustomColliders(lobby);
-        }
+        if (!BanMod.AktiveLobby.Value)
+            return;
+
+        int lobbyInstanceId = lobby.GetInstanceID();
+        if (AppliedLobbyInstanceId == lobbyInstanceId && CustomColliderRoot != null)
+            return;
+
+        if (AppliedLobbyInstanceId != lobbyInstanceId)
+            CustomColliderRoot = null;
+
+        DisableOriginalMainCollider(lobby);
+        CreateCustomColliders(lobby);
+        AppliedLobbyInstanceId = lobbyInstanceId;
     }
 
     private static void DisableOriginalMainCollider(LobbyBehaviour lobby)
@@ -189,6 +197,7 @@ public static class LobbyStairsColliderFix
 public static class LobbyRendererReplacer
 {
     private const string ResourcePrefix = "BanMod.Resources.image.";
+    private static readonly Dictionary<string, Sprite> LobbySpriteCache = new();
 
     private static bool UseCustomBackground => true;
     private static bool ShowBackground => true;
@@ -442,6 +451,16 @@ public static class LobbyRendererReplacer
     {
         try
         {
+            string cacheKey = resourcePath + "|" +
+                              originalSprite.pixelsPerUnit + "|" +
+                              originalSprite.pivot.x + "|" +
+                              originalSprite.pivot.y + "|" +
+                              originalSprite.rect.width + "|" +
+                              originalSprite.rect.height;
+
+            if (LobbySpriteCache.TryGetValue(cacheKey, out Sprite cachedSprite) && cachedSprite != null)
+                return cachedSprite;
+
             Assembly assembly = Assembly.GetExecutingAssembly();
 
             using Stream stream = assembly.GetManifestResourceStream(resourcePath);
@@ -476,6 +495,7 @@ public static class LobbyRendererReplacer
             );
 
             sprite.name = originalSprite.name + "_BANMOD";
+            LobbySpriteCache[cacheKey] = sprite;
 
             return sprite;
         }
@@ -506,21 +526,26 @@ public static class LobbyRendererReplacer
 [HarmonyPatch(typeof(LobbyBehaviour))]
 public class LobbyBehaviourPatch
 {
+    private static int MusicStoppedLobbyInstanceId = int.MinValue;
+
     [HarmonyPatch(nameof(LobbyBehaviour.Update)), HarmonyPostfix]
     public static void Update_Postfix(LobbyBehaviour __instance)
     {
-        LobbyStairsColliderFix.Apply(__instance);
+        if (!BanMod.DisableLobbyMusic.Value || __instance == null)
+            return;
+
+        int lobbyInstanceId = __instance.GetInstanceID();
+        if (MusicStoppedLobbyInstanceId == lobbyInstanceId)
+            return;
 
         System.Func<ISoundPlayer, bool> lobbybgm = x => x.Name.Equals("MapTheme");
-        ISoundPlayer MapThemeSound = SoundManager.Instance.soundPlayers.Find(lobbybgm);
+        ISoundPlayer mapThemeSound = SoundManager.Instance.soundPlayers.Find(lobbybgm);
 
-        if (BanMod.DisableLobbyMusic.Value)
-        {
-            if (MapThemeSound == null)
-                return;
+        if (mapThemeSound == null)
+            return;
 
-            SoundManager.Instance.StopNamedSound("MapTheme");
-        }
+        SoundManager.Instance.StopNamedSound("MapTheme");
+        MusicStoppedLobbyInstanceId = lobbyInstanceId;
     }
 }
 
@@ -538,11 +563,6 @@ public static class LobbyBehaviour_Update_Patch
 
     public static void Postfix()
     {
-        if (LobbyBehaviour.Instance != null)
-        {
-            LobbyStairsColliderFix.Apply(LobbyBehaviour.Instance);
-        }
-
         if (AmongUsClient.Instance == null)
             return;
 

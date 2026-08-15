@@ -166,7 +166,7 @@ public static class CombinedReportDeadBodyPatch
         if (__instance.Data?.Role?.TeamType == RoleTeamTypes.Impostor && gameMode == GameModeType.JBMode)
             return false;
 
-        if (gameMode == GameModeType.SnS || gameMode == GameModeType.FollowOrDeath || gameMode == GameModeType.StopOrDeath || gameMode == GameModeType.RunOrDeath) return false;
+        if (gameMode == GameModeType.SnS) return false;
 
         try
         {

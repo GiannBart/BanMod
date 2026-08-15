@@ -1,7 +1,6 @@
 ﻿//credits and licenses in the resources folder
 using AmongUs.GameOptions;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using static BanMod.Translator;
 using static BanMod.Utils;
@@ -11,7 +10,20 @@ namespace BanMod
     public static class CamTaskDetector
     {
         public static readonly Dictionary<byte, DataTask> PlayerDataTask = new();
-        private static readonly Dictionary<byte, int> lastTimerUpdateFrame = new();
+        private static readonly List<byte> removalBuffer = new();
+        private static readonly List<PlayerControl> playersInRoomBuffer = new();
+        private static float lastProcessedFixedTime = float.MinValue;
+
+        public static void ResetAll()
+        {
+            foreach (byte playerId in PlayerDataTask.Keys)
+                PlayerWarningMessenger.ClearForPlayer(playerId, "cam_task");
+
+            PlayerDataTask.Clear();
+            removalBuffer.Clear();
+            playersInRoomBuffer.Clear();
+            lastProcessedFixedTime = float.MinValue;
+        }
         private static readonly Dictionary<MapNames, List<RoomZoneTask>> RoomZonesTaskByMap = new()
         {
             { MapNames.Skeld, new List<RoomZoneTask> { new RoomZoneTask("Security", new List<Vector2> { new Vector2(-12.0f,-1.80f), new Vector2(-12.0f,-7.40f), new Vector2(-15.0f,-7.40f), new Vector2(-15.0f,-1.80f) }) } },
@@ -50,38 +62,92 @@ namespace BanMod
             if (!Options.EnableCamTaskDetector.GetBool() || !GameStates.IsInGameplay || pc == null || pc.Data == null) return;
             if (pc.Data.IsDead || pc.inVent) return;
 
+            // The method is reached from PlayerControl.FixedUpdate for every
+            // player, but its body already processes the whole player list.
+            if (Mathf.Approximately(lastProcessedFixedTime, Time.fixedTime)) return;
+            lastProcessedFixedTime = Time.fixedTime;
+
             MapNames currentMap = GetCurrentMap();
             if (!RoomZonesTaskByMap.TryGetValue(currentMap, out var rooms)) rooms = RoomZonesTaskByMap[MapNames.Skeld];
             var targetRoom = rooms.Find(r => r.RoomName == "Security");
             if (targetRoom == null) return;
 
-            int currentFrame = Time.frameCount;
-            foreach (var kvp in PlayerDataTask.ToList())
-            {
-                if (!lastTimerUpdateFrame.TryGetValue(kvp.Key, out int lastFrame) || lastFrame != currentFrame)
-                {
-                    kvp.Value.Timer -= Time.fixedDeltaTime;
-                    lastTimerUpdateFrame[kvp.Key] = currentFrame;
-                }
-            }
+            var alivePlayers = BanMod.AllAlivePlayerControls;
 
-            foreach (var kvp in PlayerDataTask.ToList())
+            removalBuffer.Clear();
+            foreach (var kvp in PlayerDataTask)
             {
-                var trackedPlayer = BanMod.AllAlivePlayerControls.FirstOrDefault(p => p.PlayerId == kvp.Key);
-                if (trackedPlayer == null || trackedPlayer.inVent || trackedPlayer.Data.IsDead) continue;
+                kvp.Value.Timer -= Time.fixedDeltaTime;
+
+                PlayerControl trackedPlayer = null;
+                foreach (var candidate in alivePlayers)
+                {
+                    if (candidate != null && candidate.PlayerId == kvp.Key)
+                    {
+                        trackedPlayer = candidate;
+                        break;
+                    }
+                }
+
+                if (trackedPlayer == null ||
+                    trackedPlayer.Data == null ||
+                    trackedPlayer.inVent ||
+                    trackedPlayer.Data.IsDead)
+                {
+                    continue;
+                }
+
                 if (!targetRoom.Contains(trackedPlayer.Pos()))
+                    removalBuffer.Add(kvp.Key);
+            }
+
+            for (int i = 0; i < removalBuffer.Count; i++)
+            {
+                byte playerId = removalBuffer[i];
+                PlayerDataTask.Remove(playerId);
+                PlayerWarningMessenger.ClearForPlayer(playerId, "cam_task");
+            }
+
+            playersInRoomBuffer.Clear();
+            foreach (var player in alivePlayers)
+            {
+                if (player != null &&
+                    player.Data != null &&
+                    !player.inVent &&
+                    targetRoom.Contains(player.Pos()))
                 {
-                    PlayerDataTask.Remove(kvp.Key);
-                    PlayerWarningMessenger.ClearForPlayer(kvp.Key, "cam_task");
+                    playersInRoomBuffer.Add(player);
                 }
             }
 
-            List<PlayerControl> playersInRoom = BanMod.AllAlivePlayerControls.Where(p => p != null && p.Data != null && !p.inVent && targetRoom.Contains(p.Pos())).ToList();
             int requiredTasksCrew = Options.MinTasksToUseCamCrew.GetInt();
             int requiredTasksImp = Options.MinTasksToUseCamImp.GetInt();
 
-            foreach (var player in playersInRoom)
+            bool allCrewmatesCompleted = true;
+            foreach (var crewmate in alivePlayers)
             {
+                if (crewmate == null ||
+                    crewmate.Data == null ||
+                    crewmate.Data.Role == null ||
+                    crewmate.Data.Role.TeamType != RoleTeamTypes.Crewmate ||
+                    crewmate.Data.IsDead ||
+                    crewmate.inVent)
+                {
+                    continue;
+                }
+
+                if (crewmate.Data.Tasks == null ||
+                    CountCompletedTasks(crewmate.Data.Tasks) < requiredTasksImp)
+                {
+                    allCrewmatesCompleted = false;
+                    break;
+                }
+            }
+
+            foreach (var player in playersInRoomBuffer)
+            {
+                if (player.Data.Role == null) continue;
+
                 bool isImpostor = player.Data.Role.TeamType == RoleTeamTypes.Impostor;
                 bool isCrewmate = player.Data.Role.TeamType == RoleTeamTypes.Crewmate;
 
@@ -94,8 +160,6 @@ namespace BanMod
                 else if (isImpostor)
                 {
                     int impostorCondition = Options.ImpostorCamCondition.GetValue();
-                    var aliveCrewmates = BanMod.AllAlivePlayerControls.Where(p => p.Data.Role.TeamType == RoleTeamTypes.Crewmate && !p.Data.IsDead && !p.inVent).ToList();
-                    bool allCrewmatesCompleted = aliveCrewmates.All(cm => CountCompletedTasks(cm.Data.Tasks) >= requiredTasksImp);
                     int kills = KillTracker.GetKills(player.PlayerId);
                     int requiredKills = Options.MinKillsToUseCamImp.GetInt();
                     bool allowAccess = impostorCondition switch

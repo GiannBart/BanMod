@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.7.1";
+    public static string modVersion = "3.7.3";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.7.1";
+    public const string PluginVersion = "3.7.3";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.6.5" };
@@ -501,6 +501,7 @@ public partial class BanMod : BasePlugin
             HostSelfSetTimes = new List<DateTime>(); 
         }
     }
+    public static ConfigEntry<bool> EnableLog { get; private set; }
     public static ConfigEntry<bool> ShowFPS { get; private set; }
     public static ConfigEntry<bool> GM { get; private set; }
     public static ConfigEntry<bool> DarkTheme { get; private set; }
@@ -581,6 +582,7 @@ public partial class BanMod : BasePlugin
         BMLogger.Init(PluginLogger);
         try { BanModCore.Init(Log); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.Init failed: " + ex.Message); } catch { } }
 
+        EnableLog = Config.Bind("Client Options", "EnableLog", true);
         ShowFPS = Config.Bind("Client Options", "ShowFPS", false);
         GM = Config.Bind("Client Options", "GM", false);
         DarkTheme = Config.Bind("Client Options", "DarkTheme", false);
@@ -624,9 +626,6 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<BanModUpdateHandler>();
         ClassInjector.RegisterTypeInIl2Cpp<MainMenuManagerPatch.PullingWorker>();
         ClassInjector.RegisterTypeInIl2Cpp<AnimatedSprite>(); 
-        ClassInjector.RegisterTypeInIl2Cpp<RunManager>();
-        ClassInjector.RegisterTypeInIl2Cpp<StopandGoManager>(); 
-        ClassInjector.RegisterTypeInIl2Cpp<NoisemakerRunManager>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModGUI>();
         ClassInjector.RegisterTypeInIl2Cpp<PremiumChatUI>();
         ClassInjector.RegisterTypeInIl2Cpp<PreviousMatchSummaryUi>();
@@ -678,9 +677,6 @@ public partial class BanMod : BasePlugin
         AddTrackedComponent<PlayerPositionUpdater>();
         AddTrackedComponent<PlayerMouseController>();
         AddTrackedComponent<BanModUpdateHandler>();
-        AddTrackedComponent<RunManager>();
-        AddTrackedComponent<StopandGoManager>();
-        AddTrackedComponent<NoisemakerRunManager>();
         AddTrackedComponent<BanModGUI>();
         AddTrackedComponent<PremiumChatUI>();
         AddTrackedComponent<PreviousMatchSummaryUi>();
@@ -700,7 +696,6 @@ public partial class BanMod : BasePlugin
         LoadHostSetTimes();
         FixedUpdateUnifiedPatch.LoadCustomNames();
         CustomHatManager.InitEmbeddedHats();
-        AddComponent<CustomHatSceneRenderer>();
         Harmony.PatchAll();
         try { BanModCore.RequestStartup(); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.RequestStartup failed: " + ex.Message); } catch { } }
         try { AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { BanModLoginRuntime.Shutdown(); } catch { } try { BanModCore.StopAllPremiumModules(); } catch { } }; } catch { }
@@ -726,7 +721,7 @@ public partial class BanMod : BasePlugin
         {
             if (BanMod.IsBanModDisabled)
                 return;
-
+            bool modOptionsOpen = GameSettingMenuPatch.SettingsTab != null && GameSettingMenuPatch.SettingsTab.gameObject != null && GameSettingMenuPatch.SettingsTab.gameObject.activeInHierarchy;
             try
             {
                 if (GameStates.isLobby && (GameModeType)Options.GameMode.GetValue() != GameModeType.BanMod)
@@ -736,7 +731,7 @@ public partial class BanMod : BasePlugin
                         BanMod.DisableAllRoles();
                     }
                 }
-                if (Options.GameMode.GetInt() == 6 && !FfaExternalBridge.IsAvailable())
+                if (modOptionsOpen && GameStates.isLobby && Options.GameMode != null && Options.GameMode.GetInt() == 6 && !FfaExternalBridge.IsAvailable())
                 {
                     Options.GameMode.SetValue(0);
                     Options.ReOpenSettings();
@@ -851,6 +846,7 @@ public partial class BanMod : BasePlugin
 // - MalumMenu (https://github.com/scp222thj/MalumMenu)
 // - TheotherRoles (https://github.com/TheOtherRolesAU/TheOtherRoles)
 // - BetterAmongUs (https://github.com/D1GQ/BetterAmongUs-Public)
+// - GameLogger (https://github.com/whichtwix/GameLogger)
 //
 // Since this mod was developed through reverse engineering (extracting, modifying, and patching code from the game's original DLL file),
 // the logical structure of certain functions is constrained by the base architecture of Among Us. For this reason,

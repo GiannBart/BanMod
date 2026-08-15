@@ -10,11 +10,53 @@ using static BanMod.Utils;
 
 namespace BanMod
 {
+    internal static class DetectorPlayerExclusions
+    {
+        private static readonly bool[] Evaluated = new bool[byte.MaxValue + 1];
+        private static readonly bool[] Excluded = new bool[byte.MaxValue + 1];
+
+        public static bool ShouldIgnore(PlayerControl pc)
+        {
+            if (pc == null || pc.Data == null)
+                return false;
+
+            if (PlayerControl.LocalPlayer != null && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
+                return true;
+
+            byte playerId = pc.PlayerId;
+            if (Evaluated[playerId])
+                return Excluded[playerId];
+
+            string friendCode = pc.Data.FriendCode ?? string.Empty;
+            bool excluded = Utils.IsModerator(friendCode) || Utils.IsVip(friendCode);
+            Evaluated[playerId] = true;
+            Excluded[playerId] = excluded;
+            return excluded;
+        }
+
+        public static void Reset()
+        {
+            Array.Clear(Evaluated, 0, Evaluated.Length);
+            Array.Clear(Excluded, 0, Excluded.Length);
+        }
+    }
+
     public static class AFKDetector
     {
         private static bool wasInMeeting = false;
         public static readonly Dictionary<byte, DataAFK> PlayerDataAFK = new();
         public static bool IsPlayerAfk;
+
+        public static void ResetAll()
+        {
+            foreach (byte playerId in PlayerDataAFK.Keys)
+                PlayerWarningMessenger.ClearForPlayer(playerId, "AFK");
+
+            PlayerDataAFK.Clear();
+            wasInMeeting = false;
+            IsPlayerAfk = false;
+            DetectorPlayerExclusions.Reset();
+        }
 
         private static readonly Dictionary<MapNames, List<RoomZone1>> RoomZonesByMap = new()
         {
@@ -28,6 +70,7 @@ namespace BanMod
         {
             if (!AmongUsClient.Instance.AmHost) return;
             if (!Options.EnableDetector.GetBool() || !GameStates.IsInGameplay || pc == null || pc.Data == null) return;
+            if (DetectorPlayerExclusions.ShouldIgnore(pc)) return;
 
             PlayerDataAFK[pc.PlayerId] = new DataAFK
             {
@@ -45,7 +88,13 @@ namespace BanMod
             if (!AmongUsClient.Instance.AmHost) return;
             if (!Options.EnableDetector.GetBool() || !GameStates.IsInGameplay || pc == null || pc.Data == null) return;
 
-            DeviceUsageTracker.UpdateUsage();
+            if (DetectorPlayerExclusions.ShouldIgnore(pc))
+            {
+                if (PlayerDataAFK.Remove(pc.PlayerId))
+                    PlayerWarningMessenger.ClearForPlayer(pc.PlayerId, "AFK");
+                return;
+            }
+
             if (DeviceUsageTracker.IsUsingAnyDevice(pc.PlayerId)) return;
             if (pc.Data.IsDead) return;
 
@@ -128,16 +177,6 @@ namespace BanMod
                             pc.Data.MarkDirty();
                         }
 
-                        bool isVip = Utils.IsVip(pc.FriendCode);
-                        bool isHostPlayer = pc.PlayerId == PlayerControl.LocalPlayer.PlayerId;
-
-                        if (isVip || isHostPlayer)
-                        {
-                            PlayerDataAFK.Remove(pc.PlayerId);
-                            PlayerWarningMessenger.ClearForPlayer(pc.PlayerId, "AFK");
-                            return;
-                        }
-
                         if (Options.EnableAfkKick.GetBool())
                         {
                             AmongUsClient.Instance.KickPlayer(pc.GetClientId(), false);
@@ -173,6 +212,7 @@ namespace BanMod
             foreach (var player in BanMod.AllAlivePlayerControls)
             {
                 if (player == null || player.Data == null) continue;
+                if (DetectorPlayerExclusions.ShouldIgnore(player)) continue;
                 if (!PlayerDataAFK.ContainsKey(player.PlayerId)) RecordPosition(player);
             }
         }
@@ -215,14 +255,3 @@ public class RoomZone1
     }
 }
 
-[HarmonyPatch(typeof(HudManager), nameof(HudManager.OnGameStart))]
-public static class HudManagerOnGameStartPatch
-{
-    public static void Postfix()
-    {
-        if (BanMod.BanMod.IsBanModDisabled) return;
-        if (!AmongUsClient.Instance.AmHost) return;
-        PlayerWarningMessenger.ResetAll();
-        AFKDetector.EnsureTrackedPlayers();
-    }
-}

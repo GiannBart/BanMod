@@ -9,7 +9,14 @@ namespace BanMod.Modules.CustomHats
 {
     public class CustomHatSceneRenderer : MonoBehaviour
     {
-        private float timer;
+        private const float SyncIntervalSeconds = 0.20f;
+        private const float SafetyRefreshIntervalSeconds = 1.00f;
+        private const float UiRefreshIntervalSeconds = 1.00f;
+
+        private float syncTimer;
+        private float safetyRefreshTimer = SafetyRefreshIntervalSeconds;
+        private float uiRefreshTimer = UiRefreshIntervalSeconds;
+        private int lastStateVersion = int.MinValue;
 
         private readonly Dictionary<int, string> appliedParentHatIds = new Dictionary<int, string>();
         private readonly Dictionary<int, int> appliedParentColors = new Dictionary<int, int>();
@@ -22,18 +29,34 @@ namespace BanMod.Modules.CustomHats
         {
             try
             {
-                timer += Time.deltaTime;
+                syncTimer += Time.deltaTime;
+                safetyRefreshTimer += Time.deltaTime;
+                uiRefreshTimer += Time.deltaTime;
 
-                if (timer < 0.10f)
+                if (syncTimer < SyncIntervalSeconds)
                     return;
 
-                timer = 0f;
+                syncTimer = 0f;
 
                 CustomHatSync.UpdateLocalFromCustomization();
-                CustomHatSync.RefreshKnownPlayers();
-                ApplyToAllPlayersIfNeeded();
-                ApplyToInventoryTabPreviewIfNeeded();
-                ApplyToEndGameScreensIfNeeded();
+
+                bool stateChanged = lastStateVersion != CustomHatSync.StateVersion;
+                bool safetyRefresh = safetyRefreshTimer >= SafetyRefreshIntervalSeconds;
+
+                if (stateChanged || safetyRefresh)
+                {
+                    safetyRefreshTimer = 0f;
+                    CustomHatSync.RefreshKnownPlayers();
+                    ApplyToAllPlayersIfNeeded();
+                    lastStateVersion = CustomHatSync.StateVersion;
+                }
+
+                if (stateChanged || uiRefreshTimer >= UiRefreshIntervalSeconds)
+                {
+                    uiRefreshTimer = 0f;
+                    ApplyToInventoryTabPreviewIfNeeded();
+                    ApplyToEndGameScreensIfNeeded();
+                }
             }
             catch
             {
@@ -93,11 +116,6 @@ namespace BanMod.Modules.CustomHats
 
                 if (!NeedsApply(parent, hatId, color))
                     continue;
-
-                viewData = CustomHatManager.GetAdaptiveViewData(
-    hat.ProdId,
-    viewData,
-    color);
 
                 HatParentPatches.ForceCustomRender(
                     parent,
@@ -189,10 +207,7 @@ namespace BanMod.Modules.CustomHats
                     if (!NeedsApply(parent, hatId, color))
                         continue;
 
-                    HatViewData coloredView = CustomHatManager.GetViewDataForColor(hat.ProdId, viewData, color);
-                    coloredView = CustomHatManager.GetAdaptiveViewData(hat.ProdId, coloredView, color);
-
-                    HatParentPatches.ForceCustomRender(parent, hat, coloredView, color);
+                    HatParentPatches.ForceCustomRender(parent, hat, viewData, color);
                     appliedParentHatIds[parent.GetInstanceID()] = hatId;
                     appliedParentColors[parent.GetInstanceID()] = color;
                 }
@@ -204,11 +219,11 @@ namespace BanMod.Modules.CustomHats
         {
             try
             {
-                EndGameManager[] managers = UnityEngine.Object.FindObjectsOfType<EndGameManager>(true);
-                if (managers == null || managers.Length == 0)
+                if (EndGameResult.CachedWinners == null)
                     return;
 
-                if (EndGameResult.CachedWinners == null)
+                EndGameManager[] managers = UnityEngine.Object.FindObjectsOfType<EndGameManager>(true);
+                if (managers == null || managers.Length == 0)
                     return;
 
                 List<object> winners = new List<object>();
@@ -266,10 +281,6 @@ namespace BanMod.Modules.CustomHats
                     PoolablePlayerPatches.ClearAllHatParents(poolable);
                     return;
                 }
-                viewData = CustomHatManager.GetAdaptiveViewData(
-    hat.ProdId,
-    viewData,
-    colorId);
                 PoolablePlayerPatches.ApplyToAllHatParents(poolable, hat, viewData, colorId);
             }
             catch (Exception ex)

@@ -13,6 +13,7 @@ CREDITS:
 - MalumMenu (https://github.com/scp222thj/MalumMenu)
 - TheotherRoles (https://github.com/TheOtherRolesAU/TheOtherRoles)
 - BetterAmongUs (https://github.com/D1GQ/BetterAmongUs-Public)
+- GameLogger (https://github.com/whichtwix/GameLogger)
 - NLayer components and contributors, under the MIT License where indicated
 
 Since this mod was developed through reverse engineering (extracting, modifying, and patching code from the game's original DLL file),

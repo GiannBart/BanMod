@@ -25,7 +25,7 @@ namespace BanMod
 
             zones.Add(new SpawnZone(
                 MapNames.MiraHQ,
-                new Vector2(22.35f, 0.37f), 
+                new Vector2(22.35f, 0.37f),
                 new Vector2(28.09f, 4.60f)
             ));
 

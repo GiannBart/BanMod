@@ -106,6 +106,10 @@ public static class FfaExternalBridge
                 FfaAssembly.GetType(
                     "FFA.FfaVentOptions",
                     false
+                ) ??
+                FfaAssembly.GetType(
+                    "FFA.FfaVentLimitPatch+FfaVentOptions",
+                    false
                 );
 
             Type ventBootOptionsType =

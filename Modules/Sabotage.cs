@@ -162,12 +162,7 @@ public static class ShipStatus_FixedUpdate_Patch
             return true;
         if (__instance == null)
             return true;
-        if (gameMode == GameModeType.FollowOrDeath ||
-            gameMode == GameModeType.RunOrDeath)
-        {
-            FixAllSabotages(__instance);
-            return true;
-        }
+
         if (gameMode == GameModeType.SnS)
         {
             FixSabotage(__instance, SystemTypes.Reactor);

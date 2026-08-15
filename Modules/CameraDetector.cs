@@ -1,7 +1,6 @@
 ﻿//credits and licenses in the resources folder
 using HarmonyLib;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using static BanMod.Translator;
 using static BanMod.Utils;
@@ -11,6 +10,21 @@ namespace BanMod
     public static class CamDetector
     {
         public static readonly Dictionary<byte, DataCam> PlayerDataCam = new();
+        private static readonly List<PlayerControl> playersInRoomBuffer = new();
+        private static float cachedFixedTime = float.MinValue;
+        private static int cachedMaxAllowedInCam;
+
+        public static void ResetAll()
+        {
+            foreach (byte playerId in PlayerDataCam.Keys)
+                PlayerWarningMessenger.ClearForPlayer(playerId, "cam_crowd");
+
+            PlayerDataCam.Clear();
+            playersInRoomBuffer.Clear();
+            cachedFixedTime = float.MinValue;
+            cachedMaxAllowedInCam = 0;
+            DetectorPlayerExclusions.Reset();
+        }
         private static readonly Dictionary<MapNames, List<RoomZone>> RoomZonesByMap = new()
         {
             { MapNames.Skeld, new List<RoomZone> { new RoomZone("Security", new List<Vector2> { new Vector2(-12.0f,-1.80f), new Vector2(-12.0f,-7.40f), new Vector2(-15.0f,-7.40f), new Vector2(-15.0f,-1.80f) }) } },
@@ -23,6 +37,7 @@ namespace BanMod
         {
             if (!AmongUsClient.Instance.AmHost) return;
             if (!Options.EnableCamDetector.GetBool() || !GameStates.IsInGameplay || pc == null || pc.Data == null) return;
+            if (DetectorPlayerExclusions.ShouldIgnore(pc)) return;
 
             if (!PlayerDataCam.ContainsKey(pc.PlayerId))
             {
@@ -47,6 +62,14 @@ namespace BanMod
         {
             if (!AmongUsClient.Instance.AmHost) return;
             if (!Options.EnableCamDetector.GetBool() || !GameStates.IsInGameplay || pc == null || pc.Data == null) return;
+
+            if (DetectorPlayerExclusions.ShouldIgnore(pc))
+            {
+                if (PlayerDataCam.Remove(pc.PlayerId))
+                    PlayerWarningMessenger.ClearForPlayer(pc.PlayerId, "cam_crowd");
+                return;
+            }
+
             if (pc.Data.IsDead || pc.inVent) return;
 
             MapNames currentMap = GetCurrentMap();
@@ -54,21 +77,51 @@ namespace BanMod
             var targetRoom = rooms.Find(r => r.RoomName == "Security");
             if (targetRoom == null) return;
 
-            List<PlayerControl> playersInRoom = BanMod.AllAlivePlayerControls.Where(p => p != null && p.Data != null && !p.inVent && targetRoom.Contains(p.Pos())).ToList();
-            int impostorsAlive = BanMod.AllAlivePlayerControls.Count(p => p != null && p.Data != null && p.Data.Role.IsImpostor);
-            int maxAllowedInCam = impostorsAlive == 1 ? 1 : Options.MaxCam.GetInt();
-            if (playersInRoom.Count < maxAllowedInCam) return;
-
-            PlayerControl exemptPlayer = playersInRoom[0];
-
-            for (int i = 1; i < playersInRoom.Count; i++)
-                if (!PlayerDataCam.ContainsKey(playersInRoom[i].PlayerId)) RecordPosition(playersInRoom[i]);
-
-            if (PlayerDataCam.ContainsKey(exemptPlayer.PlayerId))
+            if (!Mathf.Approximately(cachedFixedTime, Time.fixedTime))
             {
-                PlayerDataCam.Remove(exemptPlayer.PlayerId);
-                PlayerWarningMessenger.ClearForPlayer(exemptPlayer.PlayerId, "cam_crowd");
+                cachedFixedTime = Time.fixedTime;
+                playersInRoomBuffer.Clear();
+
+                int impostorsAlive = 0;
+                foreach (var player in BanMod.AllAlivePlayerControls)
+                {
+                    if (player == null || player.Data == null) continue;
+
+                    if (player.Data.Role != null && player.Data.Role.IsImpostor)
+                        impostorsAlive++;
+
+                    if (DetectorPlayerExclusions.ShouldIgnore(player))
+                        continue;
+
+                    if (!player.inVent && targetRoom.Contains(player.Pos()))
+                        playersInRoomBuffer.Add(player);
+                }
+
+                cachedMaxAllowedInCam = impostorsAlive == 1
+                    ? 1
+                    : Options.MaxCam.GetInt();
+
+                if (playersInRoomBuffer.Count >= cachedMaxAllowedInCam)
+                {
+                    for (int i = 1; i < playersInRoomBuffer.Count; i++)
+                    {
+                        PlayerControl trackedPlayer = playersInRoomBuffer[i];
+                        if (!PlayerDataCam.ContainsKey(trackedPlayer.PlayerId))
+                            RecordPosition(trackedPlayer);
+                    }
+
+                    PlayerControl exemptPlayer = playersInRoomBuffer[0];
+                    if (PlayerDataCam.Remove(exemptPlayer.PlayerId))
+                    {
+                        PlayerWarningMessenger.ClearForPlayer(
+                            exemptPlayer.PlayerId,
+                            "cam_crowd"
+                        );
+                    }
+                }
             }
+
+            if (playersInRoomBuffer.Count < cachedMaxAllowedInCam) return;
 
             if (!PlayerDataCam.TryGetValue(pc.PlayerId, out var data)) return;
 
@@ -96,14 +149,6 @@ namespace BanMod
                         goto case DataCam.Phase.Consequence;
 
                     case DataCam.Phase.Consequence:
-                        bool isVip = Utils.IsVip(pc.FriendCode) && BanMod.ExcludeFriends.Value;
-                        bool isHostPlayer = pc.PlayerId == PlayerControl.LocalPlayer.PlayerId;
-                        if (isVip || isHostPlayer)
-                        {
-                            PlayerDataCam.Remove(pc.PlayerId);
-                            PlayerWarningMessenger.ClearForPlayer(pc.PlayerId, "cam_crowd");
-                            return;
-                        }
                         if (Options.EnableCamKick.GetBool())
                         {
                             AmongUsClient.Instance.KickPlayer(pc.GetClientId(), false);

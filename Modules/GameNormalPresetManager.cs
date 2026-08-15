@@ -84,9 +84,6 @@ namespace BanMod
 
     public enum GameModeType
     {
-        RunOrDeath = 7,
-        StopOrDeath = 8,
-        FollowOrDeath = 9,
         SnS = 0,
         BanMod = 1,
         KaitoRun = 2,
@@ -217,15 +214,6 @@ namespace BanMod
         {
             switch (gameMode)
             {
-                case GameModeType.RunOrDeath:
-                    return LoadOrCreateGameModePreset("RunOrDeath.json", CreateRunOrDeathDefaults());
-
-                case GameModeType.StopOrDeath:
-                    return LoadOrCreateGameModePreset("StopOrDeath.json", CreateStopOrDeathDefaults());
-
-                case GameModeType.FollowOrDeath:
-                    return LoadOrCreateGameModePreset("FollowOrDeath.json", CreateFollowOrDeathDefaults());
-
                 case GameModeType.SnS:
                     return LoadOrCreateGameModePreset("SnS.json", CreateSnSDefaults());
 

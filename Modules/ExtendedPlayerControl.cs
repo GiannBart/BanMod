@@ -155,8 +155,14 @@ public static class FixedUpdateUnifiedPatch
 
     public static Dictionary<string, string> CustomNames = new();
     public static readonly Dictionary<byte, string> RpcCustomNames = new();
-    private static float taskNameRefreshTimer = 0f;
-    private const float TaskNameRefreshInterval = 1f;
+    private static float lastGlobalFixedTime = float.MinValue;
+    private static float nextDeniedNamesRefreshTime;
+    private static DateTime deniedNamesLastWriteUtc = DateTime.MinValue;
+    private static readonly HashSet<string> deniedNames = new(StringComparer.OrdinalIgnoreCase);
+    private static bool cachedAfkDetectorEnabled;
+    private static bool cachedProximityMonitorEnabled;
+    private static bool cachedCamTaskDetectorEnabled;
+    private static bool cachedCamDetectorEnabled;
 
     private static void Prefix(PlayerControl __instance)
     {
@@ -167,14 +173,83 @@ public static class FixedUpdateUnifiedPatch
 
         if (AmongUsClient.Instance.AmHost)
         {
-            Utils.MessageRetryHandler.TrySendPending();
+            bool runGlobalFixedStep =
+                !Mathf.Approximately(lastGlobalFixedTime, Time.fixedTime);
+
+            if (runGlobalFixedStep)
+            {
+                lastGlobalFixedTime = Time.fixedTime;
+                Utils.MessageRetryHandler.TrySendPending();
+
+                bool detectorsCanRun = GameStates.IsInGameplay;
+
+                bool afkDetectorEnabled =
+                    detectorsCanRun &&
+                    Options.EnableDetector != null &&
+                    Options.EnableDetector.GetBool();
+
+                bool proximityMonitorEnabled =
+                    detectorsCanRun &&
+                    Options.EnableProximityMonitor != null &&
+                    Options.EnableProximityMonitor.GetBool();
+
+                bool camTaskDetectorEnabled =
+                    detectorsCanRun &&
+                    Options.EnableCamTaskDetector != null &&
+                    Options.EnableCamTaskDetector.GetBool();
+
+                bool camDetectorEnabled =
+                    detectorsCanRun &&
+                    Options.EnableCamDetector != null &&
+                    Options.EnableCamDetector.GetBool();
+
+                if (cachedAfkDetectorEnabled && !afkDetectorEnabled)
+                {
+                    AFKDetector.ResetAll();
+                    DeviceUsageTracker.ResetAll();
+                }
+                else if (!cachedAfkDetectorEnabled && afkDetectorEnabled)
+                {
+                    AFKDetector.EnsureTrackedPlayers();
+                }
+
+                if (cachedProximityMonitorEnabled && !proximityMonitorEnabled)
+                    ProximityMonitor.ResetAll();
+                else if (!cachedProximityMonitorEnabled && proximityMonitorEnabled)
+                    ProximityMonitor.EnsureTrackedPlayers();
+
+                if (cachedCamTaskDetectorEnabled && !camTaskDetectorEnabled)
+                    CamTaskDetector.ResetAll();
+
+                if (cachedCamDetectorEnabled && !camDetectorEnabled)
+                    CamDetector.ResetAll();
+
+                cachedAfkDetectorEnabled = afkDetectorEnabled;
+                cachedProximityMonitorEnabled = proximityMonitorEnabled;
+                cachedCamTaskDetectorEnabled = camTaskDetectorEnabled;
+                cachedCamDetectorEnabled = camDetectorEnabled;
+            }
+
             PreviousMatchPopupTracker.ValidateRecentProtection(__instance);
 
             Vector2 currentPos = __instance.GetTruePosition();
             lastPosition[__instance.PlayerId] = currentPos;
 
-            AFKDetector.OnFixedUpdate(__instance, false);
-            ProximityMonitor.OnFixedUpdate(__instance);
+            if (cachedAfkDetectorEnabled)
+            {
+                if (runGlobalFixedStep)
+                    DeviceUsageTracker.UpdateUsage();
+                AFKDetector.OnFixedUpdate(__instance, false);
+            }
+            else if (runGlobalFixedStep)
+            {
+                DeviceUsageTracker.StopIfUnused();
+            }
+
+            if (cachedProximityMonitorEnabled)
+            {
+                ProximityMonitor.OnFixedUpdate(__instance);
+            }
 
             bool isCurrentlyProtected = BanMod.ShieldedPlayers.Contains(__instance.PlayerId);
             bool isProtected = __instance.protectedByGuardianId != -1;
@@ -197,9 +272,9 @@ public static class FixedUpdateUnifiedPatch
                 }
             }
 
-            if (BanMod.EveryRandomActive)
+            if (runGlobalFixedStep && BanMod.EveryRandomActive)
             {
-                BanMod.everyRandomTimer += Time.deltaTime;
+                BanMod.everyRandomTimer += Time.fixedDeltaTime;
 
                 if (BanMod.everyRandomTimer >= 1.5f)
                 {
@@ -218,7 +293,7 @@ public static class FixedUpdateUnifiedPatch
                 }
             }
 
-            if (BanMod.RainbowTarget != null)
+            if (runGlobalFixedStep && BanMod.RainbowTarget != null)
             {
                 if (BanMod.RainbowTarget.Data == null || BanMod.RainbowTarget.Data.Disconnected)
                 {
@@ -226,7 +301,7 @@ public static class FixedUpdateUnifiedPatch
                 }
                 else
                 {
-                    BanMod.rainbowPlayerTimer += Time.deltaTime;
+                    BanMod.rainbowPlayerTimer += Time.fixedDeltaTime;
 
                     if (BanMod.rainbowPlayerTimer >= 1.5f)
                     {
@@ -248,18 +323,18 @@ public static class FixedUpdateUnifiedPatch
                 }
             }
 
-            if (Options.EnableCamTaskDetector.GetBool() && Options.EnableCamDetector.GetBool())
+            if (cachedCamTaskDetectorEnabled && cachedCamDetectorEnabled)
             {
                 CamTaskDetector.OnFixedUpdate(__instance, false);
 
                 if (PlayerHasCompletedRequiredTasks(__instance))
                     CamDetector.OnFixedUpdate(__instance, false);
             }
-            else if (Options.EnableCamTaskDetector.GetBool())
+            else if (cachedCamTaskDetectorEnabled)
             {
                 CamTaskDetector.OnFixedUpdate(__instance, false);
             }
-            else if (Options.EnableCamDetector.GetBool())
+            else if (cachedCamDetectorEnabled)
             {
                 CamDetector.OnFixedUpdate(__instance, false);
             }
@@ -285,19 +360,26 @@ public static class FixedUpdateUnifiedPatch
         }
         else if (isImpostor)
         {
-            var aliveCrewmates = BanMod.AllAlivePlayerControls
-                .Where(p => p.Data != null &&
-                            p.Data.Role != null &&
-                            p.Data.Role.TeamType == RoleTeamTypes.Crewmate &&
-                            !p.Data.IsDead &&
-                            !p.inVent)
-                .ToList();
+            foreach (var crewmate in BanMod.AllAlivePlayerControls)
+            {
+                if (crewmate == null ||
+                    crewmate.Data == null ||
+                    crewmate.Data.Role == null ||
+                    crewmate.Data.Role.TeamType != RoleTeamTypes.Crewmate ||
+                    crewmate.Data.IsDead ||
+                    crewmate.inVent)
+                {
+                    continue;
+                }
 
-            bool allCrewmatesCompleted = aliveCrewmates.All(cm =>
-                cm.Data.Tasks != null &&
-                CamTaskDetector.CountCompletedTasks(cm.Data.Tasks) >= requiredTasksImp);
+                if (crewmate.Data.Tasks == null ||
+                    CamTaskDetector.CountCompletedTasks(crewmate.Data.Tasks) < requiredTasksImp)
+                {
+                    return false;
+                }
+            }
 
-            return allCrewmatesCompleted;
+            return true;
         }
 
         return false;
@@ -315,19 +397,6 @@ public static class FixedUpdateUnifiedPatch
             return;
 
         byte pid = __instance.PlayerId;
-
-        if (BanMod.Taskremain &&
-            AmongUsClient.Instance != null &&
-            AmongUsClient.Instance.IsGameStarted)
-        {
-            taskNameRefreshTimer += Time.fixedDeltaTime;
-
-            if (taskNameRefreshTimer >= TaskNameRefreshInterval)
-            {
-                taskNameRefreshTimer = 0f;
-                RefreshTaskNameDisplaysOnly();
-            }
-        }
 
         lastInVentState.TryGetValue(pid, out bool wasInVent);
 
@@ -356,24 +425,51 @@ public static class FixedUpdateUnifiedPatch
 
         if (GameStates.isLobby && Options.ApplyDenyNameList.GetBool())
         {
-            string denyFilePath = "./BAN_DATA/DENIED/DenyName.txt";
+            if (IsDeniedPlayerName(__instance.Data.PlayerName))
+                AmongUsClient.Instance.KickPlayer(__instance.OwnerId, false);
+        }
+    }
 
-            if (!File.Exists(denyFilePath))
-                File.WriteAllText(denyFilePath, "");
+    private static bool IsDeniedPlayerName(string playerName)
+    {
+        const string denyFilePath = "./BAN_DATA/DENIED/DenyName.txt";
 
-            string[] denyNames = File.ReadAllLines(denyFilePath)
-                .Select(x => x.Trim().ToLower())
-                .Where(x => !string.IsNullOrEmpty(x))
-                .ToArray();
+        if (Time.realtimeSinceStartup >= nextDeniedNamesRefreshTime)
+        {
+            nextDeniedNamesRefreshTime = Time.realtimeSinceStartup + 1f;
 
-            if (__instance.Data != null)
+            try
             {
-                string playerName = __instance.Data.PlayerName.Trim().ToLower();
+                if (!File.Exists(denyFilePath))
+                {
+                    string directory = Path.GetDirectoryName(denyFilePath);
+                    if (!string.IsNullOrEmpty(directory))
+                        Directory.CreateDirectory(directory);
+                    File.WriteAllText(denyFilePath, string.Empty);
+                }
 
-                if (denyNames.Any(n => n == playerName))
-                    AmongUsClient.Instance.KickPlayer(__instance.OwnerId, false);
+                DateTime lastWriteUtc = File.GetLastWriteTimeUtc(denyFilePath);
+                if (lastWriteUtc != deniedNamesLastWriteUtc)
+                {
+                    deniedNames.Clear();
+
+                    foreach (string line in File.ReadLines(denyFilePath))
+                    {
+                        string value = line.Trim();
+                        if (!string.IsNullOrEmpty(value))
+                            deniedNames.Add(value);
+                    }
+
+                    deniedNamesLastWriteUtc = lastWriteUtc;
+                }
+            }
+            catch
+            {
             }
         }
+
+        return !string.IsNullOrWhiteSpace(playerName) &&
+               deniedNames.Contains(playerName.Trim());
     }
 
     private static bool IsAuthorizedVentUser(PlayerControl player)
@@ -429,29 +525,6 @@ public static class FixedUpdateUnifiedPatch
     {
         try
         {
-            if (PlayerControl.AllPlayerControls == null)
-                return;
-
-            foreach (var player in PlayerControl.AllPlayerControls)
-            {
-                if (player == null || player.Data == null || player.Data.Disconnected)
-                    continue;
-
-                UpdatePlayerNameDisplay(player);
-            }
-        }
-        catch
-        {
-        }
-    }
-
-    private static void RefreshTaskNameDisplaysOnly()
-    {
-        try
-        {
-            if (PlayerControl.LocalPlayer == null || PlayerControl.LocalPlayer.Data == null)
-                return;
-
             if (PlayerControl.AllPlayerControls == null)
                 return;
 
@@ -619,8 +692,8 @@ public static class FixedUpdateUnifiedPatch
         if (target.cosmetics.nameText.text != finalName)
             target.cosmetics.nameText.text = finalName;
     }
-    
-   
+
+
     private static void ShowExtendedPlayerInfo(PlayerControl player)
     {
         if (player == null || player.Data == null || player.cosmetics?.nameText == null)
@@ -648,6 +721,38 @@ public static class FixedUpdateUnifiedPatch
 
         if (text.text != final)
             text.text = final;
+    }
+}
+
+[HarmonyPatch(typeof(HudManager), nameof(HudManager.OnGameStart))]
+public static class DetectorRuntimeOnGameStartPatch
+{
+    public static void Postfix()
+    {
+        FixedUpdateUnifiedPatch.lastPosition.Clear();
+        FixedUpdateUnifiedPatch.meetingPosition.Clear();
+        FixedUpdateUnifiedPatch.lastInVentState.Clear();
+
+        DeviceUsageTracker.ResetAll();
+        AFKDetector.ResetAll();
+        CamDetector.ResetAll();
+        CamTaskDetector.ResetAll();
+        ProximityMonitor.ResetAll();
+
+        if (BanMod.IsBanModDisabled ||
+            AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
+
+        PlayerWarningMessenger.ResetAll();
+
+        if (Options.EnableDetector != null && Options.EnableDetector.GetBool())
+            AFKDetector.EnsureTrackedPlayers();
+
+        if (Options.EnableProximityMonitor != null && Options.EnableProximityMonitor.GetBool())
+            ProximityMonitor.EnsureTrackedPlayers();
     }
 }
 
@@ -686,6 +791,42 @@ public static class PlayerControl_SetColor_RefreshNamePatch
 {
     public static void Postfix(PlayerControl __instance)
     {
+        try
+        {
+            FixedUpdateUnifiedPatch.RefreshNameDisplay(__instance);
+        }
+        catch
+        {
+        }
+    }
+}
+
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.CompleteTask))]
+public static class PlayerControl_CompleteTask_RefreshTaskNamePatch
+{
+    public static void Postfix(PlayerControl __instance)
+    {
+        if (!BanMod.Taskremain || __instance == null)
+            return;
+
+        try
+        {
+            FixedUpdateUnifiedPatch.RefreshNameDisplay(__instance);
+        }
+        catch
+        {
+        }
+    }
+}
+
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.HandleRpc))]
+public static class PlayerControl_HandleRpc_RefreshRemoteTaskNamePatch
+{
+    public static void Postfix(PlayerControl __instance, byte callId)
+    {
+        if (!BanMod.Taskremain || __instance == null || callId != (byte)RpcCalls.CompleteTask)
+            return;
+
         try
         {
             FixedUpdateUnifiedPatch.RefreshNameDisplay(__instance);

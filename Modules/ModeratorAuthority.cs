@@ -87,7 +87,11 @@ namespace BanMod
 
             if (AmongUsClient.Instance.AmHost)
             {
-                ExecuteHost(PlayerControl.LocalPlayer, action, targetPlayerId);
+                ExecuteHost(
+                    PlayerControl.LocalPlayer,
+                    action,
+                    targetPlayerId,
+                    false);
                 return;
             }
 
@@ -152,7 +156,11 @@ namespace BanMod
                 return;
             }
 
-            ExecuteHost(sender, action, targetPlayerId);
+            ExecuteHost(
+                sender,
+                action,
+                targetPlayerId,
+                true);
         }
 
         private static PlayerControl GetTarget(byte playerId)
@@ -199,7 +207,8 @@ namespace BanMod
         private static void ExecuteHost(
             PlayerControl moderator,
             ModeratorAction action,
-            byte targetPlayerId)
+            byte targetPlayerId,
+            bool fromModeratorCommand)
         {
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
                 return;
@@ -221,164 +230,167 @@ namespace BanMod
                     }
 
                 case ModeratorAction.StartGame:
-                {
-                    if (!GameStates.isLobby)
-                        return;
-
-                    var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
-                    manager?.BeginGame();
-                    break;
-                }
-
-                case ModeratorAction.InstantStart:
-                {
-                    if (!GameStates.isLobby)
-                        return;
-
-                    var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
-                    manager?.BeginGame();
-                    break;
-                }
-
-                case ModeratorAction.CallMeeting:
-                {
-                    if (GameStates.isLobby || moderator?.Data == null || moderator.Data.IsDead)
-                        return;
-
-                    moderator.CmdReportDeadBody(null);
-                    break;
-                }
-
-                case ModeratorAction.EndMeeting:
-                {
-                    if (MeetingHud.Instance == null)
-                        return;
-
-                    PlayerControl.LocalPlayer.StartCoroutine(Utils.DelayedCloseMeeting());
-                    break;
-                }
-
-                case ModeratorAction.EndGame:
-                {
-                    if (!GameStates.IsInGameplay || GameManager.Instance == null)
-                        return;
-
-                    GameManager.Instance.RpcEndGame(
-                        GameOverReason.CrewmatesByTask,
-                        false);
-                    break;
-                }
-
-                case ModeratorAction.Kick:
-                {
-                    if (!TryGetTargetClient(targetPlayerId, out PlayerControl target, out ClientData client))
-                        return;
-
-                    if (target.AmOwner || IsProtectedTarget(client))
-                        return;
-
-                    AmongUsClient.Instance.KickPlayer(client.Id, false);
-                    break;
-                }
-
-                case ModeratorAction.Ban:
-                {
-                    if (!TryGetTargetClient(targetPlayerId, out PlayerControl target, out ClientData client))
-                        return;
-
-                    if (target.AmOwner || IsProtectedTarget(client))
-                        return;
-
-                    BanManager.AddBanPlayer(client, "Moderator", false);
-                    AmongUsClient.Instance.KickPlayer(client.Id, true);
-                    break;
-                }
-
-                case ModeratorAction.DestroyLobby:
-                {
-                    if (!GameStates.isLobby)
-                        return;
-
-                    Utils.DestroyMap();
-                    break;
-                }
-
-                case ModeratorAction.SpawnLobby:
-                {
-                    if (!GameStates.isLobby)
-                        return;
-
-                    Utils.SpawnLobby();
-                    break;
-                }
-
-                case ModeratorAction.ToggleLobbyObject:
-                {
-                    if (!GameStates.isLobby)
-                        return;
-
-                    if (LobbyBehaviour.Instance == null)
-                        Utils.SpawnLobby();
-                    else
-                        Utils.DestroyMap();
-
-                    break;
-                }
-
-                case ModeratorAction.ChangeBody:
-                {
-                    PlayerControl target = GetTarget(targetPlayerId);
-                    if (target?.Data == null)
-                        return;
-
-                    PlayerBodyTypes nextBody = Utils.GetNextBodyType(target);
-                    float scale = Mathf.Clamp(target.transform.localScale.x, 0.25f, 2.0f);
-
-                    target.transform.localScale = new Vector3(scale, scale, 1f);
-                    Utils.SetPlayerBodyType(target, nextBody);
-
-                    var writer = AmongUsClient.Instance.StartRpcImmediately(
-                        PlayerControl.LocalPlayer.NetId,
-                        (byte)CustomRPC.SyncPlayerVisual,
-                        SendOption.Reliable,
-                        -1
-                    );
-
-                    writer.Write(target.PlayerId);
-                    writer.Write(scale);
-                    writer.Write((byte)nextBody);
-                    writer.Write(false);
-
-                    AmongUsClient.Instance.FinishRpcImmediately(writer);
-                    break;
-                }
-
-                case ModeratorAction.RandomFreeColor:
-                {
-                    PlayerControl target = GetTarget(targetPlayerId);
-                    if (target?.Data == null)
-                        return;
-
-                    List<byte> usedColors = new();
-                    foreach (var info in GameData.Instance.AllPlayers)
                     {
-                        if (info?.DefaultOutfit != null)
-                            usedColors.Add((byte)info.DefaultOutfit.ColorId);
+                        if (!GameStates.isLobby)
+                            return;
+
+                        var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
+                        manager?.BeginGame();
+                        break;
                     }
 
-                    List<byte> freeColors = Enumerable
-                        .Range(0, Palette.PlayerColors.Length)
-                        .Select(i => (byte)i)
-                        .Where(c => !usedColors.Contains(c))
-                        .ToList();
+                case ModeratorAction.InstantStart:
+                    {
+                        if (!GameStates.isLobby)
+                            return;
 
-                    if (freeColors.Count == 0)
-                        freeColors.Add(0);
+                        var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
+                        manager?.BeginGame();
+                        break;
+                    }
 
-                    byte color = freeColors[new System.Random().Next(freeColors.Count)];
-                    target.RpcSetColor(color);
-                    break;
-                }
+                case ModeratorAction.CallMeeting:
+                    {
+                        if (GameStates.isLobby || moderator?.Data == null || moderator.Data.IsDead)
+                            return;
+
+                        moderator.CmdReportDeadBody(null);
+                        break;
+                    }
+
+                case ModeratorAction.EndMeeting:
+                    {
+                        if (MeetingHud.Instance == null)
+                            return;
+
+                        PlayerControl.LocalPlayer.StartCoroutine(Utils.DelayedCloseMeeting());
+                        break;
+                    }
+
+                case ModeratorAction.EndGame:
+                    {
+                        if (!GameStates.IsInGameplay || GameManager.Instance == null)
+                            return;
+
+                        GameManager.Instance.RpcEndGame(
+                            GameOverReason.CrewmatesByTask,
+                            false);
+                        break;
+                    }
+
+                case ModeratorAction.Kick:
+                    {
+                        if (!TryGetTargetClient(targetPlayerId, out PlayerControl target, out ClientData client))
+                            return;
+
+                        if (target.AmOwner || IsProtectedTarget(client))
+                            return;
+
+                        AmongUsClient.Instance.KickPlayer(client.Id, false);
+                        break;
+                    }
+
+                case ModeratorAction.Ban:
+                    {
+                        if (!TryGetTargetClient(targetPlayerId, out PlayerControl target, out ClientData client))
+                            return;
+
+                        if (target.AmOwner || IsProtectedTarget(client))
+                            return;
+
+                        BanManager.AddBanPlayer(
+                            client,
+                            fromModeratorCommand ? "Moderator" : "ManualBan",
+                            fromModeratorCommand);
+                        AmongUsClient.Instance.KickPlayer(client.Id, true);
+                        break;
+                    }
+
+                case ModeratorAction.DestroyLobby:
+                    {
+                        if (!GameStates.isLobby)
+                            return;
+
+                        Utils.DestroyMap();
+                        break;
+                    }
+
+                case ModeratorAction.SpawnLobby:
+                    {
+                        if (!GameStates.isLobby)
+                            return;
+
+                        Utils.SpawnLobby();
+                        break;
+                    }
+
+                case ModeratorAction.ToggleLobbyObject:
+                    {
+                        if (!GameStates.isLobby)
+                            return;
+
+                        if (LobbyBehaviour.Instance == null)
+                            Utils.SpawnLobby();
+                        else
+                            Utils.DestroyMap();
+
+                        break;
+                    }
+
+                case ModeratorAction.ChangeBody:
+                    {
+                        PlayerControl target = GetTarget(targetPlayerId);
+                        if (target?.Data == null)
+                            return;
+
+                        PlayerBodyTypes nextBody = Utils.GetNextBodyType(target);
+                        float scale = Mathf.Clamp(target.transform.localScale.x, 0.25f, 2.0f);
+
+                        target.transform.localScale = new Vector3(scale, scale, 1f);
+                        Utils.SetPlayerBodyType(target, nextBody);
+
+                        var writer = AmongUsClient.Instance.StartRpcImmediately(
+                            PlayerControl.LocalPlayer.NetId,
+                            (byte)CustomRPC.SyncPlayerVisual,
+                            SendOption.Reliable,
+                            -1
+                        );
+
+                        writer.Write(target.PlayerId);
+                        writer.Write(scale);
+                        writer.Write((byte)nextBody);
+                        writer.Write(false);
+
+                        AmongUsClient.Instance.FinishRpcImmediately(writer);
+                        break;
+                    }
+
+                case ModeratorAction.RandomFreeColor:
+                    {
+                        PlayerControl target = GetTarget(targetPlayerId);
+                        if (target?.Data == null)
+                            return;
+
+                        List<byte> usedColors = new();
+                        foreach (var info in GameData.Instance.AllPlayers)
+                        {
+                            if (info?.DefaultOutfit != null)
+                                usedColors.Add((byte)info.DefaultOutfit.ColorId);
+                        }
+
+                        List<byte> freeColors = Enumerable
+                            .Range(0, Palette.PlayerColors.Length)
+                            .Select(i => (byte)i)
+                            .Where(c => !usedColors.Contains(c))
+                            .ToList();
+
+                        if (freeColors.Count == 0)
+                            freeColors.Add(0);
+
+                        byte color = freeColors[new System.Random().Next(freeColors.Count)];
+                        target.RpcSetColor(color);
+                        break;
+                    }
             }
         }
     }

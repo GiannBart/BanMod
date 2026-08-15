@@ -300,6 +300,7 @@ Main credited projects:
 - [MalumMenu](https://github.com/scp222thj/MalumMenu)
 - [TheOtherRoles](https://github.com/TheOtherRolesAU/TheOtherRoles) / TheOtherHats
 - [BetterAmongUs](https://github.com/D1GQ/BetterAmongUs-Public)
+- [GameLogger](https://github.com/whichtwix/GameLogger)
 - NLayer components and contributors, under the MIT License where indicated
 
 Credits do not imply affiliation or endorsement.

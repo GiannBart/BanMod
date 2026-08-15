@@ -87,7 +87,14 @@ public static class PlayerControlStartUnifiedPatch
         {
             __instance.StartCoroutine(InitialHandshake());
         }
-
+        if (AmongUsClient.Instance.AmHost && __instance.AmOwner && (GameModeType)Options.GameMode.GetValue() == GameModeType.FFA)
+        {
+            FfaExternalBridge.SyncGameMode();
+            FfaExternalBridge.SyncVentSeconds();
+            FfaExternalBridge.SyncVentMode();
+            FfaExternalBridge.SyncTeamMode();
+            FfaExternalBridge.SyncTeamCount();
+        }
     }
     private static IEnumerator InitialHandshake()
     {

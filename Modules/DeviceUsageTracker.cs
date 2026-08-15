@@ -15,8 +15,17 @@ public static class DeviceUsageTracker
     }
 
     private static readonly Dictionary<byte, HashSet<Device>> playersNearDevices = new();
-    private static readonly Dictionary<string, List<byte>> devicesNearPlayers = new();
     private static int updateCounter = 0;
+    private static float lastUpdateFixedTime = float.MinValue;
+    private static bool isRunning;
+
+    public static bool IsNeeded =>
+        !BanMod.IsBanModDisabled &&
+        AmongUsClient.Instance != null &&
+        AmongUsClient.Instance.AmHost &&
+        GameStates.IsInGameplay &&
+        Options.EnableDetector != null &&
+        Options.EnableDetector.GetBool();
 
     public static void AddDeviceUsage(byte playerId, Device device)
     {
@@ -29,13 +38,6 @@ public static class DeviceUsageTracker
         }
 
         devices.Add(device);
-
-        string deviceKey = device.ToString();
-        if (!devicesNearPlayers.ContainsKey(deviceKey))
-            devicesNearPlayers[deviceKey] = new List<byte>();
-
-        if (!devicesNearPlayers[deviceKey].Contains(playerId))
-            devicesNearPlayers[deviceKey].Add(playerId);
     }
 
     public static void ClearDeviceUsage(byte playerId)
@@ -43,15 +45,20 @@ public static class DeviceUsageTracker
         if (!AmongUsClient.Instance.AmHost) return;
 
         playersNearDevices.Remove(playerId);
-
-        foreach (var deviceKey in new List<string>(devicesNearPlayers.Keys))
-            devicesNearPlayers[deviceKey].Remove(playerId);
     }
 
     public static void ResetAll()
     {
         playersNearDevices.Clear();
-        devicesNearPlayers.Clear();
+        updateCounter = 0;
+        lastUpdateFixedTime = float.MinValue;
+        isRunning = false;
+    }
+
+    public static void StopIfUnused()
+    {
+        if (isRunning || playersNearDevices.Count > 0)
+            ResetAll();
     }
 
     public static bool IsUsingDevice(byte playerId, Device device) =>
@@ -64,38 +71,69 @@ public static class DeviceUsageTracker
 
     public static void UpdateUsage()
     {
-        if (!AmongUsClient.Instance.AmHost) return;
+        if (!IsNeeded)
+        {
+            StopIfUnused();
+            return;
+        }
+
+        // PlayerControl.FixedUpdate is executed once for every player. This
+        // guard makes the device scan run only once per physics step.
+        if (Mathf.Approximately(lastUpdateFixedTime, Time.fixedTime))
+            return;
+
+        lastUpdateFixedTime = Time.fixedTime;
+        isRunning = true;
 
         updateCounter--;
         if (updateCounter > 0) return;
         updateCounter = 5;
 
-        ResetAll();
+        playersNearDevices.Clear();
 
         float usableDistance = 1.0f;
+        MapNames currentMap = Utils.GetCurrentMap();
 
         foreach (var pc in BanMod.AllAlivePlayerControls)
         {
             if (pc == null || pc.Data == null) continue;
             if (pc.inVent) continue;
+            if (DetectorPlayerExclusions.ShouldIgnore(pc)) continue;
 
             Vector2 pos = pc.Pos();
             byte id = pc.PlayerId;
 
-            TryAdd(id, pos, "SkeldAdmin", Device.Admin, usableDistance);
-            TryAdd(id, pos, "SkeldCamera", Device.Camera, usableDistance);
-            TryAdd(id, pos, "MiraHQAdmin", Device.Admin, usableDistance);
-            TryAdd(id, pos, "MiraHQDoorLog", Device.DoorLog, usableDistance);
-            TryAdd(id, pos, "PolusLeftAdmin", Device.Admin, usableDistance);
-            TryAdd(id, pos, "PolusRightAdmin", Device.Admin, usableDistance);
-            TryAdd(id, pos, "PolusCamera", Device.Camera, usableDistance);
-            TryAdd(id, pos, "PolusVital", Device.Vitals, usableDistance);
-            TryAdd(id, pos, "AirshipCockpitAdmin", Device.Admin, usableDistance);
-            TryAdd(id, pos, "AirshipRecordsAdmin", Device.Admin, usableDistance);
-            TryAdd(id, pos, "AirshipCamera", Device.Camera, usableDistance);
-            TryAdd(id, pos, "AirshipVital", Device.Vitals, usableDistance);
-            TryAdd(id, pos, "FungleCamera", Device.Camera, usableDistance);
-            TryAdd(id, pos, "FungleVital", Device.Vitals, usableDistance);
+            switch (currentMap)
+            {
+                case MapNames.Skeld:
+                    TryAdd(id, pos, "SkeldAdmin", Device.Admin, usableDistance);
+                    TryAdd(id, pos, "SkeldCamera", Device.Camera, usableDistance);
+                    break;
+
+                case MapNames.MiraHQ:
+                    TryAdd(id, pos, "MiraHQAdmin", Device.Admin, usableDistance);
+                    TryAdd(id, pos, "MiraHQDoorLog", Device.DoorLog, usableDistance);
+                    break;
+
+                case MapNames.Polus:
+                    TryAdd(id, pos, "PolusLeftAdmin", Device.Admin, usableDistance);
+                    TryAdd(id, pos, "PolusRightAdmin", Device.Admin, usableDistance);
+                    TryAdd(id, pos, "PolusCamera", Device.Camera, usableDistance);
+                    TryAdd(id, pos, "PolusVital", Device.Vitals, usableDistance);
+                    break;
+
+                case MapNames.Airship:
+                    TryAdd(id, pos, "AirshipCockpitAdmin", Device.Admin, usableDistance);
+                    TryAdd(id, pos, "AirshipRecordsAdmin", Device.Admin, usableDistance);
+                    TryAdd(id, pos, "AirshipCamera", Device.Camera, usableDistance);
+                    TryAdd(id, pos, "AirshipVital", Device.Vitals, usableDistance);
+                    break;
+
+                case MapNames.Fungle:
+                    TryAdd(id, pos, "FungleCamera", Device.Camera, usableDistance);
+                    TryAdd(id, pos, "FungleVital", Device.Vitals, usableDistance);
+                    break;
+            }
         }
     }
 
@@ -103,7 +141,7 @@ public static class DeviceUsageTracker
     {
         if (!AmongUsClient.Instance.AmHost) return;
         if (!Utils.DevicePos.TryGetValue(deviceKey, out var devicePos)) return;
-        if (Vector2.Distance(playerPos, devicePos) <= range) AddDeviceUsage(id, device);
+        if ((playerPos - devicePos).sqrMagnitude <= range * range) AddDeviceUsage(id, device);
     }
 }
 

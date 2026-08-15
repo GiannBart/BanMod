@@ -9,6 +9,7 @@ namespace BanMod;
 public static class OptionsMenuBehaviourStartPatch
 {
     private static ClientOptionItem ShowFPS;
+    private static ClientOptionItem EnableLog;
     private static ClientOptionItem GM;
     private static ClientOptionItem DarkTheme;
     private static ClientOptionItem DisableLobbyMusic;
@@ -29,6 +30,10 @@ public static class OptionsMenuBehaviourStartPatch
     {
         if (__instance.DisableMouseMovement == null) return;
 
+        if (EnableLog == null || EnableLog.ToggleButton == null)
+        {
+            EnableLog = ClientOptionItem.Create("EnableLog", BanMod.EnableLog, __instance);
+        }
         if (ShowFPS == null || ShowFPS.ToggleButton == null)
         {
             ShowFPS = ClientOptionItem.Create("ShowFPS", BanMod.ShowFPS, __instance);

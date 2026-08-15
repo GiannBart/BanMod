@@ -52,15 +52,6 @@ internal static class MurderPlayerCombinedPatch
      !resultFlags.HasFlag(MurderResultFlags.Succeeded));
         bool succeeded = resultFlags.HasFlag(MurderResultFlags.Succeeded);
 
-        if (gameMode == GameModeType.RunOrDeath && IntroCutscene.Instance == null)
-        {
-            if (succeeded)
-            {
-                NoisemakerRunManager.PendingKillPosition = target.transform.position;
-                NoisemakerRunManager.PendingRaceTrigger = true;
-                BMLogger.Info("[BanMod] Trigger corsa impostato su TRUE");
-            }
-        }
         if (gameMode == GameModeType.SnS && !GameStates.isHideNSeek && IntroCutscene.Instance == null)
         {
             if (succeeded)

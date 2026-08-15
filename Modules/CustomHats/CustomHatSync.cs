@@ -21,6 +21,17 @@ namespace BanMod.Modules.CustomHats
         private static readonly Dictionary<byte, byte> ShapeshiftTargetByPlayerId = new Dictionary<byte, byte>();
         private static string lastLocalHatId = "";
         private static float lastBroadcastTime = -999f;
+        private static int stateVersion;
+
+        public static int StateVersion => stateVersion;
+
+        private static void MarkStateChanged()
+        {
+            unchecked
+            {
+                stateVersion++;
+            }
+        }
         private static string GetFriendCode(NetworkedPlayerInfo playerInfo)
         {
             try
@@ -183,11 +194,19 @@ namespace BanMod.Modules.CustomHats
                 if (target == null || target.PlayerId == shapeshifterId)
                 {
                     if (ShapeshiftTargetByPlayerId.ContainsKey(shapeshifterId))
+                    {
                         ShapeshiftTargetByPlayerId.Remove(shapeshifterId);
+                        MarkStateChanged();
+                    }
                     return;
                 }
 
-                ShapeshiftTargetByPlayerId[shapeshifterId] = target.PlayerId;
+                if (!ShapeshiftTargetByPlayerId.TryGetValue(shapeshifterId, out byte previousTargetId) ||
+                    previousTargetId != target.PlayerId)
+                {
+                    ShapeshiftTargetByPlayerId[shapeshifterId] = target.PlayerId;
+                    MarkStateChanged();
+                }
             }
             catch
             {
@@ -358,16 +377,30 @@ namespace BanMod.Modules.CustomHats
         {
             if (string.IsNullOrEmpty(hatId))
             {
-                if (CustomHatByPlayerId.ContainsKey(playerId)) CustomHatByPlayerId.Remove(playerId);
-                if (CustomHatClientByPlayerId.ContainsKey(playerId)) CustomHatClientByPlayerId.Remove(playerId);
-                if (CustomHatFriendCodeByPlayerId.ContainsKey(playerId)) CustomHatFriendCodeByPlayerId.Remove(playerId);
+                bool changed = CustomHatByPlayerId.Remove(playerId);
+                changed |= CustomHatClientByPlayerId.Remove(playerId);
+                changed |= CustomHatFriendCodeByPlayerId.Remove(playerId);
+
+                if (changed)
+                    MarkStateChanged();
 
                 return;
             }
 
+            string normalizedFriendCode = friendCode ?? string.Empty;
+            bool hatChanged = !CustomHatByPlayerId.TryGetValue(playerId, out string previousHatId) ||
+                              previousHatId != hatId;
+            bool clientChanged = !CustomHatClientByPlayerId.TryGetValue(playerId, out int previousClientId) ||
+                                 previousClientId != clientId;
+            bool friendCodeChanged = !CustomHatFriendCodeByPlayerId.TryGetValue(playerId, out string previousFriendCode) ||
+                                     previousFriendCode != normalizedFriendCode;
+
             CustomHatByPlayerId[playerId] = hatId;
             CustomHatClientByPlayerId[playerId] = clientId;
-            CustomHatFriendCodeByPlayerId[playerId] = friendCode;
+            CustomHatFriendCodeByPlayerId[playerId] = normalizedFriendCode;
+
+            if (hatChanged || clientChanged || friendCodeChanged)
+                MarkStateChanged();
 
             NetworkedPlayerInfo info = FindPlayerInfo(playerId);
             if (info != null)
@@ -479,6 +512,7 @@ namespace BanMod.Modules.CustomHats
 
             LastKnownHatByName.Clear();
             LastKnownHatByColor.Clear();
+            MarkStateChanged();
         }
     }
 }

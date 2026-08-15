@@ -41,6 +41,8 @@ public static class GameStartManagerPatch
     {
         public static TextMeshPro HideName;
         public static TextMeshPro GameCountdown;
+        public static Vector3 StartButtonTextDefaultPosition;
+        public static bool HasStartButtonTextDefaultPosition;
 
         public static void Postfix(GameStartManager __instance)
         {
@@ -50,6 +52,12 @@ public static class GameStartManagerPatch
                 var temp = __instance.PlayerCounter;
                 GameCountdown = Object.Instantiate(temp, __instance.StartButton.transform);
                 GameCountdown.text = string.Empty;
+
+                if (__instance.StartButton.buttonText != null)
+                {
+                    StartButtonTextDefaultPosition = __instance.StartButton.buttonText.transform.localPosition;
+                    HasStartButtonTextDefaultPosition = true;
+                }
 
 
                 if (AmongUsClient.Instance.AmHost)
@@ -73,7 +81,7 @@ public static class GameStartManagerPatch
                 if (AmongUsClient.Instance == null || AmongUsClient.Instance.IsGameStarted || GameStates.InGame || __instance.startState == GameStartManager.StartingStates.Starting) return;
 
                 Timer = 600f;
-           
+
                 if (!AmongUsClient.Instance.AmHost) return;
             }
         }
@@ -136,6 +144,13 @@ public static class GameStartManagerPatch
             {
                 if (instance.startState == GameStartManager.StartingStates.Countdown)
                 {
+                    if (GameStartManagerStartPatch.HasStartButtonTextDefaultPosition &&
+                        instance.StartButton.buttonText != null)
+                    {
+                        instance.StartButton.buttonText.transform.localPosition =
+                            GameStartManagerStartPatch.StartButtonTextDefaultPosition;
+                    }
+
                     instance.StartButton.ChangeButtonText(string.Format("STOP"));
                     instance.StartButton.DestroyTranslator();
                     instance.StartButton.inactiveSprites.GetComponent<SpriteRenderer>().color = new(0.8f, 0f, 0f, 1f);
@@ -153,7 +168,31 @@ public static class GameStartManagerPatch
                 }
                 else
                 {
-                    instance.StartButton.ChangeButtonText(DestroyableSingleton<TranslationController>.Instance.GetString(StringNames.StartLabel));
+                    string startLabel = DestroyableSingleton<TranslationController>.Instance.GetString(StringNames.StartLabel);
+                    string currentGameMode = Options.GameMode != null
+                        ? Options.GameMode.GetString()
+                        : string.Empty;
+
+                    bool showGameMode =
+                        Options.GameMode != null &&
+                        Options.GameMode.GetInt() != 3;
+
+                    string gameModeLine = showGameMode
+                        ? $"\n<size=65%><color=#00FFFFFF>GameMode: <b>{currentGameMode}</b></color></size>"
+                        : string.Empty;
+
+                    if (GameStartManagerStartPatch.HasStartButtonTextDefaultPosition &&
+                        instance.StartButton.buttonText != null)
+                    {
+                        instance.StartButton.buttonText.transform.localPosition =
+                            GameStartManagerStartPatch.StartButtonTextDefaultPosition +
+                            (showGameMode ? new Vector3(0f, 0.14f, 0f) : Vector3.zero);
+                    }
+
+                    instance.StartButton.ChangeButtonText(
+                        $"{startLabel}{gameModeLine}"
+                    );
+                    instance.StartButton.DestroyTranslator();
                     instance.StartButton.inactiveSprites.GetComponent<SpriteRenderer>().color = new(0.1f, 0.1f, 0.1f, 1f);
                     instance.StartButton.activeSprites.GetComponent<SpriteRenderer>().color = new(0.2f, 0.2f, 0.2f, 1f);
                     instance.StartButton.inactiveSprites.transform.Find("Shine").GetComponent<SpriteRenderer>().color = new(0.3f, 0.3f, 0.3f, 0.5f);
@@ -205,7 +244,7 @@ public static class GameStartManagerPatch
 
                     if (currentSec != lastFlashSecond)
                     {
-                        Color flashCol = new Color(1f, 0f, 0f, 0.8f); 
+                        Color flashCol = new Color(1f, 0f, 0f, 0.8f);
                         Utils.FlashColor(flashCol, 1.5f);
                     }
                 }
@@ -238,7 +277,7 @@ public static class GameStartManagerPatch
                     if ((isFull || isClosing) && __instance.startState == GameStartManager.StartingStates.NotStarting && !GameStates.InGame)
                     {
                         __instance.BeginGame();
-                        return; 
+                        return;
                     }
                 }
                 if (Options.AutoStart.GetBool())
@@ -273,7 +312,7 @@ public static class GameStartManagerPatch
 
         public static IEnumerator DelayedSafeBegin(GameStartManager __instance)
         {
-            yield return new WaitForSeconds(0.5f); 
+            yield return new WaitForSeconds(0.5f);
 
             if (__instance == null || GameStates.InGame || __instance.startState != GameStartManager.StartingStates.NotStarting)
                 yield break;
@@ -381,7 +420,7 @@ public class GameStartManagerBeginPatch
                 1,
                 2,
                 4,
-                5 
+                5
             };
 
             if (randomMaps.Count == 0)

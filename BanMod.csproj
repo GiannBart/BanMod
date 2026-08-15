@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
@@ -6,7 +6,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Il2CppInteropVerbose>true</Il2CppInteropVerbose>
 		<Optimize>True</Optimize>
-		<VersionPrefix>3.7.1</VersionPrefix>
+		<VersionPrefix>3.7.3</VersionPrefix>
 		<Description>Ban automatico</Description>
 		<Authors>Gianni</Authors>
 		<AssemblyName>BanMod</AssemblyName>
@@ -54,7 +54,9 @@ namespace BanMod
 	</Target>
 
 	<ItemGroup>
-		<EmbeddedResource Include=".\Resources\**" />
+		<EmbeddedResource
+			Include="Resources/**/*"
+			Exclude="Resources/**/*.cs;Resources/**/*.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

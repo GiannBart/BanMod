@@ -101,6 +101,11 @@ internal static class RandomVentSpawnManager
                 yield break;
             }
 
+            Dictionary<byte, Vent> ventsByColor =
+                new Dictionary<byte, Vent>();
+
+            int nextVentIndex = 0;
+
             for (int i = 0; i < players.Count; i++)
             {
                 PlayerControl player = players[i];
@@ -113,8 +118,21 @@ internal static class RandomVentSpawnManager
                     continue;
                 }
 
-                Vent vent =
-                    vents[i % vents.Count];
+                byte colorId =
+                    (byte)player.Data.DefaultOutfit.ColorId;
+
+                Vent vent;
+
+                if (!ventsByColor.TryGetValue(
+                        colorId,
+                        out vent))
+                {
+                    vent =
+                        vents[nextVentIndex % vents.Count];
+
+                    ventsByColor[colorId] = vent;
+                    nextVentIndex++;
+                }
 
                 if (vent == null)
                     continue;
@@ -122,7 +140,7 @@ internal static class RandomVentSpawnManager
                 byte ventId =
                     (byte)vent.Id;
 
-          
+
                 system.PlayersInsideVents[player.PlayerId] =
                     ventId;
 

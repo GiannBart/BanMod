@@ -212,6 +212,7 @@ namespace BanMod.Modules.CustomHats.Patches
 
             ActiveHatColors[parent.GetInstanceID()] = color;
 
+            viewData = CustomHatManager.EnsureFullViewData(hat.ProdId, viewData);
             viewData = CustomHatManager.GetViewDataForColor(hat.ProdId, viewData, color);
             viewData = CustomHatManager.GetAdaptiveViewData(hat.ProdId, viewData, color);
 

@@ -47,4 +47,13 @@ namespace BanMod.Modules.CustomHats
         [JsonPropertyName("colorVariations")]
         public bool ColorVariations;
     }
+
+    public class CustomHatFile
+    {
+        [JsonPropertyName("path")]
+        public string Path { get; set; }
+
+        [JsonPropertyName("sha256")]
+        public string Sha256 { get; set; }
+    }
 }

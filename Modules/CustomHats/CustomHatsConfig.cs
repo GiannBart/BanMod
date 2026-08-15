@@ -8,5 +8,8 @@ namespace BanMod.Modules.CustomHats
     {
         [JsonPropertyName("hats")]
         public List<CustomHat> Hats { get; set; }
+
+        [JsonPropertyName("files")]
+        public List<CustomHatFile> Files { get; set; }
     }
 }

@@ -30,10 +30,10 @@ public static class GameEndPatch
 
         VoteBanTracker.Reset();
 
-        var NoisemakerRunManager = UnityEngine.Object.FindObjectOfType<NoisemakerRunManager>();
-        if (NoisemakerRunManager != null) NoisemakerRunManager.ResetState();
-        var StopandGoManager = UnityEngine.Object.FindObjectOfType<StopandGoManager>();
-        if (StopandGoManager != null) StopandGoManager.ResetState();
+        //var NoisemakerRunManager = UnityEngine.Object.FindObjectOfType<NoisemakerRunManager>();
+        //if (NoisemakerRunManager != null) NoisemakerRunManager.ResetState();
+        //var StopandGoManager = UnityEngine.Object.FindObjectOfType<StopandGoManager>();
+        //if (StopandGoManager != null) StopandGoManager.ResetState();
         if (!AmongUsClient.Instance.AmHost) return;
         JesterWinState.Reset();
         UnifiedRPCHandlerPatch.ModdedClients.Clear();
@@ -423,48 +423,7 @@ public static class CheckEndCriteriaPatch
                 return true;
             }
         }
-        if (gameMode == GameModeType.FollowOrDeath || gameMode == GameModeType.RunOrDeath ) 
-        {
-            if (gameMode == GameModeType.RunOrDeath && NoisemakerRunManager.gameEnded)
-            {
-                __instance.Manager.RpcEndGame(GameOverReason.CrewmatesByTask, showAd);
-                return false;
-            }
-            if (impVivi == 0)
-            {
-                __instance.Manager.RpcEndGame(GameOverReason.CrewmatesByVote, showAd);
-                return false;
-            }
 
-            if (crewVivi >= 2)
-            {
-                return false;
-            }
-            else if (crewVivi == 1)
-            {
-                __instance.Manager.RpcEndGame(GameOverReason.CrewmatesByVote, showAd);
-                return false; 
-            }
-        }
-
-        if (gameMode == GameModeType.StopOrDeath) 
-        {
-            if (impVivi == 0)
-            {
-                __instance.Manager.RpcEndGame(GameOverReason.CrewmatesByVote, showAd);
-                return false;
-            }
-
-            if (StopandGoManager.gameEnded || crewVivi == 1)
-            {
-                __instance.Manager.RpcEndGame(GameOverReason.CrewmatesByVote, showAd);
-                return false;
-            }
-            else if (crewVivi >= 2)
-            {
-                return false;
-            }
-        }
         return true; 
     }
 }

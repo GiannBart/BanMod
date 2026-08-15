@@ -25,6 +25,16 @@ namespace BanMod
         private static bool MonitorEnabled => Options.EnableProximityMonitor.GetBool();
         private static int Action => Options.ProximityAction.GetValue();
 
+        public static void ResetAll()
+        {
+            foreach (byte playerId in PlayersProximity.Keys)
+                PlayerWarningMessenger.ClearForPlayer(playerId, "proximity");
+
+            PlayersProximity.Clear();
+            FrozenPlayers.Clear();
+            DetectorPlayerExclusions.Reset();
+        }
+
         public static void EnsureTrackedPlayers()
         {
             if (!AmongUsClient.Instance.AmHost) return;
@@ -34,6 +44,7 @@ namespace BanMod
             {
                 if (p?.Data == null) continue;
                 if (p.inVent) continue;
+                if (DetectorPlayerExclusions.ShouldIgnore(p)) continue;
                 TrackPlayerInit(p);
             }
         }
@@ -42,6 +53,7 @@ namespace BanMod
         {
             if (pc == null || pc.Data == null) return;
             if (pc.inVent) return;
+            if (DetectorPlayerExclusions.ShouldIgnore(pc)) return;
             PlayersProximity[pc.PlayerId] = new ProximityData
             {
                 TargetId = byte.MaxValue,
@@ -58,6 +70,14 @@ namespace BanMod
             if (!AmongUsClient.Instance.AmHost) return;
             if (!GameStates.IsInGameplay) return;
             if (pc == null || pc.Data == null) return;
+
+            if (DetectorPlayerExclusions.ShouldIgnore(pc))
+            {
+                if (PlayersProximity.ContainsKey(pc.PlayerId) || FrozenPlayers.ContainsKey(pc.PlayerId))
+                    ResetPlayerData(pc.PlayerId, pc);
+                return;
+            }
+
             if (pc.Data.IsDead) return;
             if (pc.inVent) return;
 
@@ -81,6 +101,7 @@ namespace BanMod
                 if (other.PlayerId == pc.PlayerId) continue;
                 if (other.Data.IsDead) continue;
                 if (other.inVent) continue;
+                if (DetectorPlayerExclusions.ShouldIgnore(other)) continue;
                 float d = Vector2.Distance(pc.Pos(), other.Pos());
                 if (d <= ProximityDistance && d < bestDist)
                 {
@@ -155,14 +176,4 @@ namespace BanMod
         }
     }
 
-    [HarmonyPatch(typeof(HudManager), nameof(HudManager.OnGameStart))]
-    public static class Proximity_HudManagerOnGameStartPatch
-    {
-        public static void Postfix()
-        {
-            if (!AmongUsClient.Instance.AmHost) return;
-            PlayerWarningMessenger.ResetAll();
-            ProximityMonitor.EnsureTrackedPlayers();
-        }
-    }
 }

@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
+using static BanMod.BanMod;
+using GameStates = BanMod.GameStates;
 
 namespace BanMod
 {
@@ -466,7 +468,7 @@ namespace BanMod
                 ReOpenSettings();
             });
 
-            FfaVentMaxSeconds = (IntegerOptionItem)IntegerOptionItem.Create("FfaVentMaxSeconds", new(0, 30, 1), 5, OptionCategory.FFA, true).SetColor(new Color32(0, 153, 255, 255));
+            FfaVentMaxSeconds = (IntegerOptionItem)IntegerOptionItem.Create("FfaVentMaxSeconds", new(1, 30, 1), 5, OptionCategory.FFA, true).SetColor(new Color32(0, 153, 255, 255));
             FfaVentMaxSeconds.RegisterUpdateValueEvent((sender, args) =>
             {
                 FfaExternalBridge.SyncGameMode();
@@ -1012,6 +1014,7 @@ namespace BanMod
 
             public static void Postfix()
             {
+
                 try
                 {
                     if (!GameStates.isLobby)
@@ -1131,6 +1134,141 @@ namespace BanMod
         public static void Postfix()
         {
             OptionItem.SyncAllOptions();
+        }
+    }
+}
+[HarmonyPatch(typeof(NumberOption), nameof(NumberOption.Initialize))]
+public static class NumberOptionLimitPatch
+{
+    private static readonly HashSet<StringNames> LockedOptions = new()
+    {
+        StringNames.GameNumImpostors,
+        StringNames.GamePlayerSpeed,
+        StringNames.GameKillCooldown,
+        StringNames.ViperDissolveTime,
+        StringNames.CapacityLabel,
+        StringNames.ViperDissolveTime
+    };
+
+    public static void Postfix(NumberOption __instance)
+    {
+        if (__instance == null)
+            return;
+
+        if (GameStates.isHideNSeek)
+            return;
+
+        if (__instance.Title == StringNames.ViperDissolveTime)
+        {
+            __instance.ValidRange = new FloatRange(1f, 180f);
+            __instance.Increment = 1f;
+            return;
+        }
+
+        if (LockedOptions.Contains(__instance.Title))
+            return;
+
+        __instance.ValidRange = new FloatRange(0f, 999f);
+
+    }
+}
+
+[HarmonyPatch(typeof(GameOptionsMenu), nameof(GameOptionsMenu.Initialize))]
+public static class GameOptionsMenuInitializePatch
+{
+    public static void Postfix(GameOptionsMenu __instance)
+    {
+        if (__instance == null)
+            return;
+
+        if (GameStates.isHideNSeek)
+            return;
+
+        foreach (var ob in __instance.Children)
+        {
+            var numOpt = ob.TryCast<NumberOption>();
+            if (numOpt == null) continue;
+
+            switch (ob.Title)
+            {
+                case StringNames.GameKillCooldown:
+                    numOpt.ValidRange = new FloatRange(0.001f, 180f);
+                    break;
+
+                case StringNames.GameNumImpostors:
+                    numOpt.ValidRange = new FloatRange(1f, 3f);
+                    break;
+
+                case StringNames.GamePlayerSpeed:
+                    numOpt.ValidRange = new FloatRange(0.50f, 3f);
+                    break;
+
+                case StringNames.ViperDissolveTime:
+                    numOpt.ValidRange = new FloatRange(1f, 180f);
+                    numOpt.Increment = 1f;
+                    break;
+
+                case StringNames.CapacityLabel:
+                    numOpt.ValidRange = new FloatRange(4f, 15f);
+                    break;
+            }
+        }
+    }
+}
+
+
+
+[HarmonyPatch(typeof(ActionButton), nameof(ActionButton.SetCoolDown))]
+public static class Patch_ActionButton_SetCoolDown
+{
+    static bool Prefix(ActionButton __instance, ref float timer, ref float maxTimer, ref bool __state)
+    {
+        __state = false;
+
+        try
+        {
+            if (IsBanModDisabled)
+                return true;
+
+            if (__instance == null)
+                return true;
+
+            if (GameStates.isHideNSeek)
+                return true;
+
+            if (maxTimer > 0f)
+                return true;
+
+            __state = true;
+
+            timer = 0f;
+            maxTimer = 1f;
+
+            return true;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    static void Postfix(ActionButton __instance, bool __state)
+    {
+        try
+        {
+            if (!__state)
+                return;
+
+            if (IsBanModDisabled)
+                return;
+
+            if (__instance == null)
+                return;
+
+            __instance.SetCooldownFill(0.1f);
+        }
+        catch
+        {
         }
     }
 }
