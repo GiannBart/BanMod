@@ -215,6 +215,8 @@ Use of the mod is at the user's own risk. Neither this README nor the mode selec
 
 - Website: [banmod.online](https://banmod.online)
 - Email: `banmod.giannibart@gmail.com`
+- Discord: `GianniBart`
+- Telegram: [`@GianniBart`](https://t.me/GianniBart)
 - Bugs in the public GPL core: [GitHub Issues](https://github.com/GiannBart/BanMod/issues)
 
 When reporting an issue, include the BanMod version, Among Us version, platform, reproduction steps, and sanitized logs. Do not publish tokens, friend codes, player identifiers, email addresses, private messages, or other personal data.
