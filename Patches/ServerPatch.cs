@@ -38,6 +38,7 @@ namespace BanMod
         public string SelectTitle;
         public string SelectDescription;
         public string ModdedDescription;
+        public string VanillaDescription;
         public string ModdedButton;
         public string VanillaButton;
         public string PrivateFooter;
@@ -48,11 +49,6 @@ namespace BanMod
         public string ConfirmButton;
         public string BackButton;
 
-        public string ConfirmPopupTitle;
-        public string ConfirmPopupText;
-
-        public string PrivatePopupTitle;
-        public string PrivatePopupText;
     }
 
     public static class BanModServerLocalization
@@ -64,7 +60,7 @@ namespace BanMod
             if (Has(language, "italian", "italiano"))
                 return Italian();
 
-            if (Has(language, "french", "français", "francais"))
+            if (Has(language, "french", "franÃ§ais", "francais"))
                 return French();
 
             if (Has(language, "german", "deutsch"))
@@ -77,7 +73,7 @@ namespace BanMod
                 "spanish_la",
                 "spanishla",
                 "espanollatam",
-                "españollatam"
+                "espaÃ±ollatam"
             ))
                 return SpanishLatam();
 
@@ -87,7 +83,7 @@ namespace BanMod
                 "spanisheU",
                 "spanish_eu",
                 "espanol",
-                "español"
+                "espaÃ±ol"
             ))
                 return Spanish();
 
@@ -97,7 +93,7 @@ namespace BanMod
                 "brazilianportuguese",
                 "portuguesebrazil",
                 "portuguesebr",
-                "portuguêsbr",
+                "portuguÃªsbr",
                 "portuguesbr"
             ))
                 return BrazilianPortuguese();
@@ -107,7 +103,7 @@ namespace BanMod
                 "portuguese",
                 "portugueseeu",
                 "portuguese_eu",
-                "português",
+                "portuguÃªs",
                 "portugues"
             ))
                 return Portuguese();
@@ -115,13 +111,13 @@ namespace BanMod
             if (Has(language, "dutch", "nederlands"))
                 return Dutch();
 
-            if (Has(language, "russian", "русский"))
+            if (Has(language, "russian", "Ñ€ÑƒÑÑÐºÐ¸Ð¹"))
                 return Russian();
 
-            if (Has(language, "japanese", "日本語"))
+            if (Has(language, "japanese", "æ—¥æœ¬èªž"))
                 return Japanese();
 
-            if (Has(language, "korean", "한국어"))
+            if (Has(language, "korean", "í•œêµ­ì–´"))
                 return Korean();
 
             if (Has(
@@ -130,7 +126,7 @@ namespace BanMod
                 "simplifiedchinese",
                 "chinesesimplified",
                 "chinese_cn",
-                "简体中文"
+                "ç®€ä½“ä¸­æ–‡"
             ))
                 return SimplifiedChinese();
 
@@ -140,8 +136,8 @@ namespace BanMod
                 "traditionalchinese",
                 "chinesetraditional",
                 "chinese_tw",
-                "繁體中文",
-                "繁体中文"
+                "ç¹é«”ä¸­æ–‡",
+                "ç¹ä½“ä¸­æ–‡"
             ))
                 return TraditionalChinese();
 
@@ -210,81 +206,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - SELECT LOBBY MODE",
-
                 SelectDescription =
-                    "Choose the networking mode to use before creating this lobby.",
-
+                    "Choose the lobby mode before creating this lobby.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Uses the modded host networking flag.",
-
+                    "Host a lobby with gameplay changes.",
+                VanillaDescription =
+                    "Host a lobby without gameplay changes.",
                 ModdedButton =
                     "MODDED +25\nRECOMMENDED",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod must be used responsibly. " +
-                    "When BanMod is enabled, create only PRIVATE lobbies.",
-
+                    "Use BanMod responsibly and select the mode that matches the type of lobby you are creating.",
                 VanillaTitle =
                     "IMPORTANT - VANILLA MODE",
-
                 VanillaIntro =
-                    "You selected VANILLA networking while BanMod remains enabled.",
-
+                    "You selected Vanilla mode.",
                 VanillaWarning =
-                    "BanMod must be used ONLY in PRIVATE lobbies.\n\n" +
-
-                    "Do not use BanMod in public lobbies or to disturb normal public games.\n\n" +
-
-                    "If you want to play or host normally without BanMod, disable the mod " +
-                    "using the dedicated Disable Mod option in BanMod settings.\n\n" +
-
-                    "If you continue with BanMod enabled, you must create a PRIVATE lobby " +
-                    "and use the modification legitimately and responsibly.\n\n" +
-
-                    "You are responsible for respecting the Among Us Terms of Use, " +
-                    "Mod Policy, Code of Conduct, applicable community rules, " +
-                    "and the consent of the other players.\n\n" +
-
-                    "Do not use BanMod to cheat, grief, gain an unfair advantage, " +
-                    "interfere with other players, bypass restrictions, or disrupt services.\n\n" +
-
-                    "Use of modifications may still be subject to enforcement decisions " +
-                    "made by Innersloth. BanMod cannot guarantee that an account will never " +
-                    "receive warnings, restrictions, suspensions, bans, or other sanctions.\n\n" +
-
-                    "By pressing the confirmation button below, you confirm that you have " +
-                    "read and understood this notice and that you take responsibility for " +
-                    "using BanMod legitimately.",
-
+                    "Please do not use BanMod to annoy or disturb other players, and do not enable options that change gameplay, provide unfair advantages, or alter the experience of other players.\n\nImproper, unauthorized, or rule-breaking use may result in warnings, restrictions, suspensions, bans, or other sanctions from Innersloth or other services involved.\n\nBanMod and its developers are not responsible for any consequences resulting from improper, unlawful, or unauthorized use of the mod.\n\nUse only features compatible with Vanilla mode and respect the rules of Among Us and any other services being used.",
                 ConfirmButton =
-                    "I HAVE READ AND TAKEN NOTE",
-
+                    "I AGREE",
                 BackButton =
-                    "BACK",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Vanilla networking selected.\n\n" +
-                    "BanMod remains enabled.\n\n" +
-                    "Create ONLY PRIVATE lobbies while using BanMod.\n\n" +
-                    "To play normally without BanMod, disable the mod " +
-                    "from the dedicated option in BanMod settings.",
-
-                PrivatePopupTitle =
-                    "BanMod - Private Lobby Required",
-
-                PrivatePopupText =
-                    "BanMod is enabled.\n\n" +
-                    "Only PRIVATE lobbies are allowed while using BanMod.\n\n" +
-                    "The request to make this lobby public has been blocked.\n\n" +
-                    "If you want to host a normal public lobby, disable BanMod " +
-                    "from the dedicated option in BanMod settings."
+                    "I DECLINE"
             };
         }
 
@@ -294,83 +237,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - SELEZIONA MODALITÀ LOBBY",
-
                 SelectDescription =
-                    "Scegli la modalità di rete da utilizzare prima di creare questa lobby.",
-
+                    "Scegli la modalità della lobby prima di crearla.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Utilizza il flag di rete per le mod host.",
-
+                    "Ospita una lobby con modifiche al gameplay.",
+                VanillaDescription =
+                    "Ospita una lobby senza modifiche al gameplay.",
                 ModdedButton =
                     "MODDED +25\nCONSIGLIATO",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod deve essere utilizzata responsabilmente. " +
-                    "Quando BanMod è attiva, crea SOLO lobby PRIVATE.",
-
+                    "Usa BanMod responsabilmente e seleziona la modalità che corrisponde al tipo di lobby che stai creando.",
                 VanillaTitle =
                     "IMPORTANTE - MODALITÀ VANILLA",
-
                 VanillaIntro =
-                    "Hai selezionato la rete VANILLA mentre BanMod rimane attiva.",
-
+                    "Hai scelto la modalità Vanilla.",
                 VanillaWarning =
-                    "BanMod deve essere utilizzata SOLO in lobby PRIVATE.\n\n" +
-
-                    "Non utilizzare BanMod nelle lobby pubbliche e non disturbare le normali partite pubbliche.\n\n" +
-
-                    "Se vuoi giocare o hostare normalmente senza BanMod, disattiva la mod " +
-                    "utilizzando l'apposita opzione Disabilita Mod nelle impostazioni di BanMod.\n\n" +
-
-                    "Se continui con BanMod attiva, devi creare una lobby PRIVATA " +
-                    "e utilizzare la modifica in modo legittimo e responsabile.\n\n" +
-
-                    "Sei responsabile del rispetto dei Termini di utilizzo di Among Us, " +
-                    "della Mod Policy, del Codice di condotta, delle regole applicabili " +
-                    "della community e del consenso degli altri giocatori.\n\n" +
-
-                    "Non utilizzare BanMod per barare, disturbare le partite, ottenere " +
-                    "vantaggi sleali, interferire con altri giocatori, aggirare restrizioni " +
-                    "o disturbare i servizi.\n\n" +
-
-                    "L'utilizzo di modifiche può comunque essere soggetto alle decisioni " +
-                    "di applicazione delle regole da parte di Innersloth. BanMod non può " +
-                    "garantire che un account non riceva avvertimenti, restrizioni, " +
-                    "sospensioni, ban o altre sanzioni.\n\n" +
-
-                    "Premendo il pulsante di conferma qui sotto dichiari di aver letto e " +
-                    "compreso questo avviso e di assumerti la responsabilità di utilizzare " +
-                    "BanMod in modo legittimo.",
-
+                    "Per favore, non utilizzare BanMod per infastidire o disturbare altri giocatori e non attivare opzioni che modificano il gameplay, forniscono vantaggi sleali o alterano l’esperienza degli altri giocatori.\n\nUn utilizzo improprio, non consentito o contrario alle regole può provocare avvertimenti, restrizioni, sospensioni, ban o altre sanzioni da parte di Innersloth o di altri servizi coinvolti.\n\nBanMod e i suoi sviluppatori non sono responsabili per eventuali conseguenze derivanti da un utilizzo improprio, illecito o non consentito della mod.\n\nAssicurati di utilizzare esclusivamente funzionalità compatibili con la modalità Vanilla e di rispettare le regole di Among Us e degli altri servizi utilizzati.",
                 ConfirmButton =
-                    "HO LETTO E PRESO NOTA",
-
+                    "ACCETTO",
                 BackButton =
-                    "INDIETRO",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Rete Vanilla selezionata.\n\n" +
-                    "BanMod rimane attiva.\n\n" +
-                    "Crea SOLO lobby PRIVATE mentre utilizzi BanMod.\n\n" +
-                    "Per giocare normalmente senza BanMod, disattiva la mod " +
-                    "dall'apposita opzione nelle impostazioni di BanMod.",
-
-                PrivatePopupTitle =
-                    "BanMod - Lobby privata obbligatoria",
-
-                PrivatePopupText =
-                    "BanMod è attiva.\n\n" +
-                    "Durante l'utilizzo di BanMod sono consentite SOLO lobby PRIVATE.\n\n" +
-                    "La richiesta di rendere pubblica questa lobby è stata bloccata.\n\n" +
-                    "Se vuoi creare una normale lobby pubblica, disattiva BanMod " +
-                    "dall'apposita opzione nelle impostazioni."
+                    "NEGO"
             };
         }
 
@@ -380,82 +268,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - SÉLECTION DU MODE DU SALON",
-
                 SelectDescription =
-                    "Choisissez le mode réseau avant de créer ce salon.",
-
+                    "Choisissez le mode du salon avant de le créer.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Utilise le drapeau réseau pour les mods de l'hôte.",
-
+                    "Hébergez un salon avec des modifications du gameplay.",
+                VanillaDescription =
+                    "Hébergez un salon sans modifications du gameplay.",
                 ModdedButton =
                     "MODDED +25\nRECOMMANDÉ",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod doit être utilisé de manière responsable. " +
-                    "Lorsque BanMod est actif, créez uniquement des salons PRIVÉS.",
-
+                    "Utilisez BanMod de manière responsable et choisissez le mode correspondant au type de salon que vous créez.",
                 VanillaTitle =
                     "IMPORTANT - MODE VANILLA",
-
                 VanillaIntro =
-                    "Vous avez sélectionné le réseau VANILLA alors que BanMod reste actif.",
-
+                    "Vous avez choisi le mode Vanilla.",
                 VanillaWarning =
-                    "BanMod doit être utilisé UNIQUEMENT dans des salons PRIVÉS.\n\n" +
-
-                    "N'utilisez pas BanMod dans des salons publics et ne perturbez pas " +
-                    "les parties publiques normales.\n\n" +
-
-                    "Si vous souhaitez jouer normalement sans BanMod, désactivez le mod " +
-                    "à l'aide de l'option dédiée dans les paramètres BanMod.\n\n" +
-
-                    "Si BanMod reste actif, vous devez créer un salon PRIVÉ et utiliser " +
-                    "la modification de manière légitime et responsable.\n\n" +
-
-                    "Vous êtes responsable du respect des Conditions d'utilisation " +
-                    "d'Among Us, de la politique concernant les mods, du Code de conduite, " +
-                    "des règles communautaires applicables et du consentement des autres joueurs.\n\n" +
-
-                    "N'utilisez pas BanMod pour tricher, perturber des parties, obtenir " +
-                    "un avantage injuste, interférer avec d'autres joueurs, contourner " +
-                    "des restrictions ou perturber des services.\n\n" +
-
-                    "L'utilisation de modifications peut être soumise aux décisions " +
-                    "d'Innersloth. BanMod ne peut pas garantir qu'un compte ne recevra " +
-                    "jamais d'avertissements, restrictions, suspensions, bannissements " +
-                    "ou autres sanctions.\n\n" +
-
-                    "En confirmant, vous déclarez avoir lu et compris cet avertissement " +
-                    "et accepter la responsabilité d'utiliser BanMod de manière légitime.",
-
+                    "Veuillez ne pas utiliser BanMod pour déranger ou perturber les autres joueurs, et n’activez pas d’options qui modifient le gameplay, donnent des avantages injustes ou changent l’expérience des autres joueurs.\n\nUne utilisation abusive, non autorisée ou contraire aux règles peut entraîner des avertissements, restrictions, suspensions, bannissements ou autres sanctions de la part d’Innersloth ou d’autres services concernés.\n\nBanMod et ses développeurs ne sont pas responsables des conséquences résultant d’une utilisation abusive, illégale ou non autorisée du mod.\n\nUtilisez uniquement des fonctionnalités compatibles avec le mode Vanilla et respectez les règles d’Among Us et des autres services utilisés.",
                 ConfirmButton =
-                    "J'AI LU ET PRIS NOTE",
-
+                    "J’ACCEPTE",
                 BackButton =
-                    "RETOUR",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Réseau Vanilla sélectionné.\n\n" +
-                    "BanMod reste actif.\n\n" +
-                    "Créez UNIQUEMENT des salons PRIVÉS avec BanMod.\n\n" +
-                    "Pour jouer normalement sans BanMod, désactivez le mod " +
-                    "dans les paramètres BanMod.",
-
-                PrivatePopupTitle =
-                    "BanMod - Salon privé requis",
-
-                PrivatePopupText =
-                    "BanMod est actif.\n\n" +
-                    "Seuls les salons PRIVÉS sont autorisés avec BanMod.\n\n" +
-                    "La demande de rendre ce salon public a été bloquée.\n\n" +
-                    "Pour créer un salon public normal, désactivez BanMod."
+                    "JE REFUSE"
             };
         }
 
@@ -465,79 +299,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - LOBBY-MODUS AUSWÄHLEN",
-
                 SelectDescription =
-                    "Wähle den Netzwerkmodus aus, bevor du diese Lobby erstellst.",
-
+                    "Wähle den Lobby-Modus, bevor du diese Lobby erstellst.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Verwendet das Netzwerk-Flag für Host-Mods.",
-
+                    "Hoste eine Lobby mit Gameplay-Änderungen.",
+                VanillaDescription =
+                    "Hoste eine Lobby ohne Gameplay-Änderungen.",
                 ModdedButton =
                     "MODDED +25\nEMPFOHLEN",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod muss verantwortungsvoll verwendet werden. " +
-                    "Wenn BanMod aktiv ist, erstelle nur PRIVATE Lobbys.",
-
+                    "Verwende BanMod verantwortungsvoll und wähle den Modus, der zu deiner Lobby passt.",
                 VanillaTitle =
                     "WICHTIG - VANILLA-MODUS",
-
                 VanillaIntro =
-                    "Du hast VANILLA ausgewählt, während BanMod weiterhin aktiv ist.",
-
+                    "Du hast den Vanilla-Modus ausgewählt.",
                 VanillaWarning =
-                    "BanMod darf NUR in PRIVATEN Lobbys verwendet werden.\n\n" +
-
-                    "Verwende BanMod nicht in öffentlichen Lobbys und störe keine " +
-                    "normalen öffentlichen Spiele.\n\n" +
-
-                    "Wenn du normal ohne BanMod spielen möchtest, deaktiviere die Mod " +
-                    "über die entsprechende Option in den BanMod-Einstellungen.\n\n" +
-
-                    "Wenn BanMod aktiviert bleibt, musst du eine PRIVATE Lobby erstellen " +
-                    "und die Mod legitim und verantwortungsvoll verwenden.\n\n" +
-
-                    "Du bist für die Einhaltung der Among Us-Nutzungsbedingungen, " +
-                    "Mod-Richtlinie, Verhaltensregeln, Community-Regeln und der Zustimmung " +
-                    "anderer Spieler verantwortlich.\n\n" +
-
-                    "Verwende BanMod nicht zum Cheaten, Griefen, Erlangen unfairer Vorteile, " +
-                    "Stören anderer Spieler, Umgehen von Beschränkungen oder Stören von Diensten.\n\n" +
-
-                    "Die Verwendung von Mods kann weiterhin Maßnahmen von Innersloth " +
-                    "unterliegen. BanMod kann nicht garantieren, dass ein Konto niemals " +
-                    "Warnungen, Einschränkungen, Sperren oder andere Sanktionen erhält.\n\n" +
-
-                    "Mit der Bestätigung erklärst du, diesen Hinweis gelesen und verstanden " +
-                    "zu haben und die Verantwortung für die legitime Verwendung von BanMod zu übernehmen.",
-
+                    "Bitte verwende BanMod nicht, um andere Spieler zu stören oder zu belästigen, und aktiviere keine Optionen, die das Gameplay verändern, unfaire Vorteile geben oder die Erfahrung anderer Spieler verändern.\n\nEine unsachgemäße, nicht autorisierte oder regelwidrige Nutzung kann zu Verwarnungen, Einschränkungen, Sperren, Bans oder anderen Maßnahmen durch Innersloth oder andere beteiligte Dienste führen.\n\nBanMod und seine Entwickler sind nicht für Folgen verantwortlich, die aus einer unsachgemäßen, rechtswidrigen oder nicht autorisierten Nutzung der Mod entstehen.\n\nVerwende nur mit dem Vanilla-Modus kompatible Funktionen und halte die Regeln von Among Us sowie der verwendeten Dienste ein.",
                 ConfirmButton =
-                    "GELESEN UND ZUR KENNTNIS GENOMMEN",
-
+                    "ICH STIMME ZU",
                 BackButton =
-                    "ZURÜCK",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Vanilla-Netzwerk ausgewählt.\n\n" +
-                    "BanMod bleibt aktiviert.\n\n" +
-                    "Erstelle mit BanMod NUR PRIVATE Lobbys.\n\n" +
-                    "Für normales Spielen deaktiviere BanMod in den Einstellungen.",
-
-                PrivatePopupTitle =
-                    "BanMod - Private Lobby erforderlich",
-
-                PrivatePopupText =
-                    "BanMod ist aktiviert.\n\n" +
-                    "Mit BanMod sind nur PRIVATE Lobbys erlaubt.\n\n" +
-                    "Der Versuch, diese Lobby öffentlich zu machen, wurde blockiert.\n\n" +
-                    "Für eine normale öffentliche Lobby deaktiviere BanMod."
+                    "ICH LEHNE AB"
             };
         }
 
@@ -547,78 +330,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - SELECCIONAR MODO DE SALA",
-
                 SelectDescription =
-                    "Elige el modo de red antes de crear esta sala.",
-
+                    "Elige el modo de la sala antes de crearla.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Utiliza el indicador de red para mods del anfitrión.",
-
+                    "Organiza una sala con modificaciones del gameplay.",
+                VanillaDescription =
+                    "Organiza una sala sin modificaciones del gameplay.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod debe utilizarse de forma responsable. " +
-                    "Con BanMod activo, crea únicamente salas PRIVADAS.",
-
+                    "Usa BanMod de forma responsable y selecciona el modo que corresponda al tipo de sala que vas a crear.",
                 VanillaTitle =
                     "IMPORTANTE - MODO VANILLA",
-
                 VanillaIntro =
-                    "Has seleccionado VANILLA mientras BanMod sigue activado.",
-
+                    "Has elegido el modo Vanilla.",
                 VanillaWarning =
-                    "BanMod debe utilizarse ÚNICAMENTE en salas PRIVADAS.\n\n" +
-
-                    "No utilices BanMod en salas públicas ni para molestar partidas públicas normales.\n\n" +
-
-                    "Si quieres jugar normalmente sin BanMod, desactiva el mod utilizando " +
-                    "la opción correspondiente en los ajustes de BanMod.\n\n" +
-
-                    "Si continúas con BanMod activo, debes crear una sala PRIVADA y utilizar " +
-                    "la modificación de forma legítima y responsable.\n\n" +
-
-                    "Eres responsable de respetar los Términos de uso de Among Us, " +
-                    "la Política de mods, el Código de conducta, las reglas de la comunidad " +
-                    "y el consentimiento de los demás jugadores.\n\n" +
-
-                    "No utilices BanMod para hacer trampas, molestar, obtener ventajas injustas, " +
-                    "interferir con otros jugadores, eludir restricciones o perturbar servicios.\n\n" +
-
-                    "El uso de modificaciones puede estar sujeto a medidas de Innersloth. " +
-                    "BanMod no puede garantizar que una cuenta nunca reciba advertencias, " +
-                    "restricciones, suspensiones, bloqueos u otras sanciones.\n\n" +
-
-                    "Al confirmar declaras que has leído y comprendido este aviso y que " +
-                    "asumes la responsabilidad de utilizar BanMod legítimamente.",
-
+                    "Por favor, no uses BanMod para molestar o perturbar a otros jugadores y no actives opciones que cambien el gameplay, proporcionen ventajas injustas o alteren la experiencia de otros jugadores.\n\nEl uso indebido, no autorizado o contrario a las reglas puede provocar advertencias, restricciones, suspensiones, baneos u otras sanciones por parte de Innersloth u otros servicios involucrados.\n\nBanMod y sus desarrolladores no son responsables de las consecuencias derivadas de un uso indebido, ilegal o no autorizado del mod.\n\nUtiliza únicamente funciones compatibles con el modo Vanilla y respeta las reglas de Among Us y de los demás servicios utilizados.",
                 ConfirmButton =
-                    "HE LEÍDO Y TOMADO NOTA",
-
+                    "ACEPTO",
                 BackButton =
-                    "ATRÁS",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Red Vanilla seleccionada.\n\n" +
-                    "BanMod continúa activo.\n\n" +
-                    "Crea SOLO salas PRIVADAS mientras utilizas BanMod.\n\n" +
-                    "Para jugar normalmente, desactiva BanMod en los ajustes.",
-
-                PrivatePopupTitle =
-                    "BanMod - Sala privada obligatoria",
-
-                PrivatePopupText =
-                    "BanMod está activo.\n\n" +
-                    "Solo se permiten salas PRIVADAS con BanMod.\n\n" +
-                    "Se ha bloqueado la solicitud de hacer pública esta sala.\n\n" +
-                    "Para crear una sala pública normal, desactiva BanMod."
+                    "NO ACEPTO"
             };
         }
 
@@ -628,78 +361,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - SELECCIONAR MODO DE SALA",
-
                 SelectDescription =
-                    "Elige el modo de red antes de crear esta sala.",
-
+                    "Elige el modo de la sala antes de crearla.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Usa el indicador de red para mods del anfitrión.",
-
+                    "Crea una sala con modificaciones del gameplay.",
+                VanillaDescription =
+                    "Crea una sala sin modificaciones del gameplay.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod debe usarse responsablemente. " +
-                    "Con BanMod activo, crea solamente salas PRIVADAS.",
-
+                    "Usa BanMod de forma responsable y selecciona el modo que corresponda al tipo de sala que vas a crear.",
                 VanillaTitle =
                     "IMPORTANTE - MODO VANILLA",
-
                 VanillaIntro =
-                    "Seleccionaste VANILLA mientras BanMod sigue activado.",
-
+                    "Has elegido el modo Vanilla.",
                 VanillaWarning =
-                    "BanMod debe usarse ÚNICAMENTE en salas PRIVADAS.\n\n" +
-
-                    "No uses BanMod en salas públicas ni para molestar partidas públicas normales.\n\n" +
-
-                    "Si quieres jugar normalmente sin BanMod, desactiva el mod usando " +
-                    "la opción correspondiente en la configuración de BanMod.\n\n" +
-
-                    "Si continúas con BanMod activo, debes crear una sala PRIVADA y utilizar " +
-                    "la modificación de forma legítima y responsable.\n\n" +
-
-                    "Eres responsable de respetar los Términos de uso de Among Us, " +
-                    "la Política de mods, el Código de conducta, las reglas de la comunidad " +
-                    "y el consentimiento de los demás jugadores.\n\n" +
-
-                    "No uses BanMod para hacer trampa, molestar, obtener ventajas injustas, " +
-                    "interferir con otros jugadores, evadir restricciones o interrumpir servicios.\n\n" +
-
-                    "El uso de modificaciones puede estar sujeto a decisiones de Innersloth. " +
-                    "BanMod no puede garantizar que una cuenta nunca reciba advertencias, " +
-                    "restricciones, suspensiones, bloqueos u otras sanciones.\n\n" +
-
-                    "Al confirmar declaras que leíste y comprendiste este aviso y que " +
-                    "asumes la responsabilidad de usar BanMod legítimamente.",
-
+                    "Por favor, no uses BanMod para molestar o perturbar a otros jugadores y no actives opciones que cambien el gameplay, den ventajas injustas o alteren la experiencia de otros jugadores.\n\nEl uso indebido, no autorizado o contrario a las reglas puede provocar advertencias, restricciones, suspensiones, baneos u otras sanciones por parte de Innersloth u otros servicios involucrados.\n\nBanMod y sus desarrolladores no son responsables de las consecuencias derivadas de un uso indebido, ilegal o no autorizado del mod.\n\nUtiliza únicamente funciones compatibles con el modo Vanilla y respeta las reglas de Among Us y de los demás servicios utilizados.",
                 ConfirmButton =
-                    "HE LEÍDO Y TOMADO NOTA",
-
+                    "ACEPTO",
                 BackButton =
-                    "VOLVER",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Red Vanilla seleccionada.\n\n" +
-                    "BanMod continúa activado.\n\n" +
-                    "Crea SOLO salas PRIVADAS mientras utilizas BanMod.\n\n" +
-                    "Para jugar normalmente, desactiva BanMod en la configuración.",
-
-                PrivatePopupTitle =
-                    "BanMod - Se requiere sala privada",
-
-                PrivatePopupText =
-                    "BanMod está activado.\n\n" +
-                    "Solo se permiten salas PRIVADAS con BanMod.\n\n" +
-                    "Se bloqueó la solicitud para hacer pública esta sala.\n\n" +
-                    "Para crear una sala pública normal, desactiva BanMod."
+                    "NO ACEPTO"
             };
         }
 
@@ -709,78 +392,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - SELECIONAR MODO DA SALA",
-
                 SelectDescription =
-                    "Escolha o modo de rede antes de criar esta sala.",
-
+                    "Escolha o modo da sala antes de criá-la.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Usa o sinalizador de rede para mods do host.",
-
+                    "Hospede uma sala com alterações no gameplay.",
+                VanillaDescription =
+                    "Hospede uma sala sem alterações no gameplay.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod deve ser usado com responsabilidade. " +
-                    "Com BanMod ativo, crie somente salas PRIVADAS.",
-
+                    "Use o BanMod com responsabilidade e selecione o modo correspondente ao tipo de sala que você está criando.",
                 VanillaTitle =
                     "IMPORTANTE - MODO VANILLA",
-
                 VanillaIntro =
-                    "Você selecionou VANILLA enquanto BanMod continua ativo.",
-
+                    "Você escolheu o modo Vanilla.",
                 VanillaWarning =
-                    "BanMod deve ser usado SOMENTE em salas PRIVADAS.\n\n" +
-
-                    "Não use BanMod em salas públicas nem para atrapalhar partidas públicas normais.\n\n" +
-
-                    "Se quiser jogar normalmente sem BanMod, desative o mod usando " +
-                    "a opção dedicada nas configurações do BanMod.\n\n" +
-
-                    "Se continuar com BanMod ativo, você deve criar uma sala PRIVADA " +
-                    "e usar a modificação de forma legítima e responsável.\n\n" +
-
-                    "Você é responsável por respeitar os Termos de Uso de Among Us, " +
-                    "a Política de Mods, o Código de Conduta, as regras da comunidade " +
-                    "e o consentimento dos outros jogadores.\n\n" +
-
-                    "Não use BanMod para trapacear, perturbar partidas, obter vantagem injusta, " +
-                    "interferir com jogadores, contornar restrições ou interromper serviços.\n\n" +
-
-                    "O uso de modificações pode estar sujeito às decisões da Innersloth. " +
-                    "BanMod não pode garantir que uma conta nunca receberá avisos, restrições, " +
-                    "suspensões, banimentos ou outras sanções.\n\n" +
-
-                    "Ao confirmar, você declara que leu e compreendeu este aviso e assume " +
-                    "a responsabilidade pelo uso legítimo do BanMod.",
-
+                    "Por favor, não use o BanMod para incomodar ou perturbar outros jogadores e não ative opções que alterem o gameplay, forneçam vantagens injustas ou mudem a experiência de outros jogadores.\n\nO uso indevido, não autorizado ou contrário às regras pode resultar em avisos, restrições, suspensões, banimentos ou outras sanções da Innersloth ou de outros serviços envolvidos.\n\nO BanMod e seus desenvolvedores não são responsáveis por quaisquer consequências decorrentes do uso indevido, ilegal ou não autorizado do mod.\n\nUse apenas recursos compatíveis com o modo Vanilla e respeite as regras de Among Us e dos outros serviços utilizados.",
                 ConfirmButton =
-                    "LI E ESTOU CIENTE",
-
+                    "ACEITO",
                 BackButton =
-                    "VOLTAR",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Rede Vanilla selecionada.\n\n" +
-                    "BanMod continua ativo.\n\n" +
-                    "Crie SOMENTE salas PRIVADAS enquanto estiver usando BanMod.\n\n" +
-                    "Para jogar normalmente, desative BanMod nas configurações.",
-
-                PrivatePopupTitle =
-                    "BanMod - Sala privada obrigatória",
-
-                PrivatePopupText =
-                    "BanMod está ativo.\n\n" +
-                    "Somente salas PRIVADAS são permitidas com BanMod.\n\n" +
-                    "A tentativa de tornar esta sala pública foi bloqueada.\n\n" +
-                    "Para criar uma sala pública normal, desative BanMod."
+                    "NÃO ACEITO"
             };
         }
 
@@ -790,78 +423,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - SELECIONAR MODO DA SALA",
-
                 SelectDescription =
-                    "Escolhe o modo de rede antes de criares esta sala.",
-
+                    "Escolhe o modo da sala antes de a criares.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Utiliza o indicador de rede para mods do anfitrião.",
-
+                    "Aloja uma sala com alterações ao gameplay.",
+                VanillaDescription =
+                    "Aloja uma sala sem alterações ao gameplay.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod deve ser utilizado de forma responsável. " +
-                    "Com BanMod ativo, cria apenas salas PRIVADAS.",
-
+                    "Usa o BanMod de forma responsável e seleciona o modo correspondente ao tipo de sala que estás a criar.",
                 VanillaTitle =
                     "IMPORTANTE - MODO VANILLA",
-
                 VanillaIntro =
-                    "Selecionaste VANILLA enquanto BanMod permanece ativo.",
-
+                    "Escolheste o modo Vanilla.",
                 VanillaWarning =
-                    "BanMod deve ser utilizado APENAS em salas PRIVADAS.\n\n" +
-
-                    "Não utilizes BanMod em salas públicas nem para perturbar partidas públicas normais.\n\n" +
-
-                    "Se quiseres jogar normalmente sem BanMod, desativa o mod através " +
-                    "da opção dedicada nas definições do BanMod.\n\n" +
-
-                    "Se continuares com BanMod ativo, tens de criar uma sala PRIVADA " +
-                    "e utilizar a modificação de forma legítima e responsável.\n\n" +
-
-                    "És responsável por respeitar os Termos de Utilização de Among Us, " +
-                    "a Política de Mods, o Código de Conduta, as regras da comunidade " +
-                    "e o consentimento dos outros jogadores.\n\n" +
-
-                    "Não utilizes BanMod para fazer batota, perturbar partidas, obter vantagens " +
-                    "injustas, interferir com jogadores, contornar restrições ou perturbar serviços.\n\n" +
-
-                    "A utilização de modificações pode estar sujeita às decisões da Innersloth. " +
-                    "BanMod não pode garantir que uma conta nunca receba avisos, restrições, " +
-                    "suspensões, banimentos ou outras sanções.\n\n" +
-
-                    "Ao confirmar, declaras que leste e compreendeste este aviso e assumes " +
-                    "a responsabilidade pela utilização legítima do BanMod.",
-
+                    "Por favor, não uses o BanMod para incomodar ou perturbar outros jogadores e não atives opções que alterem o gameplay, deem vantagens injustas ou mudem a experiência dos outros jogadores.\n\nUma utilização indevida, não autorizada ou contrária às regras pode resultar em avisos, restrições, suspensões, banimentos ou outras sanções da Innersloth ou de outros serviços envolvidos.\n\nO BanMod e os seus desenvolvedores não são responsáveis por quaisquer consequências resultantes de uma utilização indevida, ilegal ou não autorizada da mod.\n\nUtiliza apenas funcionalidades compatíveis com o modo Vanilla e respeita as regras de Among Us e dos outros serviços utilizados.",
                 ConfirmButton =
-                    "LI E TOMEI CONHECIMENTO",
-
+                    "ACEITO",
                 BackButton =
-                    "VOLTAR",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Rede Vanilla selecionada.\n\n" +
-                    "BanMod permanece ativo.\n\n" +
-                    "Cria APENAS salas PRIVADAS enquanto utilizares BanMod.\n\n" +
-                    "Para jogar normalmente, desativa BanMod nas definições.",
-
-                PrivatePopupTitle =
-                    "BanMod - Sala privada obrigatória",
-
-                PrivatePopupText =
-                    "BanMod está ativo.\n\n" +
-                    "Apenas são permitidas salas PRIVADAS com BanMod.\n\n" +
-                    "O pedido para tornar esta sala pública foi bloqueado.\n\n" +
-                    "Para criar uma sala pública normal, desativa BanMod."
+                    "NÃO ACEITO"
             };
         }
 
@@ -871,77 +454,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - LOBBYMODUS SELECTEREN",
-
                 SelectDescription =
-                    "Kies de netwerkmodus voordat je deze lobby maakt.",
-
+                    "Kies de lobbymodus voordat je deze lobby maakt.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Gebruikt de netwerkmarkering voor hostmods.",
-
+                    "Host een lobby met gameplaywijzigingen.",
+                VanillaDescription =
+                    "Host een lobby zonder gameplaywijzigingen.",
                 ModdedButton =
                     "MODDED +25\nAANBEVOLEN",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "Gebruik BanMod verantwoordelijk. " +
-                    "Maak alleen PRIVÉLOBBY'S wanneer BanMod actief is.",
-
+                    "Gebruik BanMod verantwoord en kies de modus die past bij het type lobby dat je maakt.",
                 VanillaTitle =
                     "BELANGRIJK - VANILLA-MODUS",
-
                 VanillaIntro =
-                    "Je hebt VANILLA geselecteerd terwijl BanMod actief blijft.",
-
+                    "Je hebt de Vanilla-modus gekozen.",
                 VanillaWarning =
-                    "BanMod mag ALLEEN in PRIVÉLOBBY'S worden gebruikt.\n\n" +
-
-                    "Gebruik BanMod niet in openbare lobby's en verstoor geen normale openbare spellen.\n\n" +
-
-                    "Wil je normaal zonder BanMod spelen, schakel de mod dan uit via " +
-                    "de speciale optie in de BanMod-instellingen.\n\n" +
-
-                    "Als BanMod actief blijft, moet je een PRIVÉLOBBY maken en de modificatie " +
-                    "legitiem en verantwoordelijk gebruiken.\n\n" +
-
-                    "Je bent verantwoordelijk voor het naleven van de Among Us-gebruiksvoorwaarden, " +
-                    "het modbeleid, de gedragscode, communityregels en de toestemming van andere spelers.\n\n" +
-
-                    "Gebruik BanMod niet om vals te spelen, te griefen, oneerlijke voordelen te verkrijgen, " +
-                    "andere spelers te hinderen, beperkingen te omzeilen of diensten te verstoren.\n\n" +
-
-                    "Het gebruik van modificaties kan onderworpen zijn aan maatregelen van Innersloth. " +
-                    "BanMod kan niet garanderen dat een account nooit waarschuwingen, beperkingen, " +
-                    "schorsingen, bans of andere sancties ontvangt.\n\n" +
-
-                    "Door te bevestigen verklaar je dat je deze melding hebt gelezen en begrepen " +
-                    "en verantwoordelijkheid neemt voor het legitieme gebruik van BanMod.",
-
+                    "Gebruik BanMod niet om andere spelers te ergeren of te hinderen en schakel geen opties in die de gameplay veranderen, oneerlijke voordelen geven of de ervaring van andere spelers aanpassen.\n\nOnjuist, ongeoorloofd of regelstrijdig gebruik kan leiden tot waarschuwingen, beperkingen, schorsingen, bans of andere sancties van Innersloth of andere betrokken diensten.\n\nBanMod en de ontwikkelaars zijn niet verantwoordelijk voor gevolgen die voortkomen uit onjuist, onwettig of ongeoorloofd gebruik van de mod.\n\nGebruik alleen functies die compatibel zijn met de Vanilla-modus en respecteer de regels van Among Us en de gebruikte diensten.",
                 ConfirmButton =
-                    "GELEZEN EN BEGREPEN",
-
+                    "IK GA AKKOORD",
                 BackButton =
-                    "TERUG",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Vanilla-netwerk geselecteerd.\n\n" +
-                    "BanMod blijft actief.\n\n" +
-                    "Maak ALLEEN PRIVÉLOBBY'S wanneer je BanMod gebruikt.\n\n" +
-                    "Schakel BanMod uit om normaal te spelen.",
-
-                PrivatePopupTitle =
-                    "BanMod - Privélobby vereist",
-
-                PrivatePopupText =
-                    "BanMod is actief.\n\n" +
-                    "Alleen PRIVÉLOBBY'S zijn toegestaan met BanMod.\n\n" +
-                    "Het verzoek om deze lobby openbaar te maken is geblokkeerd.\n\n" +
-                    "Schakel BanMod uit om een normale openbare lobby te maken."
+                    "IK WEIGER"
             };
         }
 
@@ -951,79 +485,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - ВЫБОР РЕЖИМА ЛОББИ",
-
                 SelectDescription =
-                    "Выберите сетевой режим перед созданием лобби.",
-
+                    "Выберите режим лобби перед его созданием.",
                 ModdedDescription =
-                    "MODDED +25\n" +
-                    "Использует сетевой флаг модифицированного хоста.",
-
+                    "Создайте лобби с изменениями игрового процесса.",
+                VanillaDescription =
+                    "Создайте лобби без изменений игрового процесса.",
                 ModdedButton =
                     "MODDED +25\nРЕКОМЕНДУЕТСЯ",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "Используйте BanMod ответственно. " +
-                    "При включённом BanMod создавайте только ПРИВАТНЫЕ лобби.",
-
+                    "Используйте BanMod ответственно и выбирайте режим, соответствующий создаваемому лобби.",
                 VanillaTitle =
                     "ВАЖНО - РЕЖИМ VANILLA",
-
                 VanillaIntro =
-                    "Вы выбрали VANILLA, при этом BanMod остаётся включённым.",
-
+                    "Вы выбрали режим Vanilla.",
                 VanillaWarning =
-                    "BanMod разрешается использовать ТОЛЬКО в ПРИВАТНЫХ лобби.\n\n" +
-
-                    "Не используйте BanMod в публичных лобби и не мешайте обычным публичным играм.\n\n" +
-
-                    "Если вы хотите играть без BanMod, отключите мод специальной " +
-                    "кнопкой в настройках BanMod.\n\n" +
-
-                    "Если BanMod остаётся включённым, создайте ПРИВАТНОЕ лобби " +
-                    "и используйте модификацию законно и ответственно.\n\n" +
-
-                    "Вы несёте ответственность за соблюдение Условий использования Among Us, " +
-                    "политики модификаций, Кодекса поведения, правил сообщества " +
-                    "и согласия других игроков.\n\n" +
-
-                    "Не используйте BanMod для читерства, гриферства, получения несправедливого " +
-                    "преимущества, вмешательства в игру других пользователей, обхода ограничений " +
-                    "или нарушения работы сервисов.\n\n" +
-
-                    "Использование модификаций может привести к мерам со стороны Innersloth. " +
-                    "BanMod не гарантирует отсутствие предупреждений, ограничений, блокировок " +
-                    "или других санкций для аккаунта.\n\n" +
-
-                    "Нажимая кнопку подтверждения, вы подтверждаете, что прочитали и поняли " +
-                    "это уведомление и принимаете ответственность за законное использование BanMod.",
-
+                    "Пожалуйста, не используйте BanMod для того, чтобы мешать или раздражать других игроков, и не включайте функции, которые изменяют игровой процесс, дают нечестные преимущества или влияют на опыт других игроков.\n\nНеправильное, несанкционированное или нарушающее правила использование может привести к предупреждениям, ограничениям, приостановке, блокировке или другим санкциям со стороны Innersloth или других сервисов.\n\nBanMod и его разработчики не несут ответственности за последствия неправильного, незаконного или несанкционированного использования мода.\n\nИспользуйте только функции, совместимые с режимом Vanilla, и соблюдайте правила Among Us и других используемых сервисов.",
                 ConfirmButton =
-                    "Я ПРОЧИТАЛ И ПРИНЯЛ К СВЕДЕНИЮ",
-
+                    "ПРИНИМАЮ",
                 BackButton =
-                    "НАЗАД",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Выбран режим Vanilla.\n\n" +
-                    "BanMod остаётся включённым.\n\n" +
-                    "Создавайте ТОЛЬКО ПРИВАТНЫЕ лобби с BanMod.\n\n" +
-                    "Для обычной игры отключите BanMod.",
-
-                PrivatePopupTitle =
-                    "BanMod - Требуется приватное лобби",
-
-                PrivatePopupText =
-                    "BanMod включён.\n\n" +
-                    "С BanMod разрешены только ПРИВАТНЫЕ лобби.\n\n" +
-                    "Попытка сделать это лобби публичным была заблокирована.\n\n" +
-                    "Чтобы создать обычное публичное лобби, отключите BanMod."
+                    "ОТКАЗЫВАЮСЬ"
             };
         }
 
@@ -1033,74 +516,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - ロビーモードを選択",
-
                 SelectDescription =
-                    "ロビーを作成する前にネットワークモードを選択してください。",
-
+                    "ロビーを作成する前にモードを選択してください。",
                 ModdedDescription =
-                    "MODDED +25\nホストMod用のネットワークフラグを使用します。",
-
+                    "ゲームプレイを変更するロビーをホストします。",
+                VanillaDescription =
+                    "ゲームプレイを変更しないロビーをホストします。",
                 ModdedButton =
                     "MODDED +25\n推奨",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanModは責任を持って使用してください。" +
-                    "BanModが有効な場合はプライベートロビーのみ作成してください。",
-
+                    "BanModを責任を持って使用し、作成するロビーに合ったモードを選択してください。",
                 VanillaTitle =
                     "重要 - VANILLAモード",
-
                 VanillaIntro =
-                    "BanModを有効にしたままVANILLAを選択しました。",
-
+                    "VANILLAモードを選択しました。",
                 VanillaWarning =
-                    "BanModはプライベートロビーでのみ使用してください。\n\n" +
-
-                    "公開ロビーでBanModを使用したり、通常の公開ゲームを妨害したりしないでください。\n\n" +
-
-                    "BanModなしで通常プレイする場合は、BanMod設定の専用オプションからModを無効にしてください。\n\n" +
-
-                    "BanModを有効のまま続行する場合は、プライベートロビーを作成し、" +
-                    "適切かつ責任を持ってModを使用してください。\n\n" +
-
-                    "Among Usの利用規約、Modポリシー、行動規範、コミュニティルール、" +
-                    "および他のプレイヤーの同意を守る責任があります。\n\n" +
-
-                    "チート、荒らし、不公平な利益の取得、他のプレイヤーへの妨害、" +
-                    "制限の回避、サービスへの妨害にBanModを使用しないでください。\n\n" +
-
-                    "Modの使用はInnerslothによる措置の対象となる場合があります。" +
-                    "BanModは警告、制限、停止、BANその他の制裁が発生しないことを保証できません。\n\n" +
-
-                    "確認ボタンを押すことで、この通知を読み理解し、BanModを適切に使用する" +
-                    "責任を負うことを確認します。",
-
+                    "他のプレイヤーを困らせたり妨害したりするためにBanModを使用しないでください。また、ゲームプレイを変更したり、不公平な優位性を与えたり、他のプレイヤーの体験を変えたりするオプションを有効にしないでください。\n\n不適切、許可されていない、またはルールに反する使用は、Innerslothや関係する他のサービスによる警告、制限、停止、BAN、その他の措置につながる可能性があります。\n\nBanModおよび開発者は、Modの不適切、違法、または許可されていない使用によって生じた結果について責任を負いません。\n\nVANILLAモードと互換性のある機能のみを使用し、Among Usおよび利用する他のサービスのルールを守ってください。",
                 ConfirmButton =
-                    "内容を読み、確認しました",
-
+                    "同意する",
                 BackButton =
-                    "戻る",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Vanillaネットワークが選択されました。\n\n" +
-                    "BanModは有効なままです。\n\n" +
-                    "BanMod使用中はプライベートロビーのみ作成してください。\n\n" +
-                    "通常プレイする場合はBanModを無効にしてください。",
-
-                PrivatePopupTitle =
-                    "BanMod - プライベートロビーが必要です",
-
-                PrivatePopupText =
-                    "BanModが有効です。\n\n" +
-                    "BanMod使用中はプライベートロビーのみ許可されています。\n\n" +
-                    "ロビーを公開する要求はブロックされました。\n\n" +
-                    "通常の公開ロビーを作成する場合はBanModを無効にしてください。"
+                    "拒否する"
             };
         }
 
@@ -1110,76 +547,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - 로비 모드 선택",
-
                 SelectDescription =
-                    "로비를 만들기 전에 네트워크 모드를 선택하세요.",
-
+                    "로비를 만들기 전에 로비 모드를 선택하세요.",
                 ModdedDescription =
-                    "MODDED +25\n호스트 모드용 네트워크 플래그를 사용합니다.",
-
+                    "게임플레이가 변경된 로비를 호스트합니다.",
+                VanillaDescription =
+                    "게임플레이가 변경되지 않은 로비를 호스트합니다.",
                 ModdedButton =
                     "MODDED +25\n권장",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "BanMod를 책임감 있게 사용하세요. " +
-                    "BanMod가 활성화된 경우 비공개 로비만 만드세요.",
-
+                    "BanMod를 책임감 있게 사용하고 생성하려는 로비에 맞는 모드를 선택하세요.",
                 VanillaTitle =
                     "중요 - VANILLA 모드",
-
                 VanillaIntro =
-                    "BanMod가 활성화된 상태에서 VANILLA를 선택했습니다.",
-
+                    "VANILLA 모드를 선택했습니다.",
                 VanillaWarning =
-                    "BanMod는 비공개 로비에서만 사용해야 합니다.\n\n" +
-
-                    "공개 로비에서 BanMod를 사용하거나 일반 공개 게임을 방해하지 마세요.\n\n" +
-
-                    "BanMod 없이 정상적으로 플레이하려면 BanMod 설정의 전용 옵션에서 " +
-                    "모드를 비활성화하세요.\n\n" +
-
-                    "BanMod를 활성화한 채 계속하려면 비공개 로비를 만들고 " +
-                    "합법적이고 책임감 있게 사용해야 합니다.\n\n" +
-
-                    "Among Us 이용 약관, 모드 정책, 행동 강령, 커뮤니티 규칙 및 " +
-                    "다른 플레이어의 동의를 준수할 책임이 있습니다.\n\n" +
-
-                    "치팅, 고의적인 방해, 부당한 이점 획득, 다른 플레이어 방해, " +
-                    "제한 우회 또는 서비스 방해에 BanMod를 사용하지 마세요.\n\n" +
-
-                    "모드 사용은 Innersloth의 제재 결정 대상이 될 수 있습니다. " +
-                    "BanMod는 경고, 제한, 정지, 차단 또는 기타 제재가 발생하지 않는다고 " +
-                    "보장할 수 없습니다.\n\n" +
-
-                    "확인 버튼을 누르면 이 안내를 읽고 이해했으며 BanMod를 적법하게 " +
-                    "사용할 책임을 인정하는 것입니다.",
-
+                    "다른 플레이어를 괴롭히거나 방해하기 위해 BanMod를 사용하지 말고, 게임플레이를 변경하거나 부당한 이점을 제공하거나 다른 플레이어의 경험을 바꾸는 옵션을 활성화하지 마세요.\n\n부적절하거나 승인되지 않았거나 규칙을 위반하는 사용은 Innersloth 또는 관련 서비스에서 경고, 제한, 정지, 밴 또는 기타 제재를 받을 수 있습니다.\n\nBanMod와 개발자는 모드의 부적절하거나 불법적이거나 승인되지 않은 사용으로 인해 발생하는 결과에 대해 책임을 지지 않습니다.\n\nVANILLA 모드와 호환되는 기능만 사용하고 Among Us 및 사용하는 다른 서비스의 규칙을 준수하세요.",
                 ConfirmButton =
-                    "읽고 확인했습니다",
-
+                    "동의",
                 BackButton =
-                    "뒤로",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Vanilla 네트워크가 선택되었습니다.\n\n" +
-                    "BanMod는 계속 활성화되어 있습니다.\n\n" +
-                    "BanMod 사용 중에는 비공개 로비만 만드세요.\n\n" +
-                    "일반 플레이를 하려면 BanMod를 비활성화하세요.",
-
-                PrivatePopupTitle =
-                    "BanMod - 비공개 로비 필요",
-
-                PrivatePopupText =
-                    "BanMod가 활성화되어 있습니다.\n\n" +
-                    "BanMod 사용 중에는 비공개 로비만 허용됩니다.\n\n" +
-                    "이 로비를 공개로 변경하는 요청이 차단되었습니다.\n\n" +
-                    "일반 공개 로비를 만들려면 BanMod를 비활성화하세요."
+                    "거부"
             };
         }
 
@@ -1189,70 +578,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - 选择大厅模式",
-
                 SelectDescription =
-                    "创建大厅前请选择网络模式。",
-
+                    "创建大厅前请选择大厅模式。",
                 ModdedDescription =
-                    "MODDED +25\n使用仅主机模组的网络标记。",
-
+                    "创建一个包含游戏玩法修改的大厅。",
+                VanillaDescription =
+                    "创建一个不修改游戏玩法的大厅。",
                 ModdedButton =
                     "MODDED +25\n推荐",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "请负责任地使用 BanMod。启用 BanMod 时只能创建私人大厅。",
-
+                    "请负责任地使用 BanMod，并选择与当前大厅类型相符的模式。",
                 VanillaTitle =
                     "重要 - VANILLA 模式",
-
                 VanillaIntro =
-                    "你在 BanMod 仍启用的情况下选择了 VANILLA。",
-
+                    "你选择了 Vanilla 模式。",
                 VanillaWarning =
-                    "BanMod 只能在私人大厅中使用。\n\n" +
-
-                    "请勿在公开大厅使用 BanMod，也不要干扰正常的公开游戏。\n\n" +
-
-                    "如果你想在没有 BanMod 的情况下正常游戏，请通过 BanMod 设置中的专用选项禁用模组。\n\n" +
-
-                    "如果继续启用 BanMod，你必须创建私人大厅，并合法且负责任地使用该模组。\n\n" +
-
-                    "你有责任遵守 Among Us 使用条款、模组政策、行为准则、社区规则以及其他玩家的同意。\n\n" +
-
-                    "请勿使用 BanMod 作弊、恶意干扰游戏、获得不公平优势、干扰其他玩家、" +
-                    "绕过限制或破坏服务。\n\n" +
-
-                    "使用模组仍可能受到 Innersloth 的执法决定影响。BanMod 无法保证账号不会收到" +
-                    "警告、限制、暂停、封禁或其他处罚。\n\n" +
-
-                    "按下确认按钮即表示你已阅读并理解本通知，并愿意为合法使用 BanMod 承担责任。",
-
+                    "请不要使用 BanMod 骚扰或干扰其他玩家，也不要启用会修改游戏玩法、提供不公平优势或改变其他玩家游戏体验的选项。\n\n不当、未经授权或违反规则的使用可能导致 Innersloth 或其他相关服务发出警告、限制、暂停、封禁或其他处罚。\n\n对于因不当、违法或未经授权使用该 Mod 而产生的任何后果，BanMod 及其开发者不承担责任。\n\n请仅使用与 Vanilla 模式兼容的功能，并遵守 Among Us 及其他所使用服务的规则。",
                 ConfirmButton =
-                    "我已阅读并知悉",
-
+                    "接受",
                 BackButton =
-                    "返回",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "已选择 Vanilla 网络模式。\n\n" +
-                    "BanMod 仍保持启用。\n\n" +
-                    "使用 BanMod 时只能创建私人大厅。\n\n" +
-                    "如需正常游戏，请先禁用 BanMod。",
-
-                PrivatePopupTitle =
-                    "BanMod - 必须使用私人大厅",
-
-                PrivatePopupText =
-                    "BanMod 已启用。\n\n" +
-                    "使用 BanMod 时仅允许私人大厅。\n\n" +
-                    "将此大厅设为公开的请求已被阻止。\n\n" +
-                    "如需创建普通公开大厅，请先禁用 BanMod。"
+                    "拒绝"
             };
         }
 
@@ -1262,70 +609,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - 選擇大廳模式",
-
                 SelectDescription =
-                    "建立大廳前請選擇網路模式。",
-
+                    "建立大廳前請選擇大廳模式。",
                 ModdedDescription =
-                    "MODDED +25\n使用僅主機模組的網路標記。",
-
+                    "建立一個包含遊戲玩法修改的大廳。",
+                VanillaDescription =
+                    "建立一個不修改遊戲玩法的大廳。",
                 ModdedButton =
-                    "MODDED +25\n建議",
-
+                    "MODDED +25\n推薦",
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "請負責任地使用 BanMod。啟用 BanMod 時只能建立私人房間。",
-
+                    "請負責任地使用 BanMod，並選擇符合目前大廳類型的模式。",
                 VanillaTitle =
                     "重要 - VANILLA 模式",
-
                 VanillaIntro =
-                    "你在 BanMod 仍啟用的情況下選擇了 VANILLA。",
-
+                    "你選擇了 Vanilla 模式。",
                 VanillaWarning =
-                    "BanMod 只能在私人房間中使用。\n\n" +
-
-                    "請勿在公開房間使用 BanMod，也不要干擾正常的公開遊戲。\n\n" +
-
-                    "如果你想在沒有 BanMod 的情況下正常遊玩，請透過 BanMod 設定中的專用選項停用模組。\n\n" +
-
-                    "如果繼續啟用 BanMod，你必須建立私人房間，並合法且負責任地使用此模組。\n\n" +
-
-                    "你有責任遵守 Among Us 使用條款、模組政策、行為準則、社群規則以及其他玩家的同意。\n\n" +
-
-                    "請勿使用 BanMod 作弊、惡意干擾遊戲、取得不公平優勢、干擾其他玩家、" +
-                    "規避限制或破壞服務。\n\n" +
-
-                    "使用模組仍可能受到 Innersloth 的執法決定影響。BanMod 無法保證帳號不會收到" +
-                    "警告、限制、停權、封禁或其他處分。\n\n" +
-
-                    "按下確認按鈕即表示你已閱讀並理解本通知，並願意為合法使用 BanMod 承擔責任。",
-
+                    "請不要使用 BanMod 騷擾或干擾其他玩家，也不要啟用會修改遊戲玩法、提供不公平優勢或改變其他玩家遊戲體驗的選項。\n\n不當、未經授權或違反規則的使用可能導致 Innersloth 或其他相關服務發出警告、限制、暫停、封禁或其他處分。\n\n對於因不當、違法或未經授權使用此 Mod 而產生的任何後果，BanMod 及其開發者不承擔責任。\n\n請僅使用與 Vanilla 模式相容的功能，並遵守 Among Us 及其他使用中服務的規則。",
                 ConfirmButton =
-                    "我已閱讀並知悉",
-
+                    "接受",
                 BackButton =
-                    "返回",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "已選擇 Vanilla 網路模式。\n\n" +
-                    "BanMod 仍保持啟用。\n\n" +
-                    "使用 BanMod 時只能建立私人房間。\n\n" +
-                    "如需正常遊玩，請先停用 BanMod。",
-
-                PrivatePopupTitle =
-                    "BanMod - 必須使用私人房間",
-
-                PrivatePopupText =
-                    "BanMod 已啟用。\n\n" +
-                    "使用 BanMod 時僅允許私人房間。\n\n" +
-                    "將此房間設為公開的要求已被阻止。\n\n" +
-                    "如需建立普通公開房間，請先停用 BanMod。"
+                    "拒絕"
             };
         }
 
@@ -1335,76 +640,28 @@ namespace BanMod
             {
                 SelectTitle =
                     "BANMOD - PILIIN ANG LOBBY MODE",
-
                 SelectDescription =
-                    "Piliin ang networking mode bago gumawa ng lobby.",
-
+                    "Piliin ang lobby mode bago gawin ang lobby.",
                 ModdedDescription =
-                    "MODDED +25\nGumagamit ng modded host networking flag.",
-
+                    "Mag-host ng lobby na may gameplay changes.",
+                VanillaDescription =
+                    "Mag-host ng lobby na walang gameplay changes.",
                 ModdedButton =
                     "MODDED +25\nINIREREKOMENDA",
-
                 VanillaButton =
                     "VANILLA",
-
                 PrivateFooter =
-                    "Gamitin ang BanMod nang responsable. " +
-                    "Kapag naka-enable ang BanMod, gumawa lamang ng PRIVATE lobby.",
-
+                    "Gamitin ang BanMod nang responsable at piliin ang mode na tumutugma sa lobby na iyong ginagawa.",
                 VanillaTitle =
                     "MAHALAGA - VANILLA MODE",
-
                 VanillaIntro =
-                    "Pinili mo ang VANILLA habang naka-enable pa rin ang BanMod.",
-
+                    "Pinili mo ang Vanilla mode.",
                 VanillaWarning =
-                    "Ang BanMod ay dapat gamitin LAMANG sa PRIVATE lobby.\n\n" +
-
-                    "Huwag gamitin ang BanMod sa public lobby o para manggulo ng normal na public games.\n\n" +
-
-                    "Kung gusto mong maglaro nang normal nang walang BanMod, i-disable ang mod " +
-                    "gamit ang nakalaang option sa BanMod settings.\n\n" +
-
-                    "Kung magpapatuloy ka nang naka-enable ang BanMod, dapat kang gumawa ng PRIVATE lobby " +
-                    "at gamitin ang modification nang lehitimo at responsable.\n\n" +
-
-                    "Responsibilidad mong sundin ang Among Us Terms of Use, Mod Policy, Code of Conduct, " +
-                    "community rules, at pahintulot ng ibang players.\n\n" +
-
-                    "Huwag gamitin ang BanMod para mandaya, manggulo, magkaroon ng unfair advantage, " +
-                    "manghimasok sa ibang players, umiwas sa restrictions, o manggulo ng services.\n\n" +
-
-                    "Ang paggamit ng modifications ay maaari pa ring saklawin ng enforcement ng Innersloth. " +
-                    "Hindi magagarantiya ng BanMod na ang account ay hindi makakatanggap ng warning, " +
-                    "restriction, suspension, ban, o ibang sanction.\n\n" +
-
-                    "Sa pagpindot sa confirmation button, kinukumpirma mong nabasa at naunawaan mo " +
-                    "ang notice na ito at tinatanggap mo ang responsibilidad sa lehitimong paggamit ng BanMod.",
-
+                    "Huwag gamitin ang BanMod para manggulo o mang-abala ng ibang manlalaro, at huwag i-enable ang mga option na nagbabago ng gameplay, nagbibigay ng hindi patas na advantage, o binabago ang experience ng ibang manlalaro.\n\nAng maling paggamit, hindi awtorisadong paggamit, o paggamit na labag sa rules ay maaaring magresulta sa warnings, restrictions, suspensions, bans, o iba pang sanctions mula sa Innersloth o iba pang serbisyong kasangkot.\n\nHindi mananagot ang BanMod at ang mga developer nito sa anumang kahihinatnan mula sa maling paggamit, ilegal, o hindi awtorisadong paggamit ng mod.\n\nGamitin lamang ang mga feature na compatible sa Vanilla mode at sundin ang rules ng Among Us at ng iba pang serbisyong ginagamit.",
                 ConfirmButton =
-                    "NABASA KO AT NAUNAWAAN",
-
+                    "SUMASANG-AYON AKO",
                 BackButton =
-                    "BUMALIK",
-
-                ConfirmPopupTitle =
-                    "BanMod",
-
-                ConfirmPopupText =
-                    "Napili ang Vanilla networking.\n\n" +
-                    "Naka-enable pa rin ang BanMod.\n\n" +
-                    "Gumawa lamang ng PRIVATE lobby habang ginagamit ang BanMod.\n\n" +
-                    "Para sa normal na laro, i-disable ang BanMod.",
-
-                PrivatePopupTitle =
-                    "BanMod - Kailangan ng Private Lobby",
-
-                PrivatePopupText =
-                    "Naka-enable ang BanMod.\n\n" +
-                    "PRIVATE lobby lamang ang pinapayagan habang ginagamit ang BanMod.\n\n" +
-                    "Na-block ang request na gawing public ang lobby.\n\n" +
-                    "Para gumawa ng normal na public lobby, i-disable ang BanMod."
+                    "HINDI AKO SUMASANG-AYON"
             };
         }
     }
@@ -1427,7 +684,7 @@ namespace BanMod
             new Vector2(850f, 600f);
 
         private readonly Vector2 warningWindowSize =
-            new Vector2(950f, 880f);
+            new Vector2(950f, 720f);
 
         private GUIStyle titleStyle;
         private GUIStyle textStyle;
@@ -1488,12 +745,10 @@ namespace BanMod
 
                 createScreenOpenTime = -1f;
 
-                BanModServerSelection.Reset();
-
                 CloseMenu();
 
                 BMLogger.LogInfo(
-                    "[BanMod Server] Create Game screen closed. State reset."
+                    "[BanMod Server] Create Game screen closed. Selected mode preserved for the current lobby."
                 );
 
                 return;
@@ -1723,6 +978,13 @@ namespace BanMod
                     1f
                 );
 
+            GUILayout.Label(
+                t.VanillaDescription,
+                textStyle
+            );
+
+            GUILayout.Space(20);
+
             if (GUILayout.Button(
                 t.VanillaButton,
                 buttonStyle,
@@ -1730,7 +992,7 @@ namespace BanMod
             ))
             {
                 BanModServerSelection.Mode =
-                    BanModServerMode.Vanilla;
+                    BanModServerMode.None;
 
                 BanModServerSelection.VanillaAcknowledged =
                     false;
@@ -1807,15 +1069,10 @@ namespace BanMod
                     true;
 
                 BMLogger.LogWarning(
-                    "[BanMod Server] Vanilla warning read and acknowledged."
+                    "[BanMod Server] Vanilla warning accepted. Vanilla mode selected."
                 );
 
                 CloseMenu();
-
-                BanModPopup.CreateMessagePopup(
-                    t.ConfirmPopupTitle,
-                    t.ConfirmPopupText
-                );
             }
 
             GUILayout.Space(10);
@@ -1835,19 +1092,16 @@ namespace BanMod
             ))
             {
                 BanModServerSelection.Mode =
-                    BanModServerMode.None;
+                    BanModServerMode.Modded25;
 
                 BanModServerSelection.VanillaAcknowledged =
                     false;
 
-                showVanillaWarning =
-                    false;
-
-                CenterWindow();
-
-                BMLogger.LogInfo(
-                    "[BanMod Server] Returned to server selection."
+                BMLogger.LogWarning(
+                    "[BanMod Server] Vanilla warning declined. Falling back to MODDED +25."
                 );
+
+                CloseMenu();
             }
 
             GUI.backgroundColor =
@@ -1900,36 +1154,6 @@ namespace BanMod
             );
 
             return false;
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(InnerNetClient),
-        nameof(InnerNetClient.ChangeGamePublic)
-    )]
-    public static class BanModPrivateLobbyPatch
-    {
-        public static void Prefix(ref bool __0)
-        {
-            if (!BanModServerSelection.HasSelectedMode)
-                return;
-
-            if (!__0)
-                return;
-
-            __0 = false;
-
-            BanModServerTexts t =
-                BanModServerLocalization.Get();
-
-            BMLogger.LogWarning(
-                "[BanMod Server] Attempt to make lobby public blocked."
-            );
-
-            BanModPopup.CreateMessagePopup(
-                t.PrivatePopupTitle,
-                t.PrivatePopupText
-            );
         }
     }
 }

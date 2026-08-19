@@ -26,11 +26,13 @@ namespace BanMod
         public RoleOption Noisemaker { get; set; } = new RoleOption();
         public RoleOption Tracker { get; set; } = new RoleOption();
         public RoleOption Detective { get; set; } = new RoleOption();
+        public RoleOption Judge { get; set; } = new RoleOption { Count = 0, Chance = 100 };
         public RoleOption Viper { get; set; } = new RoleOption();
 
         public float viperDissolveTime { get; set; } = 10f;
 
         public float DetectiveSuspectLimit { get; set; } = 3f;
+        public float JudgeTaskRequirementPercentage { get; set; } = 50f;
 
         public float EngineerCooldown { get; set; } = 5f;
         public float EngineerInVentMaxTime { get; set; } = 30f;
@@ -101,10 +103,12 @@ namespace BanMod
         Preset3 = 3
     }
 
-    [HarmonyPatch(typeof(NormalGameOptionsV10), nameof(NormalGameOptionsV10.SetRecommendations), new Type[] { typeof(int), typeof(bool), typeof(RulesPresets) })]
+    [HarmonyPatch(typeof(NormalGameOptionsV11), nameof(NormalGameOptionsV11.SetRecommendations), new Type[] { typeof(int), typeof(bool), typeof(RulesPresets) })]
     public static class SetRecommendationsPatch
     {
-        public static bool Prefix(NormalGameOptionsV10 __instance, int numPlayers, bool isOnline, RulesPresets rulesPresets)
+        private const RoleTypes JudgeRoleType = (RoleTypes)19;
+
+        public static bool Prefix(NormalGameOptionsV11 __instance, int numPlayers, bool isOnline, RulesPresets rulesPresets)
         {
             try
             {
@@ -159,7 +163,7 @@ namespace BanMod
             }
         }
 
-        public static void SetStandardRecommendations(NormalGameOptionsV10 __instance, int numPlayers, bool isOnline)
+        public static void SetStandardRecommendations(NormalGameOptionsV11 __instance, int numPlayers, bool isOnline)
         {
             if (__instance == null)
                 return;
@@ -240,7 +244,7 @@ namespace BanMod
             }
         }
 
-        public static void ApplyToInstance(NormalGameOptionsV10 __instance, CustomOptions options)
+        public static void ApplyToInstance(NormalGameOptionsV11 __instance, CustomOptions options)
         {
             __instance.MaxPlayers = options.MaxPlayers;
             __instance.NumImpostors = options.NumImpostors;
@@ -273,56 +277,62 @@ namespace BanMod
             __instance.roleOptions.SetRoleRate(RoleTypes.Tracker, roles.Tracker.Count, roles.Tracker.Chance);
             __instance.roleOptions.SetRoleRate(RoleTypes.Viper, roles.Viper.Count, roles.Viper.Chance);
             __instance.roleOptions.SetRoleRate(RoleTypes.Detective, roles.Detective.Count, roles.Detective.Chance);
+            __instance.roleOptions.SetRoleRate(RoleTypes.Judge, roles.Judge.Count, roles.Judge.Chance);
 
-            if (__instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV10>(RoleTypes.Viper, out var viperOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV11>(RoleTypes.Viper, out var viperOptions))
             {
-                viperOptions.viperDissolveTime = roles.viperDissolveTime;
+                viperOptions.ViperDissolveTime = roles.viperDissolveTime;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV10>(RoleTypes.Detective, out var detectiveOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV11>(RoleTypes.Detective, out var detectiveOptions))
             {
                 detectiveOptions.DetectiveSuspectLimit = roles.DetectiveSuspectLimit;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV10>(RoleTypes.Engineer, out var engineerOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<JudgeRoleOptionsV11>(RoleTypes.Judge, out var judgeOptions))
+            {
+                judgeOptions.JudgeTaskRequirementPercentage = roles.JudgeTaskRequirementPercentage;
+            }
+
+            if (__instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV11>(RoleTypes.Engineer, out var engineerOptions))
             {
                 engineerOptions.EngineerCooldown = roles.EngineerCooldown;
                 engineerOptions.EngineerInVentMaxTime = roles.EngineerInVentMaxTime;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV10>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV11>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
             {
                 guardianAngelOptions.GuardianAngelCooldown = roles.GuardianAngelCooldown;
                 guardianAngelOptions.ProtectionDurationSeconds = roles.GuardianAngelDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV10>(RoleTypes.Scientist, out var scientistOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV11>(RoleTypes.Scientist, out var scientistOptions))
             {
                 scientistOptions.ScientistCooldown = roles.ScientistCooldown;
                 scientistOptions.ScientistBatteryCharge = roles.ScientistBattery;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV10>(RoleTypes.Tracker, out var trackerOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV11>(RoleTypes.Tracker, out var trackerOptions))
             {
                 trackerOptions.TrackerCooldown = roles.TrackerCooldown;
                 trackerOptions.TrackerDelay = roles.TrackerDelay;
                 trackerOptions.TrackerDuration = roles.TrackerDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV10>(RoleTypes.Noisemaker, out var noisemakerOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV11>(RoleTypes.Noisemaker, out var noisemakerOptions))
             {
                 noisemakerOptions.NoisemakerImpostorAlert = roles.NoisemakerAlert;
                 noisemakerOptions.NoisemakerAlertDuration = roles.NoisemakerDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV10>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV11>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
             {
                 shapeshifterOptions.ShapeshifterLeaveSkin = roles.ShapeshifterLeaveSkin;
                 shapeshifterOptions.ShapeshifterCooldown = roles.ShapeshifterCooldown;
                 shapeshifterOptions.ShapeshifterDuration = roles.ShapeshifterDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV10>(RoleTypes.Phantom, out var phantomOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV11>(RoleTypes.Phantom, out var phantomOptions))
             {
                 phantomOptions.PhantomCooldown = roles.PhantomCooldown;
                 phantomOptions.PhantomDuration = roles.PhantomDuration;
@@ -330,7 +340,7 @@ namespace BanMod
         }
 
 
-        public static CustomOptions CaptureFromInstance(NormalGameOptionsV10 instance)
+        public static CustomOptions CaptureFromInstance(NormalGameOptionsV11 instance)
         {
             if (instance == null)
                 return null;
@@ -383,19 +393,25 @@ namespace BanMod
             result.Roles.Noisemaker = CaptureRoleOption(instance, RoleTypes.Noisemaker, fallback.Roles.Noisemaker);
             result.Roles.Tracker = CaptureRoleOption(instance, RoleTypes.Tracker, fallback.Roles.Tracker);
             result.Roles.Detective = CaptureRoleOption(instance, RoleTypes.Detective, fallback.Roles.Detective);
+            result.Roles.Judge = CaptureRoleOption(instance, RoleTypes.Judge, fallback.Roles.Judge);
             result.Roles.Viper = CaptureRoleOption(instance, RoleTypes.Viper, fallback.Roles.Viper);
 
-            if (instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV10>(RoleTypes.Viper, out var viperOptions))
-                result.Roles.viperDissolveTime = viperOptions.viperDissolveTime;
+            if (instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV11>(RoleTypes.Viper, out var viperOptions))
+                result.Roles.viperDissolveTime = viperOptions.ViperDissolveTime;
             else
                 result.Roles.viperDissolveTime = fallback.Roles.viperDissolveTime;
 
-            if (instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV10>(RoleTypes.Detective, out var detectiveOptions))
+            if (instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV11>(RoleTypes.Detective, out var detectiveOptions))
                 result.Roles.DetectiveSuspectLimit = detectiveOptions.DetectiveSuspectLimit;
             else
                 result.Roles.DetectiveSuspectLimit = fallback.Roles.DetectiveSuspectLimit;
 
-            if (instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV10>(RoleTypes.Engineer, out var engineerOptions))
+            if (instance.roleOptions.TryGetRoleOptions<JudgeRoleOptionsV11>(RoleTypes.Judge, out var judgeOptions))
+                result.Roles.JudgeTaskRequirementPercentage = judgeOptions.JudgeTaskRequirementPercentage;
+            else
+                result.Roles.JudgeTaskRequirementPercentage = fallback.Roles.JudgeTaskRequirementPercentage;
+
+            if (instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV11>(RoleTypes.Engineer, out var engineerOptions))
             {
                 result.Roles.EngineerCooldown = engineerOptions.EngineerCooldown;
                 result.Roles.EngineerInVentMaxTime = engineerOptions.EngineerInVentMaxTime;
@@ -406,7 +422,7 @@ namespace BanMod
                 result.Roles.EngineerInVentMaxTime = fallback.Roles.EngineerInVentMaxTime;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV10>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
+            if (instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV11>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
             {
                 result.Roles.GuardianAngelCooldown = guardianAngelOptions.GuardianAngelCooldown;
                 result.Roles.GuardianAngelDuration = guardianAngelOptions.ProtectionDurationSeconds;
@@ -417,7 +433,7 @@ namespace BanMod
                 result.Roles.GuardianAngelDuration = fallback.Roles.GuardianAngelDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV10>(RoleTypes.Scientist, out var scientistOptions))
+            if (instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV11>(RoleTypes.Scientist, out var scientistOptions))
             {
                 result.Roles.ScientistCooldown = scientistOptions.ScientistCooldown;
                 result.Roles.ScientistBattery = scientistOptions.ScientistBatteryCharge;
@@ -428,7 +444,7 @@ namespace BanMod
                 result.Roles.ScientistBattery = fallback.Roles.ScientistBattery;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV10>(RoleTypes.Tracker, out var trackerOptions))
+            if (instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV11>(RoleTypes.Tracker, out var trackerOptions))
             {
                 result.Roles.TrackerCooldown = trackerOptions.TrackerCooldown;
                 result.Roles.TrackerDelay = trackerOptions.TrackerDelay;
@@ -441,7 +457,7 @@ namespace BanMod
                 result.Roles.TrackerDuration = fallback.Roles.TrackerDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV10>(RoleTypes.Noisemaker, out var noisemakerOptions))
+            if (instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV11>(RoleTypes.Noisemaker, out var noisemakerOptions))
             {
                 result.Roles.NoisemakerAlert = noisemakerOptions.NoisemakerImpostorAlert;
                 result.Roles.NoisemakerDuration = noisemakerOptions.NoisemakerAlertDuration;
@@ -452,7 +468,7 @@ namespace BanMod
                 result.Roles.NoisemakerDuration = fallback.Roles.NoisemakerDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV10>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
+            if (instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV11>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
             {
                 result.Roles.ShapeshifterLeaveSkin = shapeshifterOptions.ShapeshifterLeaveSkin;
                 result.Roles.ShapeshifterCooldown = shapeshifterOptions.ShapeshifterCooldown;
@@ -465,7 +481,7 @@ namespace BanMod
                 result.Roles.ShapeshifterDuration = fallback.Roles.ShapeshifterDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV10>(RoleTypes.Phantom, out var phantomOptions))
+            if (instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV11>(RoleTypes.Phantom, out var phantomOptions))
             {
                 result.Roles.PhantomCooldown = phantomOptions.PhantomCooldown;
                 result.Roles.PhantomDuration = phantomOptions.PhantomDuration;
@@ -480,7 +496,7 @@ namespace BanMod
         }
 
         private static RoleOption CaptureRoleOption(
-            NormalGameOptionsV10 instance,
+            NormalGameOptionsV11 instance,
             RoleTypes role,
             RoleOption fallback)
         {
@@ -580,7 +596,7 @@ namespace BanMod
             }
         }
 
-        public static NormalGameOptionsV10 GetCurrentGameOptions()
+        public static NormalGameOptionsV11 GetCurrentGameOptions()
         {
             try
             {
@@ -592,12 +608,12 @@ namespace BanMod
 
                 return GameOptionsManager.Instance
                     .CurrentGameOptions
-                    .Cast<NormalGameOptionsV10>();
+                    .Cast<NormalGameOptionsV11>();
             }
             catch (Exception ex)
             {
                 Debug.LogWarning(
-                    "[BanMod] Could not get NormalGameOptionsV10: " +
+                    "[BanMod] Could not get NormalGameOptionsV11: " +
                     ex.GetType().Name + " - " + ex.Message
                 );
 
@@ -605,7 +621,7 @@ namespace BanMod
             }
         }
 
-        public static void SyncCurrentOptions(NormalGameOptionsV10 options)
+        public static void SyncCurrentOptions(NormalGameOptionsV11 options)
         {
             if (options == null)
                 return;
@@ -773,14 +789,31 @@ namespace BanMod
                     JsonSerializer.Deserialize<CustomOptions>(content)
                     ?? new CustomOptions();
 
+                bool shouldSave = false;
+
                 if (string.IsNullOrWhiteSpace(loaded.PresetName))
                 {
                     loaded.PresetName = $"Preset {number}";
-                    SaveUserPresetFile(number, loaded);
+                    shouldSave = true;
                 }
 
                 if (loaded.Roles == null)
+                {
                     loaded.Roles = new RoleSettings();
+                    shouldSave = true;
+                }
+
+                if (!HasJudgeSettings(content))
+                {
+                    loaded.Roles.Judge =
+                        new RoleOption { Count = 0, Chance = 100 };
+
+                    loaded.Roles.JudgeTaskRequirementPercentage = 50f;
+                    shouldSave = true;
+                }
+
+                if (shouldSave)
+                    SaveUserPresetFile(number, loaded);
 
                 return loaded;
             }
@@ -1143,11 +1176,66 @@ namespace BanMod
                 }
 
                 string content = File.ReadAllText(fullPath);
-                return JsonSerializer.Deserialize<CustomOptions>(content) ?? defaultOptions;
+
+                CustomOptions loaded =
+                    JsonSerializer.Deserialize<CustomOptions>(content)
+                    ?? defaultOptions;
+
+                if (loaded.Roles == null)
+                    loaded.Roles = defaultOptions.Roles ?? new RoleSettings();
+
+                if (!HasJudgeSettings(content))
+                {
+                    RoleOption defaultJudge =
+                        defaultOptions.Roles?.Judge;
+
+                    loaded.Roles.Judge = new RoleOption
+                    {
+                        Count = defaultJudge?.Count ?? 0,
+                        Chance = defaultJudge?.Chance ?? 100
+                    };
+
+                    loaded.Roles.JudgeTaskRequirementPercentage =
+                        defaultOptions.Roles?.JudgeTaskRequirementPercentage
+                        ?? 50f;
+
+                    string migratedJson = JsonSerializer.Serialize(
+                        loaded,
+                        new JsonSerializerOptions { WriteIndented = true }
+                    );
+
+                    File.WriteAllText(fullPath, migratedJson);
+                }
+
+                return loaded;
             }
             catch (Exception)
             {
                 return defaultOptions;
+            }
+        }
+
+        private static bool HasJudgeSettings(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return false;
+
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(json);
+
+                if (!document.RootElement.TryGetProperty("Roles", out JsonElement roles) ||
+                    roles.ValueKind != JsonValueKind.Object)
+                {
+                    return false;
+                }
+
+                return roles.TryGetProperty("Judge", out _) &&
+                       roles.TryGetProperty("JudgeTaskRequirementPercentage", out _);
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -1185,9 +1273,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 0, Chance = 100 },
                     Viper = new RoleOption { Count = 1, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 5f,
                     GuardianAngelCooldown = 35f,
@@ -1242,9 +1332,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 0, Chance = 100 },
                     Viper = new RoleOption { Count = 1, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 5f,
                     GuardianAngelCooldown = 35f,
@@ -1299,9 +1391,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 0, Chance = 100 },
                     Viper = new RoleOption { Count = 1, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 5f,
                     GuardianAngelCooldown = 35f,
@@ -1356,9 +1450,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 0, Chance = 100 },
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 30f,
                     GuardianAngelCooldown = 35f,
@@ -1413,9 +1509,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 1, Chance = 100 },
                     Viper = new RoleOption { Count = 1, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
+                    Judge = new RoleOption { Count = 1, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 30f,
                     GuardianAngelCooldown = 35f,
@@ -1470,9 +1568,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 3, Chance = 100 },
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
+                    Judge = new RoleOption { Count = 1, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 5f,
                     GuardianAngelCooldown = 0f,
@@ -1526,9 +1626,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 1, Chance = 100 },
                     Viper = new RoleOption { Count = 1, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
+                    Judge = new RoleOption { Count = 1, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 30f,
                     GuardianAngelCooldown = 35f,
@@ -1582,9 +1684,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 0, Chance = 100 },
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
 
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 30f,
                     GuardianAngelCooldown = 35f,
@@ -1638,9 +1742,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 0, Chance = 0 },
                     Viper = new RoleOption { Count = 2, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
+                    Judge = new RoleOption { Count = 1, Chance = 100 },
 
                     viperDissolveTime = 5f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 65f,
                     GuardianAngelCooldown = 35f,
@@ -1694,9 +1800,11 @@ namespace BanMod
                     Tracker = new RoleOption { Count = 0, Chance = 100 },
                     Viper = new RoleOption { Count = 15, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
 
                     viperDissolveTime = 1f,
                     DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 30f,
                     GuardianAngelCooldown = 35f,
@@ -2347,7 +2455,7 @@ namespace BanMod
 
         private static void SaveCurrent(int slot)
         {
-            NormalGameOptionsV10 current =
+            NormalGameOptionsV11 current =
                 SetRecommendationsPatch.GetCurrentGameOptions();
 
             if (current == null)
@@ -2403,7 +2511,7 @@ namespace BanMod
             string displayName =
                 SetRecommendationsPatch.GetGameModePresetName(gameMode);
 
-            NormalGameOptionsV10 current =
+            NormalGameOptionsV11 current =
                 SetRecommendationsPatch.GetCurrentGameOptions();
 
             if (current == null)

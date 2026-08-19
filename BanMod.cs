@@ -31,14 +31,14 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.7.3";
+    public static string modVersion = "3.7.6";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.7.3";
+    public const string PluginVersion = "3.7.6";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
-    public static List<string> supportedAU = new List<string> { "2026.6.5" };
+    public static List<string> supportedAU = new List<string> { "2026.8.18" };
     public static readonly string ModName = "BanMod";
-    public static NormalGameOptionsV10 NormalOptions => GameOptionsManager.Instance != null ? GameOptionsManager.Instance.currentNormalGameOptions : null;
+    public static NormalGameOptionsV11 NormalOptions => GameOptionsManager.Instance != null ? GameOptionsManager.Instance.currentNormalGameOptions : null;
     public static ManualLogSource PluginLogger;
     public static KeyBindOptions keyBindOptions;
     public static HostControl hostControl;

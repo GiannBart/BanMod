@@ -211,12 +211,12 @@ public static class MeetingHud_CheckForEndVoting_Patch
             var area = __instance.playerStates[i];
             states[i] = new MeetingHud.VoterState
             {
-                VoterId = area.TargetPlayerId,
-                VotedForId = area.VotedFor
+                VoterId = area.PlayerId,
+                VotedForId = area.VotedForId
             };
         }
 
-        __instance.RpcVotingComplete(states, exiled, isTie);
+        __instance.RpcVotingComplete(states, exiled, isTie, false, 0);
         return false;
     }
 }

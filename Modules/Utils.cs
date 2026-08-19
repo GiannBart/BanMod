@@ -108,7 +108,7 @@ public static class Utils
         {
             foreach (var playerState in meetingHud.playerStates)
             {
-                var data = GameData.Instance.GetPlayerById(playerState.TargetPlayerId);
+                var data = GameData.Instance.GetPlayerById(playerState.PlayerId);
 
                 if (data.IsNull() || data.Disconnected || data.Outfits[PlayerOutfitType.Default].IsNull()) continue;
 
@@ -186,8 +186,8 @@ public static class Utils
             if (!AmongUsClient.Instance.AmHost)
                 return;
 
-            if (meeting.CurrentState != MeetingHud.VoteStates.NotVoted &&
-                meeting.CurrentState != MeetingHud.VoteStates.Voted)
+            if (meeting.CurrentState != MeetingHud.MeetingStates.NotVoted &&
+                meeting.CurrentState != MeetingHud.MeetingStates.Voted)
                 return;
 
             ForceSkipAllMethod.Invoke(meeting, null);
@@ -1321,7 +1321,7 @@ public static class Utils
     {
         VoteContextManager.IsForcedVote = true;
         List<MeetingHud.VoterState> statesList = new();
-        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), playerToExileInfo, false);
+        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), playerToExileInfo, false, false, 0);
         MeetingHud.Instance.Close();
         MeetingHud.Instance.RpcClose();
         VoteContextManager.IsForcedVote = false;
@@ -1656,7 +1656,7 @@ public static class Utils
     {
         if (!AmongUsClient.Instance.AmHost) return;
         List<MeetingHud.VoterState> statesList = [];
-        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), null, true);
+        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), null, true, false, 0);
         MeetingHud.Instance.Close();
         MeetingHud.Instance.RpcClose();
         GuessManager.CleanupAfterMeeting();
@@ -2997,7 +2997,13 @@ public static class Utils
             BanMod.playerDeathTimes[player.PlayerId] = Time.time;
         }
     }
-
+    public static bool Judge(PlayerControl player)
+    {
+        if (player == null) return false;
+        if (player.Data == null) return false;
+        if (player.Data.Role == null) return false;
+        return player.Data.RoleType == RoleTypes.Judge;
+    }
     public static class SabotageManager
     {
         public static bool IsSabotageActive = false;
@@ -3044,7 +3050,7 @@ public static class Utils
 
         List<MeetingHud.VoterState> statesList = new();
 
-        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), playerToExileInfo, false);
+        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), playerToExileInfo, false, false, 0);
         MeetingHud.Instance.Close();
         MeetingHud.Instance.RpcClose();
     }

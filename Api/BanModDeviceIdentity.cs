@@ -1,7 +1,11 @@
+
 //credits and licenses in the resources folder/
 using System;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
+
+[assembly: SupportedOSPlatform("windows")]
 
 namespace BanMod
 {
@@ -11,7 +15,8 @@ namespace BanMod
         private const string PlatformProviderName = "Microsoft Platform Crypto Provider";
 
         private static readonly object Sync = new object();
-        private static ECDsaCng _signer;
+
+        private static ECDsaCng? _signer;
         private static string _publicKey = "";
         private static string _keyId = "";
         private static string _provider = "";
@@ -22,7 +27,8 @@ namespace BanMod
             get
             {
                 EnsureInitialized();
-                return _signer != null && !string.IsNullOrWhiteSpace(_keyId);
+                return _signer != null &&
+                       !string.IsNullOrWhiteSpace(_keyId);
             }
         }
 
@@ -31,7 +37,7 @@ namespace BanMod
             get
             {
                 EnsureInitialized();
-                return _keyId ?? "";
+                return _keyId;
             }
         }
 
@@ -40,7 +46,7 @@ namespace BanMod
             get
             {
                 EnsureInitialized();
-                return _publicKey ?? "";
+                return _publicKey;
             }
         }
 
@@ -49,7 +55,7 @@ namespace BanMod
             get
             {
                 EnsureInitialized();
-                return _provider ?? "";
+                return _provider;
             }
         }
 
@@ -65,17 +71,40 @@ namespace BanMod
 
                 _initialized = true;
 
-                CngProvider platformProvider = new CngProvider(PlatformProviderName);
-                CngProvider softwareProvider = CngProvider.MicrosoftSoftwareKeyStorageProvider;
+                CngProvider platformProvider =
+                    new CngProvider(PlatformProviderName);
 
-                if (TryInitializeWithProvider(platformProvider, "tpm", false))
-                    return;
-                if (TryInitializeWithProvider(softwareProvider, "software-ksp", false))
-                    return;
-                if (TryInitializeWithProvider(platformProvider, "tpm", true))
-                    return;
+                CngProvider softwareProvider =
+                    CngProvider.MicrosoftSoftwareKeyStorageProvider;
 
-                TryInitializeWithProvider(softwareProvider, "software-ksp", true);
+                if (TryInitializeWithProvider(
+                        platformProvider,
+                        "tpm",
+                        false))
+                {
+                    return;
+                }
+
+                if (TryInitializeWithProvider(
+                        softwareProvider,
+                        "software-ksp",
+                        false))
+                {
+                    return;
+                }
+
+                if (TryInitializeWithProvider(
+                        platformProvider,
+                        "tpm",
+                        true))
+                {
+                    return;
+                }
+
+                TryInitializeWithProvider(
+                    softwareProvider,
+                    "software-ksp",
+                    true);
             }
         }
 
@@ -97,28 +126,36 @@ namespace BanMod
                     if (!createIfMissing)
                         return false;
 
-                    CngKeyCreationParameters creation = new CngKeyCreationParameters
-                    {
-                        Provider = provider,
-                        KeyUsage = CngKeyUsages.Signing,
-                        ExportPolicy = CngExportPolicies.None,
-                        KeyCreationOptions = CngKeyCreationOptions.None
-                    };
+                    CngKeyCreationParameters creation =
+                        new CngKeyCreationParameters
+                        {
+                            Provider = provider,
+                            KeyUsage = CngKeyUsages.Signing,
+                            ExportPolicy = CngExportPolicies.None,
+                            KeyCreationOptions =
+                                CngKeyCreationOptions.None
+                        };
 
                     key = CngKey.Create(
                         CngAlgorithm.ECDsaP256,
                         KeyName,
-                        creation
-                    );
+                        creation);
                 }
 
                 ECDsaCng signer = new ECDsaCng(key);
-                byte[] publicBytes = signer.ExportSubjectPublicKeyInfo();
+                byte[] publicBytes =
+                    signer.ExportSubjectPublicKeyInfo();
 
-                using SHA256 sha = SHA256.Create();
-                byte[] digest = sha.ComputeHash(publicBytes);
+                byte[] digest;
 
-                StringBuilder sb = new StringBuilder(digest.Length * 2);
+                using (SHA256 sha = SHA256.Create())
+                {
+                    digest = sha.ComputeHash(publicBytes);
+                }
+
+                StringBuilder sb =
+                    new StringBuilder(digest.Length * 2);
+
                 foreach (byte b in digest)
                     sb.Append(b.ToString("x2"));
 
@@ -126,6 +163,7 @@ namespace BanMod
                 _publicKey = Convert.ToBase64String(publicBytes);
                 _keyId = sb.ToString();
                 _provider = providerLabel;
+
                 return true;
             }
             catch
@@ -143,7 +181,9 @@ namespace BanMod
         {
             EnsureInitialized();
 
-            if (_signer == null)
+            ECDsaCng? signer = _signer;
+
+            if (signer == null)
                 return "";
 
             try
@@ -157,12 +197,13 @@ namespace BanMod
                     Normalize(_keyId).ToLowerInvariant() + "\n" +
                     Normalize(clientVersion).ToLowerInvariant();
 
-                byte[] data = Encoding.UTF8.GetBytes(canonical);
-                byte[] signature = _signer.SignData(
+                byte[] data =
+                    Encoding.UTF8.GetBytes(canonical);
+
+                byte[] signature = signer.SignData(
                     data,
                     HashAlgorithmName.SHA256,
-                    DSASignatureFormat.Rfc3279DerSequence
-                );
+                    DSASignatureFormat.Rfc3279DerSequence);
 
                 return Convert.ToBase64String(signature);
             }
@@ -174,7 +215,9 @@ namespace BanMod
 
         private static string Normalize(string value)
         {
-            return string.IsNullOrWhiteSpace(value) ? "" : value.Trim();
+            return string.IsNullOrWhiteSpace(value)
+                ? ""
+                : value.Trim();
         }
     }
 }

@@ -205,6 +205,7 @@ namespace BanMod
                             && !Engineer(p)
                             && !Tracker(p)
                             && !Detective(p)
+                            && !Judge(p)
                             && !IsImpostorAligned(p))
                 .ToList();
 

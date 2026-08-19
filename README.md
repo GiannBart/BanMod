@@ -1,99 +1,23 @@
+[🇮🇹 Read this README in Italian](https://github.com/GiannBart/BanMod/blob/main/README_IT.md)
+
 > [!WARNING]
-> ## Project status update — August 11, 2026
+> ## Before using BanMod: choose the correct mode
 >
-> BanMod is currently undergoing a technical and policy review in relation to the [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/). Please read this notice before downloading or using the mod.
+> BanMod provides two modes. The correct mode depends on the features that will be used in the lobby:
+>
+> - **Modded +25:** for hosting lobbies with gameplay changes, custom roles, host features that change game behavior, or any modification that may affect other players' experience. The lobby must be identified and registered as modded according to the [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/) and the [official technical documentation](https://github.com/Innersloth-LLC/AmongUsModdingInformation).
+> - **Vanilla:** for using only anti-cheat and local visual modifications that do not change gameplay or other players' experience. “Vanilla” is the name of the BanMod mode and does not mean that the client itself is unmodified. Innersloth states that not every anti-cheat case can be classified in advance and strongly recommends registering the mod when in doubt.
+>
+> In **Modded +25** mode, commands remain unchanged. To hide the command text from other players, replace the `/` prefix with `/cmd`: for example, `/bm blu` becomes `/cmd bm blu`.
+>
+> Always select the mode that matches the active features. Do not use BanMod to disturb other players, alter non-consensual lobbies, deceive participants, or gain unfair advantages.
 
-### What happened
-
-I was recently contacted by a person who stated that they knew of an exploit affecting BanMod. During the conversation, information about the exploit was accompanied by repeated requests for the source code of FFA, a separate private project that is not included in this repository.
-
-I explained that I would not provide FFA's source code in exchange for information about a vulnerability. Additional concerns were subsequently raised regarding BanMod's licensing, optional components, and general compliance with Innersloth's Mod Policy.
-
-The sequence of these events gave me the personal impression that security information and legal concerns might have been used as leverage to obtain private source code.
-
-I want to make it completely clear that this is only my perception of the conversation. It may be partially or entirely incorrect, and I am not claiming to know or establish the intentions of the person involved.
-
-This notice is not intended as a personal accusation. Its purpose is to explain the circumstances that prompted the current review and to keep BanMod users informed.
-
-The concerns that were raised will not be ignored. Regardless of how the requests were presented, they may identify genuine issues. I am therefore reviewing BanMod's code, licensing information, documentation, and compliance in good faith.
-
-### GPL code and separately distributed optional components
-
-To avoid further misunderstandings, I would like to clarify the following.
-
-The public BanMod core remains available under GPLv3. Additional features—historically called “Premium” even though they are currently provided free of charge—are optional components distributed separately from this repository:
-
-- they are not included in this repository;
-- they are not required for the public core to operate or compile;
-- they are delivered as separate DLLs through the official services;
-- they are subject to the terms described in [LICENSE](LICENSE) and [LICENSES.md](LICENSES.md).
-
-The project's position is that these separately distributed components are independent works and are not part of the GPL-covered code published in this repository.
-
-This position and the boundaries between the different licenses are described in the repository's two licensing documents: [LICENSE](LICENSE), containing GPLv3 for the public core, and [LICENSES.md](LICENSES.md), describing the licenses applicable to the individual components.
-
-In particular, the final paragraph of [section 5 of GPLv3](https://www.gnu.org/licenses/gpl-3.0.html#section5) addresses an “aggregate”: a compilation in which a covered work is placed alongside separate and independent works that are not, by their nature, extensions of the covered work and are not combined with it into a larger program.
-
-Section 5 states that including such independent works in an aggregate does not, by itself, cause GPLv3 to apply to the other parts of the aggregate.
-
-On this basis, the project considers the separately distributed optional DLLs to be outside the GPL license applicable to the public BanMod core.
-
-Nothing in this notice is intended to restrict the rights granted by GPLv3 over code that is actually covered by that license.
-
-The Premium features are independent components under a private license and are not required for the operation or compilation of the mod published in this repository.
-
-### Official servers and modded-lobby registration
-
-After reviewing Innersloth's updated policy and its [official technical documentation](https://github.com/Innersloth-LLC/AmongUsModdingInformation), it appears that mods may use the official Among Us backend.
-
-However, a mod that changes gameplay, custom-role behavior, another player's experience, or other game functionality must identify and register itself when the lobby is created.
-
-BanMod will be updated so that the appropriate mode can be selected during lobby creation:
-
-- features that modify gameplay or affect the experience of other participants will require the lobby to be registered as modded;
-- if only visual modifications and anti-cheat features that do not change gameplay or another player's experience are used, it appears possible to continue using the official servers without registering the lobby as modded.
-
-However, Innersloth states that not every edge case involving anti-cheat functionality can be classified in advance and recommends registering the mod when there is uncertainty.
-
-BanMod will provide the tools needed to make the appropriate selection. Users will be responsible for selecting the correct lobby mode and for not using features that are not permitted on the official servers.
-
-### Features under review
-
-The review will include removing or limiting features that could be misused to gain an unfair advantage.
-
-In particular, the following will be removed or restricted:
-
-- automatic task animations;
-- teleportation features;
-- actions that may improperly alter another player's experience;
-- testing or debugging tools that could be used outside a controlled environment.
-
-Host, moderation, and anti-cheat tools will also be reviewed to determine which may be used on official servers and which require the lobby to be registered as modded.
-
-Until the review is complete, BanMod should be used only in private, consensual, or clearly identified modded lobbies.
-
-This is a precaution adopted by the BanMod project and is not presented as a general policy requirement applying to every Among Us mod.
-
-### Reporting problems
-
-Anyone who believes that BanMod violates a specific provision of the Mod Policy is encouraged to provide:
-
-1. the exact provision believed to have been violated;
-2. the affected feature or behavior;
-3. the technical steps needed to verify or reproduce the issue;
-4. any relevant technical information.
-
-Concrete, complete, and responsible reports will be reviewed seriously.
-
-I will not provide the source code of FFA or other private projects as a condition for receiving information about a vulnerability.
-
-At the same time, I will not ignore a technical report simply because I disagree with the way it was presented. If the issue can be verified, I will try to correct it.
-
-### Future of the project
-
-If reasonable compliance cannot be achieved or substantial problems remain, the repository and related services may be suspended or closed.
-
-Thank you to everyone who reports problems, vulnerabilities, or possible violations responsibly, completely, and constructively.
+> [!CAUTION]
+> ## BanMod is anti-cheat
+>
+> If BanMod detects other mods or unrecognized components, it automatically disables itself and blocks Premium features. This check exists to protect the project, its services, and users from cheats, tampering, and incompatible configurations.
+>
+> If you use another legitimate mod, contact the administrator before using it together with BanMod. It will be reviewed and, if considered legitimate and compatible, may be added to the whitelist. The presence of an unrecognized mod does not grant access to official services or optional features.
 
 ---
 
@@ -103,53 +27,34 @@ Thank you to everyone who reports problems, vulnerabilities, or possible violati
 
 # BanMod
 
-**Lobby moderation, anti-abuse tools, host controls, custom roles, and configurable game modes for Among Us.**
+**Lobby moderation, anti-abuse protection, host controls, custom roles, and configurable game modes for Among Us.**
 
-[![Code license: GPL-3.0](https://img.shields.io/badge/code-GPL--3.0-blue.svg)](LICENSE)
+[![Core license: GPL-3.0](https://img.shields.io/badge/core-GPL--3.0-blue.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D4.svg)](#requirements)
 [![Official website](https://img.shields.io/badge/website-banmod.online-7A5CFA.svg)](https://banmod.online)
 
-**English** · [Italiano](README_IT.md)
-
-[Website](https://banmod.online) · [Instructions](https://banmod.online/instructions)
+[Website](https://banmod.online) · [Instructions](https://banmod.online/instructions) · [Downloads](https://banmod.online/downloads)
 
 </div>
 
 > [!IMPORTANT]
-> ## Please read before using BanMod
->
-> Before downloading, using the official BanMod build, connecting to BanMod online services, or opening an issue, please read the following:
->
-> - [Important Information & Rules](IMPORTANT_INFO_AND_RULES.md)
-> - [Official Rules](https://banmod.online/rules)
-> - [Privacy Policy](https://banmod.online/policy/privacy)
-> - [Cookie Policy](https://banmod.online/policy/cookies)
->
-> BanMod is optional. Use of the official servers, APIs, verification systems, and optional features is not required.
->
-> If you do not agree with the rules or privacy conditions governing the official services, you may fork the GPL-licensed source code and use your own backend, replace the official APIs, or use no backend at all.
->
-> Questions and criticism are welcome, but please read the documentation above before making claims or opening complaints about data processing, DLL/plugin checks, activation, modified builds, or access to the official infrastructure.
-
-> [!IMPORTANT]
-> BanMod is an unofficial community-made modification. Use it only in fair, consensual, or clearly modded lobbies. Host and testing tools must not be used to deceive other players, disrupt public games, or gain unfair advantages.
+> BanMod is an unofficial community-made modification. Before downloading it or using official services, read the [Important Information & Rules](IMPORTANT_INFO_AND_RULES.md), the [Official Rules](https://banmod.online/rules), the [Privacy Policy](https://banmod.online/policy/privacy), the [Cookie Policy](https://banmod.online/policy/cookies), and, above all, the [Among Us Mod Policy on Innersloth's official website](https://www.innersloth.com/among-us-mod-policy/). The policy may change, and users are responsible for checking the current version.
 
 ## Description
 
-BanMod is a Windows mod for **Among Us** based on **BepInEx IL2CPP**. The GPL-licensed core focuses on persistent moderation, anti-abuse protections, host administration, configurable gameplay, custom roles, and supporting interfaces.
+BanMod is a **Windows mod for Among Us**, based on **BepInEx IL2CPP**. The public core, distributed under GPLv3, provides persistent moderation tools, anti-abuse protections, host administration, gameplay options, custom roles, and supporting interfaces.
 
-The public repository contains only the **core mod**. Some additional features—historically called “Premium” even though they are currently free—are optional components delivered separately by the official BanMod servers after eligibility, compatibility, and security checks. They are not required for the core to operate and are not included in this repository.
+The public repository contains only the **core**. Some additional features, historically called “Premium”, are separate optional components and are not required to compile or use the core.
 
 ## Main features
 
-- **Lobby moderation:** persistent ban and block tools, cheater/suspicious-player lists, prohibited name and word checks, spam protection, AFK management, and player administration menus.
-- **Host controls:** autostart, meeting and voting rules, tasks and sabotages, doors, maps, lobby messages, summaries, and configurable player actions.
-- **Roles and modes:** custom or modified roles, role configuration, Hide and Seek improvements, testing modes, and additional presets.
-- **Client and visual tools:** configurable keys, zoom in permitted states, lobby decorations, dark theme, custom interfaces, outfit/skin menus, and local options.
-- **Private-lobby testing tools:** some host/debug features are intended only for controlled testing or games where every participant knows and accepts the rules.
-- **Connected services:** optional online verification, reports, server messages, lobby services, anti-abuse systems, and separately distributed optional features.
+- **Moderation:** persistent bans and blocks, suspicious-player lists, name and word filters, spam protection, AFK management, and player administration.
+- **Host controls:** automatic start, meeting and voting rules, tasks, sabotages, doors, maps, lobby messages, summaries, and configurable actions.
+- **Roles and modes:** custom or modified roles, presets, role configuration, Hide and Seek improvements, and testing modes.
+- **Client and visual tools:** configurable keys, zoom in permitted states, decorations, dark theme, custom interfaces, outfit/skin menus, and local options.
+- **Anti-cheat and connected services:** optional verification, reports, server messages, anti-abuse systems, and lobby services.
 
-Features may change between releases. The official website and release notes are the reference for the currently supported build.
+Host, debug, or testing tools must only be used in controlled environments or in lobbies where all participants know and accept the rules.
 
 ## Images
 
@@ -162,102 +67,94 @@ Features may change between releases. The official website and release notes are
   <img src="docs/images/game-settings.png" alt="BanMod game settings" width="82%">
 </p>
 
-> **BanMod custom skins** are separate proprietary content. They are not included in the source code or the public repository and are not distributed under the GPL. Documentation images present in the repository follow the license stated in their respective files. See the [Licensing overview](LICENSES.md).
+BanMod custom skins are separate proprietary content. They are not part of the public source code and are not distributed under the GPL. See [Licenses and components](#licenses-and-components).
 
 ## Requirements
 
 - A legitimate copy of **Among Us** for Windows PC.
-- The game version supported by the current BanMod release.
+- A game version supported by the current BanMod release.
 - The correct package for **Steam** or **Epic Games**.
 - Permission to extract files into the folder containing `Among Us.exe`.
 
-Game updates may break mod compatibility. Always check the latest available release before installing BanMod or reporting an issue.
+Among Us updates may break compatibility. Always check the latest release before installing BanMod or reporting an issue.
 
 ## Installation
 
 1. Download the current package from the [official download page](https://banmod.online/downloads).
 2. Select the Steam or Epic Games version.
-3. Open the main game folder, which is the folder containing `Among Us.exe`.
+3. Open the folder containing `Among Us.exe`.
 4. Extract all files from the BanMod ZIP into that folder.
-5. Make sure that `Among Us.exe` and the `BepInEx` folder are at the same level.
+5. Make sure `Among Us.exe` and the `BepInEx` folder are at the same level.
 6. Start Among Us. After BepInEx finishes loading, BanMod should appear in the main menu.
-
-### Finding the game folder
 
 **Steam:** Library → right-click **Among Us** → **Manage** → **Browse local files**.
 
 **Epic Games:** Library → three-dot menu next to **Among Us** → **Manage** → folder icon.
 
-<p align="center">
-  <img src="docs/images/install-folder.png" alt="Example Among Us installation folder" width="360">
-</p>
+### Updating and uninstalling
 
-### Updating
+When instructed by the release notes, back up the `BAN_DATA` folder. Remove obsolete or duplicate BanMod DLLs from `BepInEx/plugins` and do not mix files from different releases.
 
-Back up the `BAN_DATA` folder when instructed by the release notes. Remove obsolete or duplicate BanMod DLLs from `BepInEx/plugins`, then install the new official package. Do not mix files from different releases.
-
-### Uninstalling
-
-Use your platform's file verification feature:
+To uninstall, first save any presets or configuration files you want to keep, then use your platform's file verification:
 
 - **Steam:** Properties → Installed Files → Verify integrity of game files.
 - **Epic Games:** Manage → Verify.
-
-Before verification, save any BanMod presets or personal configuration files you want to keep.
 
 ## Default controls
 
 - `Delete`: opens the main BanMod menu.
 - `F10`: opens the keybind configuration menu.
 
-Available keys and menus may change depending on the release or host permissions. Check the in-game help and the [official instructions](https://banmod.online/instructions).
+Available keys and menus may change depending on the release or host permissions. Check the in-game guide and the [official instructions](https://banmod.online/instructions).
 
-## Official services and optional features
+## Optional Premium features
 
-The GPL core and the online services operated by BanMod are separate layers:
+Premium features are additional features that are not associated with the main operation of the core:
 
-- The core source code may be studied, modified, and redistributed under GPLv3.
-- APIs, verification, tokens, reports, lobbies, server messages, and other official services are operated by the BanMod project and are subject to their applicable service and privacy rules.
-- Remote optional features are **not present in the repository**. They may be downloaded at runtime only after the official server verifies compliance with all applicable requirements.
-- Remote optional features are proprietary components distributed under a separate private license. This repository does not grant permission to copy, republish, redistribute, sublicense, extract them into another project, or include them in a fork.
-- Optional features are currently provided without payment, but availability is not guaranteed and access may be changed, suspended, or revoked.
-- A modified or self-compiled client is not an official BanMod release and is generally not eligible for official optional features.
+- they are **optional**, **free**, and not required to use or compile the public mod;
+- they are not included in this repository and are distributed separately through official services;
+- they must be selected in the main login menu to be activated;
+- they are offered only to users who comply with the rules, pass the applicable security checks, and use compatible configurations;
+- they are subject to a separate private/proprietary license, described in [LICENSES.md](LICENSES.md);
+- they are not mandatory, promised, or owed, and their availability may be changed, suspended, or revoked;
+- they may not be copied, extracted, republished, redistributed, sublicensed, or included in forks without separate written authorization.
 
-Service rules do not remove the rights granted by GPLv3 over GPL-covered code.
+BanMod services—including APIs, verification, tokens, reports, server messages, and lobby services—are separate from the GPL core and subject to their own rules and policies. Service rules do not restrict the rights granted by GPLv3 over code that is actually covered by the GPL.
 
-## Fair-use and service rules
+## Rules of use
 
 When using an official build or BanMod services:
 
-1. Do not use cheat menus, malicious clients, exploits, unlockers, request manipulation, API abuse, spam, false reports, bypass tools, or systems intended to harm the game, the project, or other users.
-2. Other legitimate mods are not automatically prohibited, but compatibility or security checks may restrict connected features. Contact the administrator before development testing or unusual multi-mod configurations.
-3. Do not send automated, malformed, excessive, or unauthorized requests to official BanMod endpoints.
-4. Do not reuse tokens, credentials, build identifiers, or private official-endpoint details in forks.
-5. Technical restrictions may be applied to clients, tokens, mod IDs, friend codes, player IDs, accounts, IP addresses, or other identifiers linked to abuse or incompatibility.
-6. User reports are items to be verified and must not be treated as evidence without reasonable checks.
+1. Do not use cheats, malicious clients, exploits, unlockers, request manipulation, spam, false reports, bypass tools, or other systems intended to harm the game, the project, or its users.
+2. Do not disturb public lobbies, modify the experience of players who are unaware of the mod, or gain unfair advantages.
+3. Select **Modded +25** when the active features change gameplay, role behavior, host authority, or another player's experience. When in doubt, register the mod.
+4. Use **Vanilla** only with anti-cheat and local visual modifications that do not modify gameplay or another player's experience.
+5. Do not send automated, malformed, excessive, or unauthorized requests to BanMod endpoints.
+6. Do not reuse official tokens, credentials, build identifiers, or private endpoint details in forks.
 7. Follow the Among Us Terms of Use and Mod Policy, community rules, applicable law, and the consent of other players.
 
-Before enabling connected features, read the updated **Important Rules** and **Privacy Policy** on the [official policies page](https://banmod.online/policies).
+User reports must be verified and must not be treated as proof without reasonable checks. Technical restrictions may be applied to clients, tokens, or identifiers associated with abuse, incompatibility, or violations.
 
 ## Forks and modified builds
 
-You may fork and modify GPL-covered code. A compliant public fork should:
+GPLv3-covered core code may be studied, modified, and forked. Anyone distributing a fork must, among other things:
 
-- preserve GPLv3, copyright, attribution, and warranty-disclaimer notices;
-- clearly identify that the project has been modified and state the modification date;
-- provide complete corresponding source for every distributed binary;
-- distribute GPL-covered derivative code under GPLv3 without adding further restrictions;
-- identify itself as unofficial and not imply endorsement by GianniBart, BanMod, Among Us, or Innersloth;
-- not include, extract, or redistribute proprietary BanMod custom skins, which are not part of the public repository, unless separately authorized in writing;
-- disable or replace integrations with official BanMod APIs and not use official infrastructure without authorization;
-- never include private server modules, remote optional components, keys, tokens, personal data, reports, or game files;
-- support the fork independently and not redirect fork-specific issues to official BanMod support channels.
+- preserve GPLv3, copyright notices, attributions, and warranty disclaimers;
+- clearly identify the modifications and their date;
+- provide the complete corresponding source for every distributed binary;
+- distribute GPLv3-covered derivative code under GPLv3 without additional restrictions;
+- clearly state that the fork is unofficial and must not imply endorsement by GianniBart, BanMod, Among Us, or Innersloth;
+- not include BanMod proprietary skins, separate Premium components, private server modules, keys, tokens, personal data, reports, or game files;
+- replace or disable integrations with official BanMod APIs unless separately authorized;
+- provide independent support and not redirect fork-specific issues to official BanMod support channels.
 
-A fork can remain fully GPL-compliant by using its own backend or no backend. Eligibility for official services is a separate operational decision and does not restrict the right to modify the code.
+A fork may use its own backend or no backend. A modified or self-compiled build is not an official release and may not be eligible for official services or optional features; this does not remove the rights granted by GPLv3 over the GPL-covered core.
+
+The project considers separately distributed Premium components to be independent works and not part of the published GPL core. The relevant reference is the final paragraph of [section 5 of GPLv3](https://www.gnu.org/licenses/gpl-3.0.html#section5), concerning aggregates. This reference does not automatically make a component an independent work: its qualification depends on its actual nature and technical integration. Nothing in this README limits GPL rights over code that is actually covered by that license.
 
 ## Building from source
 
-The project uses **.NET 6** and BepInEx IL2CPP packages.
+The project uses **.NET 6** and BepInEx IL2CPP packages:
 
 ```bash
 git clone https://github.com/GiannBart/BanMod.git
@@ -266,30 +163,15 @@ dotnet restore
 dotnet build -c Release
 ```
 
-Before building, review `BanMod.csproj`:
+Before building, review `BanMod.csproj`: remove developer-specific Windows paths, configure IL2CPP assemblies and metadata using your legitimate game installation, and remove local post-build targets. Do not publish secrets, credentials, local configurations, Among Us binaries, `Among Us_Data`, `GameAssembly.dll`, or other game files.
 
-- replace or remove developer-specific absolute Windows paths;
-- update IL2CPP assembly and metadata paths using your legitimate game installation;
-- change or remove the local post-build copy target;
-- do not publish `BanMod.BuildCode.txt`, generated secret sources, API credentials, or local configuration files;
-- do not publish or redistribute Among Us binaries, `Among Us_Data`, `GameAssembly.dll`, or other game files.
+The DLL is normally generated in `bin/Release/net6.0/`.
 
-The DLL is normally produced in `bin/Release/net6.0/`. Self-compiled builds are unofficial and may not connect to official BanMod services.
+## Contributions and credits
 
-## Releases and changes
+Issues and pull requests for the GPL core are welcome when they respect people, the law, licenses, and the project's goals. By submitting code, you confirm that you have the right to contribute it and agree that the contribution may be distributed under GPLv3 unless a different written agreement applies. Do not submit proprietary components, unlawfully obtained game code, secret endpoints, credentials, or personal data.
 
-- Official release notes and compatibility notices are published on [banmod.online](https://banmod.online).
-- Version numbers in the repository or project file may represent ongoing development and may be newer than the latest public release. Only a package explicitly published as official should be treated as a release.
-
-## Contributing
-
-Issues and pull requests for the GPL core are welcome when they respect the law, people, licenses, and the project's goals.
-
-By submitting code, you confirm that you have the right to contribute it and that the contribution may be distributed under GPLv3 unless a different written agreement applies. Do not submit proprietary optional modules, proprietary BanMod custom skins, unlawfully obtained game code, secret endpoints, credentials, personal data, or code copied without a compatible license and attribution.
-
-## Credits
-
-BanMod contains original work and portions inspired by or derived from open-source community projects. Preserve all notices contained in source files and in `Resources/Credits and License.txt`.
+BanMod contains original work and portions inspired by or derived from open-source projects. Preserve all notices contained in source files and in `Resources/Credits and License.txt`.
 
 Main credited projects:
 
@@ -305,28 +187,36 @@ Main credited projects:
 
 Credits do not imply affiliation or endorsement.
 
-## Licensing overview
+## Licenses and components
 
-- **Core source code:** GNU General Public License v3.0, except for files carrying a different compatible notice.
-- **Third-party code:** remains subject to its original notices and license obligations.
-- **Optional server-delivered components:** separate proprietary/private license; not included in the repository and not covered by the repository's GPL grant.
-- **BanMod custom skins:** © 2026 GianniBart. All rights reserved. They are separate content and are not included in the source code or public repository.
-- **Among Us intellectual property:** belongs to Innersloth LLC and/or its licensors.
+| Component | License or ownership | Reference |
+| --- | --- | --- |
+| BanMod public core and source | GNU General Public License v3.0, except files carrying a different compatible notice | [LICENSE](LICENSE) · [GPLv3 §5](https://www.gnu.org/licenses/gpl-3.0.html#section5) |
+| Third-party code and libraries | Original licenses and notices, including MIT where indicated | [LICENSES.md](LICENSES.md) · `Resources/Credits and License.txt` |
+| Optional Premium components delivered by the server | Separate private/proprietary license; not included in the repository | [LICENSES.md](LICENSES.md) |
+| BanMod custom skins | © 2026 GianniBart. All rights reserved; separate from the core | [LICENSES.md](LICENSES.md) |
+| Among Us, names, logos, characters, and related materials | Property of Innersloth LLC and/or its licensors | [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/) |
 
-See [LICENSE](LICENSE) for GPLv3 and [LICENSES.md](LICENSES.md) for component-level details. This summary is informational and does not replace the applicable license texts.
+This table is only a summary and does not replace the applicable license texts. The distinction between the GPL core and separate components also depends on their actual structure and integration. For legal decisions, consult a qualified professional.
 
-## Non-affiliation and legal notice
+## Innersloth notice, non-affiliation, and liability
 
-BanMod is an unofficial fan-made modification for Among Us. It is not affiliated with, endorsed by, sponsored by, or otherwise authorized by Innersloth LLC. Among Us, related names, logos, characters, and materials belong to Innersloth LLC or their respective owners.
+BanMod must display the mod stamp required by the [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/) during gameplay and must not include the Among Us base game or unauthorized copies of Among Us files.
 
-The mod must retain the in-game identification stamp required by the [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/). BanMod releases must not contain the Among Us base game or unauthorized copies of game files.
+Official text required by Innersloth, reproduced without modification:
 
-The software is provided **as is**, without warranties. To the maximum extent permitted by law, the authors are not responsible for bans, account restrictions, data loss, incompatibility, crashes, service interruptions, or damages caused by misuse, unsupported configurations, modified builds, or violations of third-party rules.
+> This mod is not affiliated with Among Us or Innersloth LLC, and the content contained therein is not endorsed or otherwise sponsored by Innersloth LLC. Portions of the materials contained herein are property of Innersloth LLC. © Innersloth LLC.
+
+The software is provided **“as is”**, without express or implied warranties. To the maximum extent permitted by law, the authors and contributors are not responsible for bans, account restrictions, data loss, incompatibility, crashes, service interruptions, or damages resulting from use or misuse of the mod, unsupported configurations, modified builds, or violations of third-party rules.
+
+Use of the mod is at the user's own risk. Neither this README nor the mode selector guarantees that a specific configuration will comply with every future version of Innersloth's rules. Always consult the [current official policy](https://www.innersloth.com/among-us-mod-policy/) and the [official technical documentation](https://github.com/Innersloth-LLC/AmongUsModdingInformation) before use.
 
 ## Support
 
 - Website: [banmod.online](https://banmod.online)
 - Email: `banmod.giannibart@gmail.com`
+- Discord: `GianniBart`
+- Telegram: [`@GianniBart`](https://t.me/GianniBart)
 - Bugs in the public GPL core: [GitHub Issues](https://github.com/GiannBart/BanMod/issues)
 
 When reporting an issue, include the BanMod version, Among Us version, platform, reproduction steps, and sanitized logs. Do not publish tokens, friend codes, player identifiers, email addresses, private messages, or other personal data.

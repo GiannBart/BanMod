@@ -1,4 +1,5 @@
-﻿using AmongUs.GameOptions;
+﻿
+using AmongUs.GameOptions;
 using BanMod.Modules.CustomHats;
 using HarmonyLib;
 using Hazel;
@@ -31,6 +32,7 @@ namespace BanMod
         SyncPlayerVisual = 223,
         Sicko = 164,
         KillNet = 154,
+        FfaSettings = 253,
         CREWMODIMPOSTORFORCE = 255
     }
 
@@ -569,6 +571,17 @@ namespace BanMod
             bool hasByteId = callId >= byte.MinValue && callId <= byte.MaxValue;
             byte callIdByte = hasByteId ? (byte)callId : byte.MaxValue;
 
+            if ((GameModeType)Options.GameMode.GetValue() == GameModeType.FFA &&
+                hasByteId &&
+                (
+                    callIdByte == (byte)RpcCalls.MurderPlayer ||
+                    callIdByte == (byte)RpcCalls.EnterVent ||
+                    callIdByte == (byte)RpcCalls.ExitVent
+                ))
+            {
+                return true;
+            }
+
             RegisterReceivedRpc(__instance, callId, hasByteId, callIdByte, reader);
 
             if (PlayerControl.LocalPlayer == __instance)
@@ -627,6 +640,18 @@ namespace BanMod
                 {
                     TryHandleAllowedVisualRpc(__instance, reader, originalReaderPosition, cheaterClientId);
                     return false;
+                }
+
+                if (callIdByte == (byte)CustomRPC.FfaSettings)
+                {
+                    if (!IsHostPlayer(__instance))
+                    {
+                        BMLogger.Warn($"FfaSettings RPC blocked: sender is not host | Player={name}", LogTag);
+                        return false;
+                    }
+
+                    reader.Position = originalReaderPosition;
+                    return true;
                 }
 
                 if (callIdByte == (byte)RpcCalls.LobbyTimeExpiring)
@@ -732,6 +757,7 @@ namespace BanMod
                     callIdByte != (byte)CustomRPC.HostTripleBoolUpdate &&
                     callIdByte != (byte)CustomRPC.HostRoleOptionsUpdate &&
                     callIdByte != (byte)CustomRPC.HandshakeModded &&
+                    callIdByte != (byte)CustomRPC.FfaSettings &&
                     callIdByte != (byte)CustomHatSync.RpcId &&
                     callIdByte != (byte)CustomRPC.ModdedHandshake)
                 {

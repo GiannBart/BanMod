@@ -16,7 +16,7 @@ public static class GameStates
     public static bool IsVoting =>
         IsMeeting &&
         MeetingHud.Instance != null &&
-        (MeetingHud.Instance.state is MeetingHud.VoteStates.Voted or MeetingHud.VoteStates.NotVoted);
+        (MeetingHud.Instance.state is MeetingHud.MeetingStates.Voted or MeetingHud.MeetingStates.NotVoted);
 
     public static bool isShip => ShipStatus.Instance != null;
 
@@ -54,12 +54,12 @@ public static class GameStates
     public static bool isMeetingVoting =>
         IsMeeting &&
         MeetingHud.Instance != null &&
-        (MeetingHud.Instance.state is MeetingHud.VoteStates.Voted or MeetingHud.VoteStates.NotVoted);
+        (MeetingHud.Instance.state is MeetingHud.MeetingStates.Voted or MeetingHud.MeetingStates.NotVoted);
 
     public static bool isMeetingProceeding =>
         IsMeeting &&
         MeetingHud.Instance != null &&
-        MeetingHud.Instance.state is MeetingHud.VoteStates.Proceeding;
+        MeetingHud.Instance.state is MeetingHud.MeetingStates.Proceeding;
 
     public static bool isNormalGame =>
         GameOptionsManager.Instance != null &&

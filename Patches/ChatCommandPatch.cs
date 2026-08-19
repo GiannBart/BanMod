@@ -54,6 +54,64 @@ namespace BanMod;
 internal class ChatCommands
 {
     public static List<string> ChatHistory = [];
+
+    private const string Modded25CommandPrefix = "/cmd";
+
+    private static bool IsChatCommand(string text)
+    {
+        return !string.IsNullOrWhiteSpace(text) &&
+               text.TrimStart().StartsWith("/", StringComparison.Ordinal);
+    }
+
+    private static bool IsWrappedModded25Command(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        string trimmed = text.TrimStart();
+
+        return trimmed.Equals(
+                   Modded25CommandPrefix,
+                   StringComparison.OrdinalIgnoreCase
+               ) ||
+               trimmed.StartsWith(
+                   Modded25CommandPrefix + " ",
+                   StringComparison.OrdinalIgnoreCase
+               );
+    }
+
+    private static string WrapModded25Command(string text)
+    {
+        if (!IsChatCommand(text) || IsWrappedModded25Command(text))
+            return text;
+
+        string command = text.TrimStart();
+
+        return Modded25CommandPrefix + " " + command.Substring(1);
+    }
+
+    private static string UnwrapModded25Command(string text)
+    {
+        if (!IsWrappedModded25Command(text))
+            return text;
+
+        string trimmed = text.TrimStart();
+
+        if (trimmed.Length <= Modded25CommandPrefix.Length)
+            return text;
+
+        string command = trimmed
+            .Substring(Modded25CommandPrefix.Length)
+            .TrimStart();
+
+        if (string.IsNullOrEmpty(command))
+            return text;
+
+        return command.StartsWith("/", StringComparison.Ordinal)
+            ? command
+            : "/" + command;
+    }
+
     public static bool Prefix(ChatController __instance)
     {
         string text = __instance.freeChatField.textArea.text;
@@ -61,19 +119,35 @@ internal class ChatCommands
         if (__instance.timeSinceLastMessage < 3f) return false;
 
         ChatControllerUpdatePatch.CurrentHistorySelection = ChatHistory.Count;
-        string[] args = text.Split(' ');
+
+        bool useModded25CommandEnvelope =
+            BanModServerSelection.IsModded25 && IsChatCommand(text);
+
+        string commandText = useModded25CommandEnvelope
+            ? UnwrapModded25Command(text)
+            : text;
+
+        if (useModded25CommandEnvelope &&
+            !AmongUsClient.Instance.AmHost)
+        {
+            text = WrapModded25Command(commandText);
+            __instance.freeChatField.textArea.text = text;
+        }
+
+        string[] args = commandText.Split(' ');
         if (args.Length == 0) return true;
 
         string command = args[0].ToLowerInvariant();
         string subArgs = args.Length > 1 ? args[1] : "";
         bool isPmCommand = command == "/pm" || command == "/pmall";
-        if (AmongUsClient.Instance.AmHost || isPmCommand)
+        if (AmongUsClient.Instance.AmHost ||
+            (isPmCommand && !useModded25CommandEnvelope))
         {
             bool canceled = HandleCommand(command, args, subArgs);
-            return !canceled; 
+            return !canceled;
         }
 
-        return true; 
+        return true;
     }
 
 
@@ -92,7 +166,7 @@ internal class ChatCommands
         {
             string msg = match1.Message.Replace("\\n", "\n");
             Utils.SendMessage(msg);
-            
+
             return true;
         }
         string lowerMsg = command.ToLower();
@@ -185,14 +259,14 @@ internal class ChatCommands
                     return true;
                 }
 
-        case "/skipmeeting":
-            {
-                if (!AmongUsClient.Instance.AmHost)
-                    return true;
+            case "/skipmeeting":
+                {
+                    if (!AmongUsClient.Instance.AmHost)
+                        return true;
                     MeetingVoteCloser.CloseVoteNow();
                     return true;
-            }
-        case "/infogame":
+                }
+            case "/infogame":
                 {
                     if (!AmongUsClient.Instance.AmHost)
                         return true;
@@ -280,7 +354,7 @@ internal class ChatCommands
 
                     if (targetIsModerator || targetIsVip)
                     {
-                        continue; 
+                        continue;
                     }
 
                     var client = pc.GetClient();
@@ -367,7 +441,7 @@ internal class ChatCommands
                         if (p != null)
                         {
                             BanMod.RainbowTarget = p;
-                            BanMod.EveryRandomActive = false; 
+                            BanMod.EveryRandomActive = false;
                             BMLogger.SendInGame($"Rainbow ON per {p.Data.PlayerName}");
                         }
                     }
@@ -484,7 +558,7 @@ internal class ChatCommands
 
                     if (args.Length >= 2)
                     {
-                        PlayerControl targetPlayer = Utils.GetTarget(args[1]); 
+                        PlayerControl targetPlayer = Utils.GetTarget(args[1]);
 
                         if (targetPlayer != null)
                         {
@@ -497,7 +571,7 @@ internal class ChatCommands
                             }
                         }
                     }
-                    return false; 
+                    return false;
                 }
             case "/bm":
                 {
@@ -519,7 +593,7 @@ internal class ChatCommands
                             }
                         }
                     }
-                    return false; 
+                    return false;
                 }
 
             case "/destroy":
@@ -556,11 +630,11 @@ internal class ChatCommands
                     if (args.Length < 2)
                     {
                         ShowChat("Uso: /scanner on|off [durata_in_secondi]");
-                        return true; 
+                        return true;
                     }
 
                     string state = args[1].ToLowerInvariant();
-                    float duration = 5f; 
+                    float duration = 5f;
 
                     if (args.Length >= 3 && float.TryParse(args[2], out float parsedDuration))
                         duration = parsedDuration;
@@ -587,7 +661,7 @@ internal class ChatCommands
                 ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Electrical, 69);
                 return true;
 
-                
+
             case "/endgame":
                 if (!AmongUsClient.Instance.AmHost)
                     return true;
@@ -617,7 +691,7 @@ internal class ChatCommands
 
                     string targetInput = args[1];
                     string normalizedTargetInput = NameNormalizer.NormalizeInputName(targetInput);
-                    
+
 
                     PlayerControl targetPlayer = null;
 
@@ -775,7 +849,7 @@ internal class ChatCommands
                     string name1 = targetPlayer.name;
                     BanManager.RemoveBanPlayerFromBanList(client);
                     NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, $"{name1} Unbanned");
-                    
+
 
                     return true;
                 }
@@ -867,7 +941,7 @@ internal class ChatCommands
             case "/livelli":
                 {
                     if (!AmongUsClient.Instance.AmHost)
-                        return true; 
+                        return true;
 
                     string levelList = GetString("PlayerLevelsTitle");
 
@@ -921,7 +995,7 @@ internal class ChatCommands
             case "/time":
                 if (!AmongUsClient.Instance.AmHost)
                     return true;
-                Scientist.ScientistCommandHost(); 
+                Scientist.ScientistCommandHost();
                 return true;
 
 
@@ -931,7 +1005,7 @@ internal class ChatCommands
                 {
                     string report1 = MatchSummary1.GetSummaryReport();
                     {
-                        Utils.SendMessage(report1,255);
+                        Utils.SendMessage(report1, 255);
                     }
                     return true;
                 }
@@ -939,7 +1013,7 @@ internal class ChatCommands
                 if (!AmongUsClient.Instance.AmHost)
                     return true;
                 subArgs = args.Length < 2 ? "" : args[1];
-                subArgs = args.Length < 2 ? "" : args[1].ToLowerInvariant(); 
+                subArgs = args.Length < 2 ? "" : args[1].ToLowerInvariant();
                 switch (subArgs)
                 {
                     case "giustiziere":
@@ -947,9 +1021,9 @@ internal class ChatCommands
                     case "guess":
                     case "giustiz":
                     case "g":
-                    case "devin":           
-                    case "vermuten":        
-                    case "Предсказатель":   
+                    case "devin":
+                    case "vermuten":
+                    case "Предсказатель":
                         bool isGuessEnabled = Options.Guess.GetBool();
                         string statoGuess = isGuessEnabled ? "On" : "Off";
                         string msgGuess =
@@ -965,9 +1039,9 @@ internal class ChatCommands
                     case "president":
                     case "exiler":
                     case "p":
-                    case "président":      
-                    case "präsident":     
-                    case "президент":       
+                    case "président":
+                    case "präsident":
+                    case "президент":
                         bool isExilerEnabled = Options.ExilerExe.GetBool();
                         bool isExilerKilled = Options.killexiler.GetBool();
                         string action = Options.ExilerAction.GetString();
@@ -988,9 +1062,9 @@ internal class ChatCommands
                     case "fantasma":
                     case "phantom":
                     case "ph":
-                    case "fantôme":    
-                    case "geist":          
-                    case "призрак":         
+                    case "fantôme":
+                    case "geist":
+                    case "призрак":
                         {
                             var optionsPha = GameOptionsManager.Instance.CurrentGameOptions;
                             float PhantomCooldown = 1f;
@@ -1040,9 +1114,9 @@ internal class ChatCommands
                     case "immortale":
                     case "immortal":
                     case "imm":
-                    case "immortel":        
-                    case "unsterblich":     
-                    case "бессмертный":     
+                    case "immortel":
+                    case "unsterblich":
+                    case "бессмертный":
                         bool isImmortalEnabled = Options.EnableImmortal.GetBool();
                         bool isImmortalesentEnabled = Options.Immortalesentvote.GetBool();
                         string statoImmortal = isImmortalEnabled ? "On" : "Off";
@@ -1061,9 +1135,9 @@ internal class ChatCommands
                     case "ingegnere":
                     case "engineer":
                     case "eng":
-                    case "ingénieur":     
-                    case "ingenieur":   
-                    case "инженер":       
+                    case "ingénieur":
+                    case "ingenieur":
+                    case "инженер":
                         {
                             var optionsIng = GameOptionsManager.Instance.CurrentGameOptions;
                             float engineerCooldown = 1f;
@@ -1117,9 +1191,9 @@ internal class ChatCommands
                     case "scienziato":
                     case "scientist":
                     case "sci":
-                    case "scientifique":   
+                    case "scientifique":
                     case "wissenschaftler":
-                    case "учёный":         
+                    case "учёный":
                         {
                             var optionsScie = GameOptionsManager.Instance.CurrentGameOptions;
                             float ScientistCooldown = 1f;
@@ -1161,7 +1235,7 @@ internal class ChatCommands
                             return true;
                         }
 
-                    case "lobby": 
+                    case "lobby":
                         {
                             var options = GameOptionsManager.Instance.CurrentGameOptions;
 
@@ -1687,7 +1761,7 @@ internal class ChatCommands
                     var target = BanMod.AllPlayerControls.FirstOrDefault(p =>
                         p.PlayerId == targetId2 &&
                         p.Data != null &&
-                        !p.Data.IsDead );
+                        !p.Data.IsDead);
 
                     if (target != null)
                     {
@@ -1718,7 +1792,7 @@ internal class ChatCommands
                 return true;
 
 
-         
+
 
 
             case "/setjudge":
@@ -1839,7 +1913,7 @@ internal class ChatCommands
             case "/all":
                 if (!AmongUsClient.Instance.AmHost)
                 {
-                    return true; 
+                    return true;
                 }
                 Utils.ShowCommand();
                 Utils.ShowCommand3();
@@ -1852,7 +1926,7 @@ internal class ChatCommands
             case "/помощь":
                 if (!AmongUsClient.Instance.AmHost)
                 {
-                    return true; 
+                    return true;
                 }
                 Utils.ShowCommand4();
                 return true;
@@ -1860,7 +1934,7 @@ internal class ChatCommands
             case "/dn": return AppendToFile("DenyName.txt", string.Join(" ", subArgs), "AddedtoDenynamelist");
             case "/ddn": return RemoveFromFile("DenyName.txt", string.Join(" ", subArgs), "DeletedtoDenynamelist");
             case "/dw": return AppendToFile("BanWords.txt", string.Join(" ", subArgs), "AddedtoDenyWordlist");
-            case "/ddw": return RemoveFromFile("BanWords.txt", string.Join(" ", subArgs), "DeletedtoDenyWord"); 
+            case "/ddw": return RemoveFromFile("BanWords.txt", string.Join(" ", subArgs), "DeletedtoDenyWord");
             case "/ds": return AppendToFile("SpamStart.txt", string.Join(" ", subArgs), "AddedtoDenystartlistlist");
             case "/dds": return RemoveFromFile("SpamStart.txt", string.Join(" ", subArgs), "DeletedtoDenystartlist");
             case "/addvip": return AllowedManager.ManageVip(subArgs, add: true);
@@ -1871,11 +1945,11 @@ internal class ChatCommands
             case "/id":
                 if (!AmongUsClient.Instance.AmHost)
                 {
-                    return true; 
+                    return true;
                 }
                 string msg5 = GetString("PlayerIdList") + string.Join("\n", BanMod.AllPlayerControls
                     .Where(p => p != null)
-                    .Select(p => $"{p.PlayerId} ({NumberToWords(p.PlayerId)}) → {p.Data.PlayerName}")); 
+                    .Select(p => $"{p.PlayerId} ({NumberToWords(p.PlayerId)}) → {p.Data.PlayerName}"));
                 ShowChat(msg5);
                 return true;
 
@@ -1928,13 +2002,13 @@ internal class ChatCommands
     public static bool ComandoExeUsed = false;
     public static bool ComandoRoomUsed = false;
 
-    
+
     static bool PrivateMessage1(string[] args)
     {
         if (args.Length < 2) return false;
 
         string msg;
-        byte id = byte.MaxValue; 
+        byte id = byte.MaxValue;
 
         if (byte.TryParse(args[1], out byte parsedId) && args.Length >= 3)
         {
@@ -2007,7 +2081,7 @@ internal class ChatCommands
                 }
             }
 
-            currentChatColor = null; 
+            currentChatColor = null;
             return false;
         }
     }
@@ -2091,6 +2165,8 @@ internal class ChatCommands
         if (!AmongUsClient.Instance.AmHost)
             return;
 
+        if (BanModServerSelection.IsModded25)
+            text = UnwrapModded25Command(text);
 
         string[] args = text.Split(' ');
         string command = args[0].ToLowerInvariant();
@@ -2487,7 +2563,7 @@ internal class ChatCommands
 
             case "/info":
                 subArgs = args.Length < 2 ? "" : args[1];
-                subArgs = args.Length < 2 ? "" : args[1].ToLowerInvariant(); 
+                subArgs = args.Length < 2 ? "" : args[1].ToLowerInvariant();
                 switch (subArgs)
                 {
                     case "giustiziere":
@@ -2495,9 +2571,9 @@ internal class ChatCommands
                     case "guess":
                     case "giustiz":
                     case "g":
-                    case "devin":           
-                    case "vermuten":        
-                    case "Предсказатель":   
+                    case "devin":
+                    case "vermuten":
+                    case "Предсказатель":
                         bool isGuessEnabled = Options.Guess.GetBool();
                         string statoGuess = isGuessEnabled ? "On" : "Off";
                         string msgGuess =
@@ -2513,9 +2589,9 @@ internal class ChatCommands
                     case "president":
                     case "exiler":
                     case "p":
-                    case "président":     
-                    case "präsident":     
-                    case "президент":      
+                    case "président":
+                    case "präsident":
+                    case "президент":
                         bool isExilerEnabled = Options.ExilerExe.GetBool();
                         bool isExilerKilled = Options.killexiler.GetBool();
                         string action = Options.ExilerAction.GetString();
@@ -2532,14 +2608,14 @@ internal class ChatCommands
                         MessageBlocker.UpdateLastMessageTime();
                         return;
 
-                  
+
                     case "spettro":
                     case "fantasma":
                     case "phantom":
                     case "ph":
-                    case "fantôme":        
-                    case "geist":         
-                    case "призрак":         
+                    case "fantôme":
+                    case "geist":
+                    case "призрак":
                         {
                             var optionsPha = GameOptionsManager.Instance.CurrentGameOptions;
                             float PhantomCooldown = 1f;
@@ -2589,9 +2665,9 @@ internal class ChatCommands
                     case "immortale":
                     case "immortal":
                     case "imm":
-                    case "immortel":      
-                    case "unsterblich":    
-                    case "бессмертный":     
+                    case "immortel":
+                    case "unsterblich":
+                    case "бессмертный":
                         bool isImmortalEnabled = Options.EnableImmortal.GetBool();
                         bool isImmortalesentEnabled = Options.Immortalesentvote.GetBool();
                         string statoImmortal = isImmortalEnabled ? "On" : "Off";
@@ -2610,9 +2686,9 @@ internal class ChatCommands
                     case "ingegnere":
                     case "engineer":
                     case "eng":
-                    case "ingénieur":     
-                    case "ingenieur":      
-                    case "инженер":         
+                    case "ingénieur":
+                    case "ingenieur":
+                    case "инженер":
                         {
                             var optionsIng = GameOptionsManager.Instance.CurrentGameOptions;
                             float engineerCooldown = 1f;
@@ -2666,9 +2742,9 @@ internal class ChatCommands
                     case "scienziato":
                     case "scientist":
                     case "sci":
-                    case "scientifique":    
-                    case "wissenschaftler": 
-                    case "учёный":          
+                    case "scientifique":
+                    case "wissenschaftler":
+                    case "учёный":
                         {
                             var optionsScie = GameOptionsManager.Instance.CurrentGameOptions;
                             float ScientistCooldown = 1f;
@@ -2710,7 +2786,7 @@ internal class ChatCommands
                             return;
                         }
 
-                    case "lobby":  
+                    case "lobby":
                         {
                             var options = GameOptionsManager.Instance.CurrentGameOptions;
 
@@ -2940,8 +3016,8 @@ internal class ChatCommands
                 return;
 
             default:
-                    if (SpamManager.CheckStart(player, text) ||
-                        SpamManager.CheckWord(player, text)) return;
+                if (SpamManager.CheckStart(player, text) ||
+                    SpamManager.CheckWord(player, text)) return;
 
                 return;
 

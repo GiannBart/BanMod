@@ -318,8 +318,8 @@ public static class MatchTextLogger
                 if (!voteArea)
                     continue;
 
-                byte playerId = voteArea.TargetPlayerId;
-                var playerData = GameData.Instance.GetPlayerById(playerId);
+                byte playerId = voteArea.PlayerId.Value;
+                var playerData = GameData.Instance.GetPlayerById(voteArea.PlayerId);
 
                 if (playerData == null || playerData.Disconnected || playerData.IsDead)
                     continue;
@@ -353,7 +353,7 @@ public static class MatchTextLogger
 
         foreach (var area in meetingHud.playerStates)
         {
-            if (area && area.TargetPlayerId == voterId)
+            if (area && area.PlayerId.Value == voterId)
             {
                 voterArea = area;
                 break;
@@ -363,7 +363,7 @@ public static class MatchTextLogger
         if (!voterArea || !voterArea.DidVote)
             return;
 
-        byte votedForId = voterArea.VotedFor;
+        byte votedForId = voterArea.VotedForId;
 
         if (votedForId == PlayerVoteArea.HasNotVoted ||
             votedForId == PlayerVoteArea.MissedVote ||
@@ -1635,13 +1635,24 @@ internal static class MatchTextLoggerMeetingStartPatch
 internal static class MatchTextLoggerVotePatch
 {
     [HarmonyPostfix]
-    private static void Postfix(
-        MeetingHud __instance,
-        [HarmonyArgument(0)] byte srcPlayerId)
+    private static void Postfix(MeetingHud __instance)
     {
-        if (BanMod.EnableLog.Value)
+        if (!BanMod.EnableLog.Value ||
+            __instance == null ||
+            __instance.playerStates == null)
         {
-            MatchTextLogger.RecordVote(__instance, srcPlayerId);
+            return;
+        }
+
+        foreach (var voteArea in __instance.playerStates)
+        {
+            if (!voteArea || !voteArea.DidVote)
+                continue;
+
+            MatchTextLogger.RecordVote(
+                __instance,
+                voteArea.PlayerId.Value
+            );
         }
     }
 }

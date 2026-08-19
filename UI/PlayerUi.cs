@@ -578,7 +578,7 @@ namespace BanMod
                         NetworkedPlayerInfo playerToExileInfo = GameData.Instance.GetPlayerById(selectedPlayer.PlayerId);
                         VoteContextManager.IsForcedVote = true;
                         List<MeetingHud.VoterState> statesList = new();
-                        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), playerToExileInfo, false);
+                        MeetingHud.Instance.RpcVotingComplete(statesList.ToArray(), playerToExileInfo, false, false, 0);
                         MeetingHud.Instance.Close();
                         MeetingHud.Instance.RpcClose();
                         VoteContextManager.IsForcedVote = false;

@@ -101,8 +101,8 @@ namespace BanMod
                     PlayerVoteArea playerVoteArea = __instance.playerStates[i];
                     array[i] = new MeetingHud.VoterState
                     {
-                        VoterId = playerVoteArea.TargetPlayerId,
-                        VotedForId = playerVoteArea.VotedFor
+                        VoterId = playerVoteArea.PlayerId.Value,
+                        VotedForId = playerVoteArea.VotedForId
                     };
                 }
 
@@ -117,7 +117,7 @@ namespace BanMod
                 }
                 JesterWinHelper.TryTriggerJesterWin();
                 JesterWinState.SetWinner(Jester.JesterId);
-                __instance.RpcVotingComplete(array, exiled, false);
+                __instance.RpcVotingComplete(array, exiled, false, false, 0);
 
                 LateTask.New(() =>
                 {

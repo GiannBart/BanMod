@@ -4,6 +4,7 @@ using BanMod;
 using BepInEx.Unity.IL2CPP.Utils;
 using HarmonyLib;
 using Hazel;
+using InnerNet;
 using Rewired.UI.ControlMapper;
 using System.Collections;
 using System.Collections.Generic;
@@ -91,6 +92,7 @@ namespace BanMod
                                 !Scientist(p) &&
                                 !Engineer(p) &&
                                 !Tracker(p) &&
+                                !Judge(p) &&
                                 (!BanMod.forceImpostor || !BanMod.forcedImpostorIds.Contains(p.PlayerId)) &&
                                 !(Options.PhantomGuess.GetBool() && Phantom(p)) &&
                                 !(Options.ViperGuess.GetBool() && Cobra(p)) &&
@@ -422,36 +424,44 @@ namespace BanMod
 }
 
 [HarmonyPatch]
+[HarmonyPatch]
 public static class WatcherMeetingPatch
 {
     private const byte SkipVoteId = 253;
 
     [HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.CastVote))]
     [HarmonyPrefix]
-    public static void CastVotePrefix(byte srcPlayerId, ref byte suspectPlayerId)
+    public static void CastVotePrefix(
+        PlayerId srcPlayerId,
+        ref PlayerId suspectPlayerId)
     {
         if (!AmongUsClient.Instance.AmHost)
             return;
 
-        if (!Watcher.WatcherSelected)
-            return;
-
-        if (Watcher.WatcherId == 255)
-            return;
-
-        if (suspectPlayerId == Watcher.WatcherId)
+        if (!Watcher.WatcherSelected ||
+            Watcher.WatcherId == byte.MaxValue)
         {
-            BMLogger.Info(
-                $"[Watcher] {srcPlayerId} ha votato il Watcher {Watcher.WatcherId}. Voto convertito in Skip."
-            );
-
-            suspectPlayerId = SkipVoteId;
+            return;
         }
+
+        byte sourceId = srcPlayerId.Value;
+        byte suspectId = suspectPlayerId.Value;
+
+        if (suspectId != Watcher.WatcherId)
+            return;
+
+        BMLogger.Info(
+            $"[Watcher] {sourceId} ha votato il Watcher " +
+            $"{Watcher.WatcherId}. Voto convertito in Skip."
+        );
+
+        suspectPlayerId = (PlayerId)SkipVoteId;
     }
 
     [HarmonyPatch(typeof(MeetingHud), "VotingComplete")]
     [HarmonyPostfix]
-    public static void VotingCompletePostfix(NetworkedPlayerInfo exiled)
+    public static void VotingCompletePostfix(
+        NetworkedPlayerInfo exiled)
     {
         if (!AmongUsClient.Instance.AmHost)
             return;
@@ -459,8 +469,11 @@ public static class WatcherMeetingPatch
         if (!Watcher.WatcherSelected)
             return;
 
-        if (Watcher.WatcherId == 255 || Watcher.WatcherLover == 255)
+        if (Watcher.WatcherId == byte.MaxValue ||
+            Watcher.WatcherLover == byte.MaxValue)
+        {
             return;
+        }
 
         if (exiled == null)
             return;
@@ -468,7 +481,8 @@ public static class WatcherMeetingPatch
         if (exiled.PlayerId == Watcher.WatcherLover)
         {
             BMLogger.Info(
-                $"[Watcher] WatcherLover {Watcher.WatcherLover} è stato votato/esiliato. Uccido il Watcher {Watcher.WatcherId}."
+                $"[Watcher] WatcherLover " +
+                $"{Watcher.WatcherLover} è stato esiliato."
             );
 
             Watcher.KillWatcherBecauseLoverDied();

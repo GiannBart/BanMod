@@ -79,7 +79,7 @@ namespace BanMod
                         if (pva.transform.Find(ButtonName) != null)
                             continue;
 
-                        byte targetId = pva.TargetPlayerId;
+                        byte targetId = pva.PlayerId;
 
                         PlayerControl pc = Utils.GetPlayerById(targetId);
 

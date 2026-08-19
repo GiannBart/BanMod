@@ -78,6 +78,7 @@ namespace BanMod
                             && !Engineer(p)
                             && !Tracker(p)
                             && !Detective(p)
+                            && !Judge(p)
                             && (!BanMod.forceImpostor || !BanMod.forcedImpostorIds.Contains(p.PlayerId))
                             && !(Options.PhantomGuess.GetBool() && Phantom(p))
                             && !(Options.ViperGuess.GetBool() && Cobra(p))
@@ -233,13 +234,13 @@ namespace BanMod
                 return true;
             }
 
-            MeetingHud.VoteStates meetingState =
+            MeetingHud.MeetingStates meetingState =
                 MeetingHud.Instance.CurrentState;
 
             bool meetingCanBeClosed =
-                meetingState == MeetingHud.VoteStates.Discussion ||
-                meetingState == MeetingHud.VoteStates.NotVoted ||
-                meetingState == MeetingHud.VoteStates.Voted;
+                meetingState == MeetingHud.MeetingStates.Discussion ||
+                meetingState == MeetingHud.MeetingStates.NotVoted ||
+                meetingState == MeetingHud.MeetingStates.Voted;
 
             if (!meetingCanBeClosed)
             {
@@ -339,7 +340,7 @@ namespace BanMod
             {
                 PlayerVoteArea state = __instance.playerStates[i];
 
-                if (state != null && state.TargetPlayerId == Judge.JudgeId)
+                if (state != null && state.PlayerId == Judge.JudgeId)
                 {
                     judgeVoteArea = state;
                     break;
@@ -353,7 +354,7 @@ namespace BanMod
                 return true;
             }
 
-            byte judgeTarget = judgeVoteArea.VotedFor;
+            byte judgeTarget = judgeVoteArea.VotedForId;
 
             if (judgeTarget == 252 ||
                 judgeTarget == 253 ||
@@ -423,11 +424,11 @@ namespace BanMod
                 finalStates.Add(
                     new MeetingHud.VoterState
                     {
-                        VoterId = area.TargetPlayerId,
+                        VoterId = area.PlayerId,
                         VotedForId =
-                            area.TargetPlayerId == Judge.JudgeId
+                            area.PlayerId == Judge.JudgeId
                                 ? byte.MaxValue
-                                : area.VotedFor
+                                : area.VotedForId
                     });
             }
 
@@ -437,8 +438,8 @@ namespace BanMod
 
                 if (area == null ||
                     area.AmDead ||
-                    area.TargetPlayerId == Judge.JudgeId ||
-                    area.VotedFor != judgeTarget)
+                    area.PlayerId == Judge.JudgeId ||
+                    area.VotedForId != judgeTarget)
                 {
                     continue;
                 }
@@ -446,7 +447,7 @@ namespace BanMod
                 finalStates.Add(
                     new MeetingHud.VoterState
                     {
-                        VoterId = area.TargetPlayerId,
+                        VoterId = area.PlayerId,
                         VotedForId = judgeTarget
                     });
             }
@@ -460,7 +461,7 @@ namespace BanMod
             __instance.RpcVotingComplete(
                 finalStates.ToArray(),
                 exiled,
-                tie);
+                tie, false, 0);
 
             return false;
         }

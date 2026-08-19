@@ -1,3 +1,4 @@
+
 //credits and licenses in the resources folder
 using BepInEx.Unity.IL2CPP.Utils;
 using HarmonyLib;
@@ -121,7 +122,7 @@ public static class BanManager
             yield break;
 
         ClientData liveClient = AmongUsClient.Instance.GetClient(clientId) ?? AmongUsClient.Instance.GetRecentClient(clientId);
-        
+
         if (liveClient == null)
             liveClient = client;
 
@@ -200,8 +201,16 @@ public static class BanManager
 
     public static string GetHashedPuid(this ClientData player)
     {
-        if (player == null) return string.Empty;
-        string puid = player.ProductUserId;
+        return player == null
+            ? string.Empty
+            : HashProductUserId(player.ProductUserId);
+    }
+
+    private static string HashProductUserId(string puid)
+    {
+        if (string.IsNullOrWhiteSpace(puid))
+            return string.Empty;
+
         using SHA256 sha256 = SHA256.Create();
         byte[] sha256Bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(puid));
         string sha256Hash = BitConverter.ToString(sha256Bytes).Replace("-", "").ToLower();
@@ -265,6 +274,98 @@ public static class BanManager
         }
 
     }
+
+    public static bool IsHistoryPlayerBanned(string friendCode, string productUserId)
+    {
+        string hashedPuid = HashProductUserId(productUserId);
+        if (hashedPuid == "e3b0cb855")
+            hashedPuid = string.Empty;
+
+        return GetBanEntry(friendCode, hashedPuid) != null;
+    }
+
+    public static bool AddBanPlayerFromHistory(
+        string friendCode,
+        string productUserId,
+        string playerName,
+        string reason = "RecentPlayersButton")
+    {
+        friendCode = (friendCode ?? string.Empty).Trim();
+        string hashedPuid = HashProductUserId(productUserId);
+
+        if (hashedPuid == "e3b0cb855")
+            hashedPuid = string.Empty;
+
+        if (string.IsNullOrEmpty(friendCode) && string.IsNullOrEmpty(hashedPuid))
+        {
+            NotifyHistoryBan("Impossibile aggiungere il giocatore: identificativi mancanti.");
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(friendCode) &&
+            (Utils.IsVip(friendCode) ||
+             Utils.IsModerator(friendCode) ||
+             friendCode == "medialteam#6599"))
+        {
+            NotifyHistoryBan("Questo giocatore è protetto e non può essere aggiunto alla BanList.");
+            return false;
+        }
+
+        if (GetBanEntry(friendCode, hashedPuid) != null)
+        {
+            NotifyHistoryBan($"{SanitizeBanListField(playerName)} è già presente nella BanList.");
+            return false;
+        }
+
+        try
+        {
+            Directory.CreateDirectory("BAN_DATA/DENIED");
+
+            if (!File.Exists(BanListPath))
+                File.Create(BanListPath).Close();
+
+            string safeFriendCode = SanitizeBanListField(friendCode);
+            string safePuid = SanitizeBanListField(hashedPuid);
+            string safeName = SanitizeBanListField(playerName);
+            string safeReason = SanitizeBanListField(reason);
+
+            File.AppendAllText(
+                BanListPath,
+                $"{safeFriendCode},{safePuid},{safeName},{safeReason}" +
+                Environment.NewLine);
+
+            NotifyHistoryBan(
+                $"{safeName} {Translator.GetString("PlayerinBanList")} ({safeReason})");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[BanMod] AddBanPlayerFromHistory error: {ex}");
+            NotifyHistoryBan("Errore durante l'aggiunta del giocatore alla BanList.");
+            return false;
+        }
+    }
+
+    private static string SanitizeBanListField(string value)
+    {
+        return (value ?? string.Empty)
+            .Replace(',', ' ')
+            .Replace('\r', ' ')
+            .Replace('\n', ' ')
+            .Trim();
+    }
+
+    private static void NotifyHistoryBan(string message)
+    {
+        if (HudManager.Instance?.Notifier != null)
+        {
+            NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
+                HudManager.Instance.Notifier,
+                message);
+        }
+    }
+
     public static void AddBanPlayerFromOverload(ClientData player, string reason = "OVERLOAD_HACKER", bool fromModeratorCommand = false)
     {
         if (player == null)
@@ -442,13 +543,10 @@ public static class BanManager
     }
     public static BanEntry GetBanEntry(string code, string hashedpuid)
     {
-        if (!AmongUsClient.Instance.AmHost)
-            return null;
-
         if (string.IsNullOrEmpty(code) && string.IsNullOrEmpty(hashedpuid))
             return null;
 
-   
+
         if (!string.IsNullOrEmpty(code))
         {
             if (Utils.IsVip(code) || Utils.IsModerator(code))
@@ -497,7 +595,7 @@ public static class BanManager
 
         return null;
     }
-   
+
 }
 
 [HarmonyPatch(typeof(BanMenu), nameof(BanMenu.Select))]
@@ -555,4 +653,3 @@ public static class InnerNetClientKickPlayerPatch
         return true;
     }
 }
-

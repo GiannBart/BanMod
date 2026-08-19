@@ -1,4 +1,3 @@
-//credits and licenses in the resources folder/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -67,8 +66,8 @@ namespace BanMod
                 Token = "";
                 LastTokenRequestWasBlocked = true;
                 LastTokenBlockReason = updateResult.UpdateStarted
-                    ? "Aggiornamento obbligatorio in installazione."
-                    : "Aggiornamento obbligatorio non installato: " + (updateResult.Error ?? "errore sconosciuto");
+                    ? "Mandatory update installation in progress."
+                    : "Mandatory update was not installed: " + (updateResult.Error ?? "unknown error");
                 callback?.Invoke(false, "");
                 yield break;
             }
@@ -91,7 +90,7 @@ namespace BanMod
 
             Token = "";
             LastTokenRequestWasBlocked = true;
-            LastTokenBlockReason = "Activation token non disponibile.";
+            LastTokenBlockReason = "Activation token unavailable.";
             callback?.Invoke(false, "");
         }
 
@@ -301,7 +300,7 @@ namespace BanMod
                 if ((cheaterTask != null && cheaterTask.IsFaulted) ||
                     (teamerTask != null && teamerTask.IsFaulted))
                 {
-                    LastError = "Errore durante la sincronizzazione iniziale delle liste.";
+                    LastError = "An error occurred during the initial list synchronization.";
                 }
 
                 try { LastRefreshUnix = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(); }
@@ -427,7 +426,7 @@ namespace BanMod
             ServerReachable = ok;
             if (ok) LastValidServerDataTime = Time.time;
             IsModBlocked = !ok;
-            ModBlockReason = ok ? "" : "Premium non autorizzato dal server.";
+            ModBlockReason = ok ? "" : "Premium access was not authorized by the server.";
         }
 
         public static IEnumerator RefreshFeatureDecisionCoroutine(ModFeature feature, Action<bool> callback)
@@ -500,6 +499,7 @@ namespace BanMod
             public bool UpdateStarted { get; set; }
             public bool BlockStartup { get; set; }
             public bool RepairRequired { get; set; }
+            public string ReleaseNotes { get; set; } = "";
             public string Error { get; set; } = "";
         }
 
@@ -624,7 +624,7 @@ namespace BanMod
             catch (Exception ex)
             {
                 result.Checked = false;
-                result.Error = "Update JSON non valido: " + ex.Message;
+                result.Error = "Invalid update JSON: " + ex.Message;
                 lastError = result.Error;
                 isBroken = true;
                 isChecked = true;
@@ -640,7 +640,7 @@ namespace BanMod
                 result.Checked = false;
                 result.Error = response != null && !string.IsNullOrWhiteSpace(response.reason)
                     ? response.reason
-                    : "Risposta update non valida";
+                    : "Invalid update response";
                 lastError = result.Error;
                 isBroken = true;
                 isChecked = true;
@@ -664,6 +664,7 @@ namespace BanMod
             result.Mandatory = automaticMandatoryUpdate;
             result.BlockStartup = automaticMandatoryUpdate;
             result.RepairRequired = response.repair_required || response.integrity_mismatch;
+            result.ReleaseNotes = (response.release_notes ?? "").Trim();
 
             hasUpdate = result.UpdateAvailable;
             isMandatory = automaticMandatoryUpdate;
@@ -687,7 +688,7 @@ namespace BanMod
 
             if (string.IsNullOrWhiteSpace(downloadUrl))
             {
-                result.Error = "Aggiornamento obbligatorio senza download_url";
+                result.Error = "Mandatory update response does not contain download_url";
                 lastError = result.Error;
                 isBroken = true;
                 callback?.Invoke(result);
@@ -697,7 +698,7 @@ namespace BanMod
             if (string.IsNullOrWhiteSpace(latestSha256) ||
                 !Regex.IsMatch(latestSha256, "^[0-9a-f]{64}$", RegexOptions.IgnoreCase))
             {
-                result.Error = "Aggiornamento obbligatorio senza SHA256 ufficiale valido";
+                result.Error = "Mandatory update response does not contain a valid official SHA256";
                 lastError = result.Error;
                 isBroken = true;
                 callback?.Invoke(result);
@@ -781,7 +782,7 @@ namespace BanMod
                 isInstalling = false;
                 callback?.Invoke(
                     false,
-                    "Download update fallito: " +
+                    "Update download failed: " +
                     downloadError.GetType().Name + ": " +
                     downloadError.Message);
                 yield break;
@@ -790,7 +791,7 @@ namespace BanMod
             if (bytes == null || bytes.Length == 0)
             {
                 isInstalling = false;
-                callback?.Invoke(false, "DLL aggiornamento vuota");
+                callback?.Invoke(false, "The downloaded update DLL is empty");
                 yield break;
             }
 
@@ -800,17 +801,27 @@ namespace BanMod
             {
                 isInstalling = false;
                 callback?.Invoke(false,
-                    "SHA256 update non valido. Atteso=" + expectedSha256 + " Ricevuto=" + actualSha256);
+                    "Invalid update SHA256. Expected=" + expectedSha256 + " Received=" + actualSha256);
                 yield break;
             }
 
-            string targetPath = SafeGetOwnDllPath();
-            if (string.IsNullOrWhiteSpace(targetPath))
+            string loadedDllPath = SafeGetOwnDllPath();
+            if (string.IsNullOrWhiteSpace(loadedDllPath))
             {
                 isInstalling = false;
-                callback?.Invoke(false, "Percorso BanMod.dll non trovato");
+                callback?.Invoke(false, "BanMod DLL path was not found");
                 yield break;
             }
+
+            string pluginDirectory = Path.GetDirectoryName(loadedDllPath);
+            if (string.IsNullOrWhiteSpace(pluginDirectory) || !Directory.Exists(pluginDirectory))
+            {
+                isInstalling = false;
+                callback?.Invoke(false, "BanMod plugins directory was not found");
+                yield break;
+            }
+
+            string targetPath = Path.Combine(pluginDirectory, "BanMod.dll");
 
             bool launchSucceeded = false;
             string launchError = "";
@@ -820,12 +831,11 @@ namespace BanMod
                 string stagedPath = targetPath + ".update";
                 File.WriteAllBytes(stagedPath, bytes);
 
-                // Verifica anche il file realmente scritto su disco.
                 string stagedSha256 = SafeSha256File(stagedPath);
                 if (!string.Equals(stagedSha256, actualSha256, StringComparison.OrdinalIgnoreCase))
                 {
                     try { File.Delete(stagedPath); } catch { }
-                    launchError = "Verifica SHA256 del file temporaneo fallita";
+                    launchError = "Staged update file SHA256 verification failed";
                 }
                 else
                 {
@@ -833,7 +843,7 @@ namespace BanMod
                     if (string.IsNullOrWhiteSpace(scriptPath))
                     {
                         try { File.Delete(stagedPath); } catch { }
-                        launchError = "Impossibile creare il processo di aggiornamento";
+                        launchError = "Unable to create the update process";
                     }
                     else
                     {
@@ -878,6 +888,8 @@ namespace BanMod
                 string target = EscapeBatchValue(targetPath);
                 string staged = EscapeBatchValue(stagedPath);
                 string backup = EscapeBatchValue(targetPath + ".backup");
+                string pluginDirectory = EscapeBatchValue(
+                    Path.GetDirectoryName(targetPath) ?? "");
 
                 string updaterLog = EscapeBatchValue(
                     Path.Combine(
@@ -889,6 +901,8 @@ namespace BanMod
                 sb.AppendLine("setlocal");
                 sb.AppendLine("set \"BANMOD_PID=" + pid + "\"");
                 sb.AppendLine("set \"BANMOD_TRIES=0\"");
+                sb.AppendLine("set \"BANMOD_DIRECTORY=" + pluginDirectory + "\"");
+                sb.AppendLine("set \"BANMOD_TARGET=" + target + "\"");
                 sb.AppendLine(
                     "echo [%date% %time%] Update BAT started. Waiting for shutdown.>>\"" +
                     updaterLog + "\"");
@@ -911,8 +925,8 @@ namespace BanMod
 
                 sb.AppendLine(":replace_file");
                 sb.AppendLine(
-                    "copy /Y \"" + target + "\" \"" + backup +
-                    "\" >NUL 2>&1");
+                    "if exist \"" + target + "\" copy /Y \"" + target + "\" \"" +
+                    backup + "\" >NUL 2>&1");
                 sb.AppendLine(
                     "copy /Y \"" + staged + "\" \"" + target + "\" >NUL");
 
@@ -924,15 +938,25 @@ namespace BanMod
 
                 sb.AppendLine(":verify_replaced");
                 sb.AppendLine("if not exist \"" + target + "\" goto replace_failed");
-                sb.AppendLine("del /Q \"" + staged + "\" >NUL 2>&1");
+                sb.AppendLine("del /F /Q \"" + staged + "\" >NUL 2>&1");
                 sb.AppendLine(
                     "echo [%date% %time%] BanMod.dll replaced successfully.>>\"" +
                     updaterLog + "\"");
 
+                sb.AppendLine(
+                    "echo [%date% %time%] Removing obsolete BanMod DLLs.>>\"" +
+                    updaterLog + "\"");
+                sb.AppendLine("for %%F in (\"%BANMOD_DIRECTORY%\\BanMod*.dll\") do (");
+                sb.AppendLine("    if /I not \"%%~fF\"==\"%BANMOD_TARGET%\" (");
+                sb.AppendLine("        del /F /Q \"%%~fF\" >NUL 2>&1");
+                sb.AppendLine("    )");
+                sb.AppendLine(")");
+                sb.AppendLine("del /F /Q \"" + backup + "\" >NUL 2>&1");
+
                 sb.AppendLine("timeout /t 2 /nobreak >NUL");
 
                 sb.AppendLine(
-                    "echo [%date% %time%] Update installed. Automatic game restart disabled.>>\"" +
+                    "echo [%date% %time%] Update installed and obsolete BanMod DLLs removed. Automatic game restart disabled.>>\"" +
                     updaterLog + "\"");
 
                 sb.AppendLine("goto cleanup");
@@ -1090,7 +1114,7 @@ namespace BanMod
             {
                 if (AmongUsClient.Instance == null)
                 {
-                    lastError = "Impossibile avviare l'aggiornamento manuale: client di gioco non disponibile";
+                    lastError = "Unable to start the manual update: game client unavailable";
                     isBroken = true;
                     return;
                 }
@@ -1102,7 +1126,7 @@ namespace BanMod
             {
                 manualUpdateRunning = false;
                 isBroken = true;
-                lastError = "Avvio aggiornamento manuale fallito: " + ex.GetType().Name + ": " + ex.Message;
+                lastError = "Failed to start the manual update: " + ex.GetType().Name + ": " + ex.Message;
                 Debug.LogError("[BanMod Updater] " + lastError);
             }
         }
@@ -1121,8 +1145,8 @@ namespace BanMod
                 manualUpdateRunning = false;
                 isBroken = true;
                 if (string.IsNullOrWhiteSpace(lastError))
-                    lastError = result != null ? (result.Error ?? "Controllo update fallito") : "Controllo update senza risposta";
-                Debug.LogError("[BanMod Updater] Aggiornamento manuale non disponibile: " + lastError);
+                    lastError = result != null ? (result.Error ?? "Update check failed") : "Update check returned no response";
+                Debug.LogError("[BanMod Updater] Manual update unavailable: " + lastError);
                 yield break;
             }
 
@@ -1136,7 +1160,7 @@ namespace BanMod
             {
                 manualUpdateRunning = false;
                 isBroken = false;
-                lastError = "Nessun aggiornamento disponibile";
+                lastError = "No update available";
                 Debug.Log("[BanMod Updater] " + lastError);
                 yield break;
             }
@@ -1145,7 +1169,7 @@ namespace BanMod
             {
                 manualUpdateRunning = false;
                 isBroken = true;
-                lastError = "Aggiornamento manuale senza download_url";
+                lastError = "Manual update response does not contain download_url";
                 Debug.LogError("[BanMod Updater] " + lastError);
                 yield break;
             }
@@ -1155,7 +1179,7 @@ namespace BanMod
             {
                 manualUpdateRunning = false;
                 isBroken = true;
-                lastError = "Aggiornamento manuale senza SHA256 ufficiale valido";
+                lastError = "Manual update response does not contain a valid official SHA256";
                 Debug.LogError("[BanMod Updater] " + lastError);
                 yield break;
             }
@@ -1177,7 +1201,7 @@ namespace BanMod
             lastError = installError;
 
             if (!started)
-                Debug.LogError("[BanMod Updater] Aggiornamento manuale fallito: " + lastError);
+                Debug.LogError("[BanMod Updater] Manual update failed: " + lastError);
         }
     }
 
@@ -1200,7 +1224,7 @@ namespace BanMod
             catch (Exception ex)
             {
                 checkRunning = false;
-                Debug.LogError("[BanMod Updater] Impossibile avviare il controllo: " + ex.Message);
+                Debug.LogError("[BanMod Updater] Unable to start the update check: " + ex.Message);
             }
         }
 
@@ -1214,13 +1238,13 @@ namespace BanMod
 
             if (result == null)
             {
-                Debug.LogError("[BanMod Updater] Il controllo non ha restituito alcun risultato.");
+                Debug.LogError("[BanMod Updater] The update check returned no result.");
                 yield break;
             }
 
             if (!result.Checked)
             {
-                Debug.LogWarning("[BanMod Updater] Controllo fallito: " + (result.Error ?? "errore sconosciuto"));
+                Debug.LogWarning("[BanMod Updater] Update check failed: " + (result.Error ?? "unknown error"));
                 yield break;
             }
 
@@ -1230,8 +1254,8 @@ namespace BanMod
             {
                 if (!result.UpdateStarted)
                 {
-                    Debug.LogError("[BanMod Updater] Aggiornamento obbligatorio non installato: " +
-                                   (result.Error ?? "errore sconosciuto"));
+                    Debug.LogError("[BanMod Updater] Mandatory update was not installed: " +
+                                   (result.Error ?? "unknown error"));
 
                     yield return new WaitForSeconds(1f);
                     Application.Quit();
@@ -1241,8 +1265,27 @@ namespace BanMod
                 yield break;
             }
 
-            if (result.UpdateAvailable)
-                Debug.Log("[BanMod Updater] Aggiornamento facoltativo disponibile: " + ModUpdater.latestTitle);
+            if (result.UpdateAvailable && !result.Mandatory)
+            {
+                string changes = string.IsNullOrWhiteSpace(result.ReleaseNotes)
+                    ? "No details available."
+                    : result.ReleaseNotes;
+
+                string message =
+                    ModUpdater.latestTitle + " is available.\n\n" +
+                    "Changes:\n" +
+                    changes;
+
+                Debug.Log(
+                    "[BanMod Updater] Optional update available: " +
+                    ModUpdater.latestTitle
+                );
+
+                BanModPopup.CreateMessagePopup(
+                    "Optional update available",
+                    message
+                );
+            }
         }
     }
 

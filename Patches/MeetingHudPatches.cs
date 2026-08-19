@@ -27,7 +27,7 @@ public static class MeetingHud_Update
             return;
         }
 
-        if (__instance.state >= MeetingHud.VoteStates.Results)
+        if (__instance.state >= MeetingHud.MeetingStates.Results)
             return;
 
         foreach (var playerVoteArea in __instance.playerStates)
@@ -35,8 +35,8 @@ public static class MeetingHud_Update
             if (!playerVoteArea)
                 continue;
 
-            byte voterId = playerVoteArea.TargetPlayerId;
-            byte votedForId = playerVoteArea.VotedFor;
+            byte voterId = playerVoteArea.PlayerId.Value;
+            byte votedForId = playerVoteArea.VotedForId;
 
             var playerData = GameData.Instance.GetPlayerById(voterId);
 
@@ -72,7 +72,7 @@ public static class MeetingHud_Update
                 if (!votedForArea)
                     continue;
 
-                if (votedForArea.TargetPlayerId != votedForId)
+                if (votedForArea.PlayerId != votedForId)
                     continue;
 
                 if (votedForArea.transform != null)

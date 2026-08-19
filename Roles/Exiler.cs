@@ -46,6 +46,7 @@ namespace BanMod
                             && !Scientist(p)
                             && !Engineer(p)
                             && !Tracker(p)
+                            && !Judge(p)
                             && (!BanMod.forceImpostor || !BanMod.forcedImpostorIds.Contains(p.PlayerId))
                             && !(Options.PhantomGuess.GetBool() && Phantom(p))
                             && !(Options.ViperGuess.GetBool() && Cobra(p))

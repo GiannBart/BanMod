@@ -82,7 +82,7 @@ public static class ImpGuessManager
                     if (pva.transform.Find(ButtonName) != null)
                         continue;
 
-                    byte targetId = pva.TargetPlayerId;
+                    byte targetId = pva.PlayerId;
 
                     PlayerControl pc = GetPlayerById(targetId);
 

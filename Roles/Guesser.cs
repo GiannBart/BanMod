@@ -58,7 +58,9 @@ namespace BanMod
                             && !Utils.Scientist(p)
                             && !Utils.Tracker(p)
                             && !Utils.Engineer(p)
+                            && !Judge(p)
                             && !Utils.Detective(p))
+
                 .ToList();
 
             if (guesserPlayers.Count == 0)

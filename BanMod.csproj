@@ -6,7 +6,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Il2CppInteropVerbose>true</Il2CppInteropVerbose>
 		<Optimize>True</Optimize>
-		<VersionPrefix>3.7.3</VersionPrefix>
+		<VersionPrefix>3.7.6</VersionPrefix>
 		<Description>Ban automatico</Description>
 		<Authors>Gianni</Authors>
 		<AssemblyName>BanMod</AssemblyName>
@@ -60,7 +60,7 @@ namespace BanMod
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AmongUs.GameLibs.Steam" Version="2026.6.5" />
+		<PackageReference Include="AmongUs.GameLibs.Steam" Version="2026.8.18" />
 		<PackageReference Include="BepInEx.IL2CPP.MSBuild" Version="2.1.0-rc.1" PrivateAssets="all" ExcludeAssets="runtime" />
 		<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.735" ExcludeAssets="runtime;native" />
 	</ItemGroup>

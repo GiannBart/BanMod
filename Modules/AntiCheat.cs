@@ -1,3 +1,4 @@
+
 //credits and licenses in the resources folder
 using AmongUs.GameOptions;
 using AmongUs.InnerNet.GameDataMessages;
@@ -131,6 +132,7 @@ namespace BanMod
             {
                 if (player == null || !AmongUsClient.Instance.AmHost) return;
                 if (player == PlayerControl.LocalPlayer) return;
+                if ((GameModeType) Options.GameMode.GetValue() == GameModeType.FFA) return;
                 if (Time.time - lastCheckTime > Time.fixedDeltaTime)
                 {
                     ventRemovalsThisTick.Clear();
@@ -269,6 +271,107 @@ namespace BanMod
             }
         }
     }
+
+}
+
+[HarmonyPatch(typeof(ShipStatus), nameof(ShipStatus.HandleRpc))]
+public static class BlockNonHostKickExploitPatch
+{
+    private static readonly Dictionary<byte, float> SuspiciousVentEnter = new();
+    private const float ExploitSequenceWindow = 0.75f;
+
+    public static bool Prefix(byte callId, MessageReader reader)
+    {
+        if (callId != (byte)RpcCalls.UpdateSystem || reader == null)
+            return true;
+
+        AmongUsClient client = AmongUsClient.Instance;
+
+        if (client == null ||
+            client.NetworkMode != NetworkModes.OnlineGame ||
+            client.AmHost)
+        {
+            return true;
+        }
+
+        int originalPosition = reader.Position;
+
+        try
+        {
+            SystemTypes systemType = (SystemTypes)reader.ReadByte();
+            PlayerControl player = reader.ReadNetObject<PlayerControl>();
+
+            if (systemType != SystemTypes.Ventilation || player == null)
+                return true;
+
+            ushort sequenceId = reader.ReadUInt16();
+            VentilationSystem.Operation operation =
+                (VentilationSystem.Operation)reader.ReadByte();
+            byte ventId = reader.ReadByte();
+
+            byte playerId = player.PlayerId;
+            float now = Time.realtimeSinceStartup;
+
+            if (operation == VentilationSystem.Operation.Enter &&
+                sequenceId == 0 &&
+                ventId == 0 &&
+                !player.inVent)
+            {
+                SuspiciousVentEnter[playerId] = now;
+                return true;
+            }
+
+            if (operation == VentilationSystem.Operation.BootImpostors &&
+                sequenceId == 1 &&
+                ventId == 0 &&
+                SuspiciousVentEnter.TryGetValue(playerId, out float enterTime))
+            {
+                SuspiciousVentEnter.Remove(playerId);
+
+                if (now - enterTime <= ExploitSequenceWindow)
+                {
+                    string playerName = player.Data?.PlayerName ?? "Unknown";
+                    int clientId = player.OwnerId;
+
+                    BMLogger.Warn(
+                        $"Blocked non-host kick exploit | Player={playerName} | " +
+                        $"PlayerId={player.PlayerId} | ClientId={clientId}",
+                        "AntiCheat"
+                    );
+
+                    return false;
+                }
+            }
+            bool invalidVentState =
+    MeetingHud.Instance != null ||
+    ShipStatus.Instance == null ||
+    client.GameState != InnerNetClient.GameStates.Started;
+
+            if (invalidVentState &&
+                (operation == VentilationSystem.Operation.BootImpostors ||
+                 operation == VentilationSystem.Operation.StartCleaning))
+            {
+                BMLogger.Warn(
+                    $"Blocked ventilation RPC outside gameplay | " +
+                    $"Player={player.Data?.PlayerName ?? "Unknown"} | " +
+                    $"Operation={operation}",
+                    "AntiCheat"
+                );
+
+                return false;
+            }
+            return true;
+        }
+        catch
+        {
+            return true;
+        }
+        finally
+        {
+            reader.Position = originalPosition;
+        }
+    }
+
 }
 
 [HarmonyPatch]
@@ -279,10 +382,10 @@ public static class ShipStatus_UpdateSystem_Patch
     static MethodBase TargetMethod()
     {
         return AccessTools.Method(typeof(ShipStatus), "UpdateSystem", new Type[] {
-            typeof(SystemTypes),
-            typeof(PlayerControl),
-            typeof(Hazel.MessageReader)
-        });
+        typeof(SystemTypes),
+        typeof(PlayerControl),
+        typeof(Hazel.MessageReader)
+    });
     }
 
     public static void Prefix(
@@ -296,16 +399,16 @@ public static class ShipStatus_UpdateSystem_Patch
 
         SystemTypes[] monitoredSystems = new SystemTypes[]
         {
-            SystemTypes.Electrical,
-            SystemTypes.LifeSupp,
-            SystemTypes.Comms,
-            SystemTypes.Doors,
-            SystemTypes.Sabotage,
-            SystemTypes.Laboratory,
-            SystemTypes.HeliSabotage,
-            SystemTypes.MushroomMixupSabotage,
-            SystemTypes.Reactor,
-            SystemTypes.Ventilation
+        SystemTypes.Electrical,
+        SystemTypes.LifeSupp,
+        SystemTypes.Comms,
+        SystemTypes.Doors,
+        SystemTypes.Sabotage,
+        SystemTypes.Laboratory,
+        SystemTypes.HeliSabotage,
+        SystemTypes.MushroomMixupSabotage,
+        SystemTypes.Reactor,
+        SystemTypes.Ventilation
         };
 
         if (Array.IndexOf(monitoredSystems, systemType) == -1) return;
@@ -524,9 +627,9 @@ public static class ShipStatus_UpdateSystem_Patch
         {
             Vector2[] airshipPanels = new Vector2[]
             {
-            new Vector2(-12.82f, -11.27f),
-            new Vector2(30.66f, 2.08f),
-            new Vector2(13.97f, 6.35f)
+        new Vector2(-12.82f, -11.27f),
+        new Vector2(30.66f, 2.08f),
+        new Vector2(13.97f, 6.35f)
             };
 
             return airshipPanels.Any(p => Vector2.Distance(pos, p) < airshipElectricalRange);
@@ -545,13 +648,13 @@ public static class ShipStatus_UpdateSystem_Patch
         {
             MapNames.Skeld => new Vector2[]
             {
-                new Vector2(6.52f, -6.61f),
-                new Vector2(6.81f, -3.07f)
+            new Vector2(6.52f, -6.61f),
+            new Vector2(6.81f, -3.07f)
             },
             MapNames.MiraHQ => new Vector2[]
             {
-                new Vector2(17.57f, 24.22f),
-                new Vector2(4.03f, -0.63f)
+            new Vector2(17.57f, 24.22f),
+            new Vector2(4.03f, -0.63f)
             },
             _ => Array.Empty<Vector2>()
         };
@@ -568,28 +671,28 @@ public static class ShipStatus_UpdateSystem_Patch
         {
             MapNames.Skeld => new Vector2[]
             {
-                new Vector2(-21.28f, -1.69f),
-                new Vector2(-21.28f, -8.62f)
+            new Vector2(-21.28f, -1.69f),
+            new Vector2(-21.28f, -8.62f)
             },
             MapNames.MiraHQ => new Vector2[]
             {
-                new Vector2(4.67f, 14.47f),
-                new Vector2(0.24f, 14.49f)
+            new Vector2(4.67f, 14.47f),
+            new Vector2(0.24f, 14.49f)
             },
             MapNames.Polus => new Vector2[]
             {
-                new Vector2(24.40f, -3.05f),
-                new Vector2(4.43f, -3.91f)
+            new Vector2(24.40f, -3.05f),
+            new Vector2(4.43f, -3.91f)
             },
             MapNames.Airship => new Vector2[]
             {
-                new Vector2(3.89f, 9.76f),
-                new Vector2(11.49f, 6.35f)
+            new Vector2(3.89f, 9.76f),
+            new Vector2(11.49f, 6.35f)
             },
             MapNames.Fungle => new Vector2[]
             {
-                new Vector2(20.95f, -6.01f),
-                new Vector2(23.98f, -7.67f)
+            new Vector2(20.95f, -6.01f),
+            new Vector2(23.98f, -7.67f)
             },
             _ => Array.Empty<Vector2>()
         };
@@ -606,27 +709,27 @@ public static class ShipStatus_UpdateSystem_Patch
         {
             MapNames.Skeld => new Vector2[]
             {
-                new Vector2(4.27f, -16.39f)
+            new Vector2(4.27f, -16.39f)
             },
             MapNames.MiraHQ => new Vector2[]
             {
-                new Vector2(15.11f, 5.17f),
-                new Vector2(13.79f, 18.93f),
-                new Vector2(13.68f, 19.97f),
-                new Vector2(14.46f, 19.24f)
+            new Vector2(15.11f, 5.17f),
+            new Vector2(13.79f, 18.93f),
+            new Vector2(13.68f, 19.97f),
+            new Vector2(14.46f, 19.24f)
             },
             MapNames.Polus => new Vector2[]
             {
-                new Vector2(13.86f, -15.30f)
+            new Vector2(13.86f, -15.30f)
             },
             MapNames.Airship => new Vector2[]
             {
-                new Vector2(-13.98f, 2.17f)
+            new Vector2(-13.98f, 2.17f)
             },
             MapNames.Fungle => new Vector2[]
             {
-                new Vector2(24.57f, 13.76f),
-                new Vector2(8.25f, 0.43f)
+            new Vector2(24.57f, 13.76f),
+            new Vector2(8.25f, 0.43f)
             },
             _ => Array.Empty<Vector2>()
         };
@@ -643,6 +746,7 @@ public static class ShipStatus_UpdateSystem_Patch
             _ => Vector2.zero
         };
     }
+
 }
 
 [HarmonyPatch(typeof(ShipStatus), nameof(ShipStatus.OnDestroy))]
@@ -701,4 +805,5 @@ public static class CloseDoorsOfTypePatch
             BMLogger.Warn($"Possible door close spam detected | Count={closeDoorsCount} | Room={room}", LogTag);
         }
     }
+
 }

@@ -285,8 +285,8 @@ public static class AutoSkipVotePatch
         if (!Options.AutoVote.GetBool()) return;
         if (PlayerControl.LocalPlayer.Data.IsDead) return;
 
-        if (__instance.CurrentState != MeetingHud.VoteStates.NotVoted &&
-            __instance.CurrentState != MeetingHud.VoteStates.Voted)
+        if (__instance.CurrentState != MeetingHud.MeetingStates.NotVoted &&
+            __instance.CurrentState != MeetingHud.MeetingStates.Voted)
         {
             timer = 0f;
             hasVoted = false;
@@ -324,41 +324,47 @@ public static class VoteToSpecialActionPatch
 
     private static readonly Dictionary<MeetingHud, HashSet<byte>> UsedSpecialVotePlayers = new();
 
-    public static bool Prefix(MeetingHud __instance, byte srcPlayerId, byte suspectPlayerId)
+    public static bool Prefix(
+    MeetingHud __instance,
+    PlayerId srcPlayerId,
+    PlayerId suspectPlayerId)
     {
-        if (!AmongUsClient.Instance.AmHost) return true;
-        if (!Options.specialvote.GetBool()) return true;
-        PlayerControl voter = Utils.GetPlayerById(srcPlayerId);
-        if (voter == null || voter.Data == null) return true;
+        if (!AmongUsClient.Instance.AmHost)
+            return true;
+
+        if (!Options.specialvote.GetBool())
+            return true;
+
+        byte sourceId = srcPlayerId.Value;
+        byte suspectId = suspectPlayerId.Value;
+
+        PlayerControl voter = Utils.GetPlayerById(sourceId);
+
+        if (voter == null || voter.Data == null)
+            return true;
 
         string voterFriendCode = voter.Data.FriendCode;
 
-        if (!AllowedManager.IsVip(voterFriendCode)) return true;
-        if (!IsInSpecialVoteTime(__instance)) return true;
-
-        if (HasUsedSpecialVote(__instance, srcPlayerId))
-        {
+        if (!AllowedManager.IsVip(voterFriendCode))
             return true;
-        }
 
-        bool actionExecuted = RolesCommand.Cmd(srcPlayerId, suspectPlayerId);
+        if (!IsInSpecialVoteTime(__instance))
+            return true;
 
-        if (actionExecuted)
-        {
-            MarkSpecialVoteUsed(__instance, srcPlayerId);
+        if (HasUsedSpecialVote(__instance, sourceId))
+            return true;
 
-            PlayerControl player = Utils.GetPlayerById(srcPlayerId);
-            if (player != null)
-            {
-                __instance.RpcClearVote(
-                    AmongUsClient.Instance.GetClientIdFromCharacter(player)
-                );
-            }
+        bool actionExecuted =
+            RolesCommand.Cmd(sourceId, suspectId);
 
-            return false;
-        }
+        if (!actionExecuted)
+            return true;
 
-        return true;
+        MarkSpecialVoteUsed(__instance, sourceId);
+
+        __instance.RpcClearVote(srcPlayerId);
+
+        return false;
     }
 
     public static void SetVotingStart(MeetingHud meetingHud)
@@ -383,8 +389,8 @@ public static class VoteToSpecialActionPatch
         if (meetingHud == null)
             return false;
 
-        if (meetingHud.CurrentState != MeetingHud.VoteStates.NotVoted &&
-            meetingHud.CurrentState != MeetingHud.VoteStates.Voted)
+        if (meetingHud.CurrentState != MeetingHud.MeetingStates.NotVoted &&
+            meetingHud.CurrentState != MeetingHud.MeetingStates.Voted)
         {
             return false;
         }
@@ -434,19 +440,19 @@ public static class VoteToSpecialActionPatch
 [HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.Update))]
 public static class MeetingHudVotingStartTrackerPatch
 {
-    private static readonly Dictionary<MeetingHud, MeetingHud.VoteStates> LastStates = new();
+    private static readonly Dictionary<MeetingHud, MeetingHud.MeetingStates> LastStates = new();
 
     public static void Postfix(MeetingHud __instance)
     {
         if (__instance == null) return;
 
-        MeetingHud.VoteStates current = __instance.CurrentState;
+        MeetingHud.MeetingStates current = __instance.CurrentState;
 
-        if (!LastStates.TryGetValue(__instance, out MeetingHud.VoteStates last))
+        if (!LastStates.TryGetValue(__instance, out MeetingHud.MeetingStates last))
         {
             LastStates[__instance] = current;
 
-            if (current == MeetingHud.VoteStates.NotVoted)
+            if (current == MeetingHud.MeetingStates.NotVoted)
             {
                 VoteToSpecialActionPatch.SetVotingStart(__instance);
             }
@@ -454,8 +460,8 @@ public static class MeetingHudVotingStartTrackerPatch
             return;
         }
 
-        if (last != MeetingHud.VoteStates.NotVoted &&
-            current == MeetingHud.VoteStates.NotVoted)
+        if (last != MeetingHud.MeetingStates.NotVoted &&
+            current == MeetingHud.MeetingStates.NotVoted)
         {
             VoteToSpecialActionPatch.SetVotingStart(__instance);
         }

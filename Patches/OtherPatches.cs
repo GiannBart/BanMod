@@ -48,6 +48,7 @@ using UnityEngine.UIElements;
 using UnityEngine.UIElements.Experimental;
 using UnityEngine.UIElements.UIR;
 using static BanMod.ChatCommands;
+using static BanMod.ChatController_LateUpdate;
 using static BanMod.ExtendedPlayerControl;
 using static BanMod.ImmortalManager;
 using static BanMod.Translator;
@@ -143,23 +144,65 @@ public static class PingTracker_Update
 
 
 [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
+[HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
 public static class HudManager_Update
 {
     public static void Postfix(HudManager __instance)
     {
-        __instance.ShadowQuad.gameObject.SetActive(!Utils.fullBrightActive());
+        __instance.ShadowQuad.gameObject.SetActive(
+            !Utils.fullBrightActive()
+        );
 
-        if (Utils.chatUiActive())
+        bool chatVisible = Utils.chatUiActive();
+
+        if (chatVisible)
+        {
             __instance.Chat.gameObject.SetActive(true);
+        }
         else
         {
             Utils.closeChat();
             __instance.Chat.gameObject.SetActive(false);
         }
+
+        MatchInfoButtonPosition.Set(__instance, chatVisible);
     }
 }
 
+[HarmonyPatch(typeof(ChatController), "LateUpdate")]
+public static class ChatController_LateUpdate
+{
+    public static void Postfix()
+    {
+        if (!DestroyableSingleton<HudManager>.InstanceExists)
+            return;
 
+        MatchInfoButtonPosition.Set(
+            DestroyableSingleton<HudManager>.Instance,
+            Utils.chatUiActive()
+        );
+    }
+    internal static class MatchInfoButtonPosition
+    {
+        private const float NormalX = 3.1833f;
+        private const float ChatX = 2.5833f;
+
+        internal static void Set(HudManager hud, bool chatVisible)
+        {
+            if (!hud || !hud.MatchInfoButton)
+                return;
+
+            Transform button = hud.MatchInfoButton.transform;
+
+            if (!button.gameObject.activeInHierarchy)
+                return;
+
+            Vector3 position = button.localPosition;
+            position.x = chatVisible ? ChatX : NormalX;
+            button.localPosition = position;
+        }
+    }
+}
 [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.Update))]
 public static class AmongUsClient_Update
 {
