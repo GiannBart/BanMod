@@ -1,40 +1,58 @@
+> [!WARNING]
+> ## Prima di usare BanMod: scegli la modalità corretta
+>
+> BanMod offre due modalità. La scelta dipende dalle funzioni che verranno usate nella lobby:
+>
+> - **Modded +25:** per ospitare lobby con modifiche al gameplay, ruoli personalizzati, funzioni host che cambiano il comportamento del gioco o qualsiasi modifica che possa influire sull’esperienza degli altri giocatori. La lobby deve essere identificata e registrata come moddata secondo la [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/) e la [documentazione tecnica ufficiale](https://github.com/Innersloth-LLC/AmongUsModdingInformation).
+> - **Vanilla:** per usare esclusivamente l’anti-cheat e modifiche visive locali che non cambiano il gameplay né l’esperienza degli altri giocatori. “Vanilla” è il nome della modalità BanMod e non significa che il client non sia modificato. Innersloth precisa che non è possibile classificare in anticipo ogni caso relativo agli anti-cheat e raccomanda di registrare la mod in caso di dubbio.
+>
+> Nella modalità **Modded +25** i comandi restano invariati. Per nascondere agli altri giocatori il testo del comando, sostituisci il prefisso `/` con `/cmd`: ad esempio, `/bm blu` diventa `/cmd bm blu`.
+>
+> Seleziona sempre la modalità adatta alle funzioni attive. Non usare BanMod per disturbare altri giocatori, alterare lobby non consenzienti, ingannare i partecipanti o ottenere vantaggi sleali.
+
+> [!CAUTION]
+> ## BanMod è contro i cheat
+>
+> Se BanMod rileva altre mod o componenti non riconosciuti, si disattiva automaticamente e blocca le funzionalità Premium. Questo controllo serve a proteggere il progetto, i servizi e gli utenti da cheat, manomissioni e configurazioni incompatibili.
+>
+> Se utilizzi un’altra mod lecita, contatta l’amministratore prima di usarla insieme a BanMod: verrà valutata e, se ritenuta compatibile e legittima, potrà essere inserita nella whitelist. La presenza di una mod non riconosciuta non dà diritto all’accesso ai servizi o alle funzioni opzionali.
+
+---
+
 <div align="center">
 
 <img src="docs/images/image.png" alt="Banner BanMod" width="100%">
 
 # BanMod
 
-**Moderazione delle lobby, strumenti anti-abuso, controlli host, ruoli personalizzati e modalità configurabili per Among Us.**
+**Moderazione delle lobby, protezione anti-abuso, controlli host, ruoli personalizzati e modalità configurabili per Among Us.**
 
-[![Licenza codice: GPL-3.0](https://img.shields.io/badge/codice-GPL--3.0-blue.svg)](LICENSE)
-[![Piattaforma: Windows](https://img.shields.io/badge/piattaforma-Windows-0078D4.svg)](#requisiti)
-[![Sito ufficiale](https://img.shields.io/badge/sito-banmod.online-7A5CFA.svg)](https://banmod.online)
+[![Licenza del core: GPL-3.0](https://img.shields.io/badge/core-GPL--3.0-blue.svg)](LICENSE)
+[![Piattaforma: Windows](https://img.shields.io/badge/platform-Windows-0078D4.svg)](#requisiti)
+[![Sito ufficiale](https://img.shields.io/badge/website-banmod.online-7A5CFA.svg)](https://banmod.online)
 
-[English](README.md) · **Italiano**
-
-[Sito](https://banmod.online) · [Istruzioni](https://banmod.online/instructions)
+[Sito](https://banmod.online) · [Istruzioni](https://banmod.online/instructions) · [Download](https://banmod.online/downloads)
 
 </div>
 
 > [!IMPORTANT]
-> BanMod è una modifica non ufficiale realizzata dalla community. Usala soltanto in lobby corrette, consensuali o chiaramente moddate. Gli strumenti host e di test non devono essere usati per ingannare gli altri, disturbare partite pubbliche o ottenere vantaggi sleali.
+> BanMod è una modifica non ufficiale creata dalla community. Prima di scaricarla o utilizzare i servizi ufficiali, leggi le [informazioni e regole importanti](IMPORTANT_INFO_AND_RULES.md), le [regole ufficiali](https://banmod.online/rules), la [Privacy Policy](https://banmod.online/policy/privacy), la [Cookie Policy](https://banmod.online/policy/cookies) e, soprattutto, la [Among Us Mod Policy sul sito ufficiale di Innersloth](https://www.innersloth.com/among-us-mod-policy/). La policy può cambiare: è responsabilità dell’utente consultare sempre la versione aggiornata.
 
 ## Descrizione
 
-BanMod è una mod Windows per **Among Us** basata su **BepInEx IL2CPP**. Il nucleo distribuito sotto GPL è dedicato a moderazione persistente, protezioni anti-abuso, amministrazione host, gameplay configurabile, ruoli personalizzati e interfacce di supporto.
+BanMod è una mod per **Among Us su Windows**, basata su **BepInEx IL2CPP**. Il core pubblico, distribuito con licenza GPLv3, comprende strumenti di moderazione persistente, protezioni anti-abuso, amministrazione host, opzioni di gioco, ruoli personalizzati e interfacce di supporto.
 
-Il repository pubblico contiene soltanto il **nucleo della mod**. Alcune funzioni aggiuntive—storicamente chiamate “Premium” anche se attualmente gratuite—sono componenti opzionali forniti separatamente dai server ufficiali BanMod dopo controlli di idoneità, compatibilità e sicurezza. Non sono necessarie per il funzionamento del nucleo e non sono incluse in questo repository.
+Il repository pubblico contiene esclusivamente il **core**. Alcune funzioni aggiuntive, storicamente chiamate “Premium”, sono componenti opzionali separati e non sono necessarie per compilare o usare il core.
 
 ## Funzioni principali
 
-- **Moderazione lobby:** strumenti di ban e blocco persistenti, liste cheater/sospetti, controlli su nomi e parole vietate, protezione dallo spam, gestione AFK e menu di amministrazione dei giocatori.
-- **Controlli host:** autostart, regole per meeting e votazioni, task e sabotaggi, porte, mappe, messaggi lobby, riepiloghi e azioni configurabili sui giocatori.
-- **Ruoli e modalità:** ruoli personalizzati o modificati, configurazione dei ruoli, miglioramenti Hide and Seek, modalità di test e preset aggiuntivi.
-- **Strumenti client e grafici:** tasti configurabili, zoom negli stati consentiti, decorazioni lobby, tema scuro, interfacce personalizzate, menu outfit/skin e opzioni locali.
-- **Strumenti di test per lobby private:** alcune funzioni host/debug sono destinate esclusivamente a test controllati o partite in cui tutti i partecipanti conoscono e accettano le regole.
-- **Servizi collegati:** verifica online opzionale, report, messaggi server, servizi lobby, sistemi anti-abuso e funzioni opzionali distribuite separatamente.
+- **Moderazione:** ban e blocchi persistenti, liste di giocatori sospetti, filtri per nomi e parole, protezione dallo spam, gestione AFK e amministrazione dei giocatori.
+- **Controlli host:** avvio automatico, regole per riunioni e votazioni, task, sabotaggi, porte, mappe, messaggi lobby, riepiloghi e azioni configurabili.
+- **Ruoli e modalità:** ruoli personalizzati o modificati, preset, configurazione dei ruoli, miglioramenti per Hide and Seek e modalità di test.
+- **Strumenti client e visivi:** tasti configurabili, zoom negli stati consentiti, decorazioni, tema scuro, interfacce personalizzate, menu outfit/skin e opzioni locali.
+- **Anti-cheat e servizi connessi:** verifiche opzionali, segnalazioni, messaggi server, sistemi anti-abuso e servizi lobby.
 
-Le funzioni possono cambiare tra una release e l'altra. Il sito ufficiale e le note di rilascio sono il riferimento per la build attualmente supportata.
+Gli strumenti host, di debug o di test devono essere usati soltanto in ambienti controllati o in lobby nelle quali tutti i partecipanti conoscano e accettino le regole.
 
 ## Immagini
 
@@ -47,102 +65,94 @@ Le funzioni possono cambiare tra una release e l'altra. Il sito ufficiale e le n
   <img src="docs/images/game-settings.png" alt="Impostazioni di gioco BanMod" width="82%">
 </p>
 
-> Le **custom skin BanMod** sono contenuti proprietari separati, non inclusi nel codice sorgente né nel repository pubblico e non distribuiti sotto GPL. Le immagini di documentazione presenti nel repository seguono la licenza indicata nei rispettivi file. Consulta la [Panoramica delle licenze](LICENSES.md).
+Le skin personalizzate BanMod sono contenuti proprietari separati: non fanno parte del codice sorgente pubblico e non sono distribuite con licenza GPL. Vedi [Licenze](#licenze-e-componenti).
 
 ## Requisiti
 
-- Una copia legittima di **Among Us** per PC Windows.
-- La versione del gioco supportata dalla release BanMod corrente.
+- Una copia legittima di **Among Us** per Windows PC.
+- Una versione del gioco supportata dalla release BanMod corrente.
 - Il pacchetto corretto per **Steam** o **Epic Games**.
-- I permessi per estrarre file nella cartella che contiene `Among Us.exe`.
+- Il permesso di estrarre file nella cartella che contiene `Among Us.exe`.
 
-Gli aggiornamenti del gioco possono interrompere la compatibilità delle mod. Controlla sempre l'ultima release disponibile prima di installare o segnalare un problema.
+Gli aggiornamenti di Among Us possono interrompere la compatibilità. Controlla sempre la release più recente prima di installare BanMod o segnalare un problema.
 
 ## Installazione
 
-1. Scarica il pacchetto corrente dalla [pagina download ufficiale](https://banmod.online/downloads).
-2. Seleziona la versione Steam oppure Epic Games.
-3. Apri la cartella principale del gioco, cioè quella che contiene `Among Us.exe`.
-4. Estrai tutti i file dello ZIP BanMod in quella cartella.
-5. Verifica che `Among Us.exe` e la cartella `BepInEx` si trovino allo stesso livello.
-6. Avvia Among Us. Dopo il caricamento di BepInEx, BanMod dovrebbe apparire nel menu principale.
+1. Scarica il pacchetto corrente dalla [pagina ufficiale](https://banmod.online/downloads).
+2. Seleziona la versione Steam o Epic Games.
+3. Apri la cartella che contiene `Among Us.exe`.
+4. Estrai nella cartella tutti i file dello ZIP BanMod.
+5. Verifica che `Among Us.exe` e la cartella `BepInEx` siano allo stesso livello.
+6. Avvia Among Us: dopo il caricamento di BepInEx, BanMod dovrebbe comparire nel menu principale.
 
-### Trovare la cartella del gioco
+**Steam:** Libreria → clic destro su **Among Us** → **Gestisci** → **Sfoglia file locali**.
 
-**Steam:** Libreria → click destro su **Among Us** → **Gestisci** → **Sfoglia i file locali**.
+**Epic Games:** Libreria → menu con tre punti accanto a **Among Us** → **Gestisci** → icona della cartella.
 
-**Epic Games:** Libreria → menu con i tre puntini accanto ad **Among Us** → **Gestisci** → icona della cartella.
+### Aggiornamento e disinstallazione
 
-<p align="center">
-  <img src="docs/images/install-folder.png" alt="Esempio cartella di installazione Among Us" width="360">
-</p>
+Quando indicato nelle note di rilascio, esegui il backup della cartella `BAN_DATA`. Rimuovi DLL BanMod obsolete o duplicate da `BepInEx/plugins` e non mescolare file di release diverse.
 
-### Aggiornamento
-
-Esegui un backup della cartella `BAN_DATA` quando indicato nelle note di rilascio. Rimuovi DLL BanMod obsolete o duplicate da `BepInEx/plugins`, poi installa il nuovo pacchetto ufficiale. Non mischiare file appartenenti a release diverse.
-
-### Disinstallazione
-
-Usa la verifica dei file della piattaforma:
+Per disinstallare, salva prima eventuali preset o configurazioni che vuoi conservare, quindi usa la verifica dei file della piattaforma:
 
 - **Steam:** Proprietà → File installati → Verifica integrità dei file di gioco.
 - **Epic Games:** Gestisci → Verifica.
 
-Prima della verifica salva eventuali preset o configurazioni personali di BanMod che desideri conservare.
-
 ## Comandi predefiniti
 
-- `Delete`: apre il menu principale di BanMod.
-- `F10`: apre il menu di configurazione dei tasti rapidi.
+- `Delete`: apre il menu principale BanMod.
+- `F10`: apre il menu di configurazione dei tasti.
 
-I tasti e i menu disponibili possono cambiare in base alla release o ai permessi host. Consulta l'aiuto nel gioco e le [istruzioni ufficiali](https://banmod.online/instructions).
+I tasti e i menu disponibili possono cambiare in base alla release e ai permessi host. Consulta la guida nel gioco e le [istruzioni ufficiali](https://banmod.online/instructions).
 
-## Servizi ufficiali e funzioni opzionali
+## Funzioni Premium opzionali
 
-Il nucleo GPL e i servizi online gestiti da BanMod sono livelli separati:
+Le funzioni Premium sono funzioni aggiuntive, non associate al funzionamento principale del core:
 
-- Il codice sorgente del nucleo può essere studiato, modificato e redistribuito secondo la GPLv3.
-- API, verifica, token, report, lobby, messaggi server e altri servizi ufficiali sono gestiti dal progetto BanMod e soggetti alle rispettive regole di servizio e privacy.
-- Le funzioni opzionali remote **non sono presenti nel repository**. Possono essere scaricate durante l'esecuzione soltanto dopo che il server ufficiale ha verificato il rispetto di tutti i requisiti applicabili.
-- Le funzioni opzionali remote sono componenti proprietari distribuiti con licenza privata separata. Questo repository non concede il permesso di copiarli, ripubblicarli, redistribuirli, sublicenziarli, estrarli in un altro progetto o inserirli in un fork.
-- Le funzioni opzionali sono attualmente fornite senza pagamento, ma la disponibilità non è garantita e l'accesso può essere modificato, sospeso o revocato.
-- Un client modificato o compilato autonomamente non è una release ufficiale BanMod e, di norma, non è idoneo alle funzioni opzionali ufficiali.
+- sono **facoltative**, **gratuite** e non necessarie per usare o compilare la mod pubblica;
+- non sono incluse in questo repository e vengono distribuite separatamente tramite i servizi ufficiali;
+- devono essere selezionate nel menu di login principale per essere attivate;
+- sono offerte esclusivamente agli utenti che rispettano le regole, superano i controlli di sicurezza e usano configurazioni compatibili;
+- sono soggette a una licenza privata/proprietaria separata, descritta in [LICENSES.md](LICENSES.md);
+- non sono obbligatorie, promesse o dovute e la loro disponibilità può essere modificata, sospesa o revocata;
+- non possono essere copiate, estratte, ripubblicate, ridistribuite, sublicenziate o incluse in fork senza un’autorizzazione scritta separata.
 
-Le regole dei servizi non eliminano i diritti concessi dalla GPLv3 sul codice coperto dalla GPL.
+I servizi BanMod — incluse API, verifiche, token, segnalazioni, messaggi server e servizi lobby — sono distinti dal core GPL e soggetti alle proprie regole e informative. Le regole dei servizi non limitano i diritti concessi dalla GPLv3 sul codice effettivamente coperto dalla GPL.
 
-## Regole di correttezza e dei servizi
+## Regole d’uso
 
-Durante l'uso di una build ufficiale o dei servizi BanMod:
+Quando usi una build ufficiale o i servizi BanMod:
 
-1. Non usare cheat menu, client malevoli, exploit, unlocker, manipolazione delle richieste, abuso delle API, spam, report falsi, strumenti di bypass o sistemi destinati a danneggiare il gioco, il progetto o gli altri utenti.
-2. Le altre mod legittime non sono automaticamente vietate, ma controlli di compatibilità o sicurezza possono limitare le funzioni collegate. Contatta l'amministratore prima di test di sviluppo o configurazioni multi-mod particolari.
-3. Non inviare richieste automatiche, malformate, eccessive o non autorizzate agli endpoint ufficiali BanMod.
-4. Non riutilizzare token, credenziali, identificatori di build o dettagli privati degli endpoint ufficiali nei fork.
-5. Possono essere applicate limitazioni tecniche a client, token, mod ID, friend code, player ID, account, indirizzi IP o altri identificatori collegati ad abusi o incompatibilità.
-6. Le segnalazioni degli utenti sono elementi da verificare e non devono essere considerate prove senza controlli ragionevoli.
-7. Rispetta i Termini di utilizzo e la Mod Policy di Among Us, le regole della community, la legge applicabile e il consenso degli altri giocatori.
+1. Non usare cheat, client malevoli, exploit, unlocker, manipolazione di richieste, spam, segnalazioni false, bypass o altri strumenti destinati a danneggiare il gioco, il progetto o gli utenti.
+2. Non disturbare lobby pubbliche, non modificare l’esperienza di giocatori inconsapevoli e non ottenere vantaggi sleali.
+3. Seleziona **Modded +25** quando le funzioni cambiano il gameplay, il comportamento dei ruoli, l’autorità host o l’esperienza di altri giocatori; in caso di dubbio, registra la mod.
+4. Usa la modalità **Vanilla** soltanto con anti-cheat e modifiche visive locali che non modificano gameplay o peer.
+5. Non inviare richieste automatizzate, malformate, eccessive o non autorizzate agli endpoint BanMod.
+6. Non riutilizzare in fork token, credenziali, identificatori di build o dettagli privati degli endpoint ufficiali.
+7. Rispetta i Termini d’uso e la Mod Policy di Among Us, le regole della community, la legge applicabile e il consenso degli altri giocatori.
 
-Prima di attivare funzioni collegate, leggi le **Regole importanti** e la **Privacy Policy** aggiornate nella [pagina delle policy ufficiali](https://banmod.online/policies).
+Le segnalazioni degli utenti devono essere verificate e non costituiscono prova senza controlli ragionevoli. Restrizioni tecniche possono essere applicate a client, token o identificatori collegati ad abuso, incompatibilità o violazioni.
 
 ## Fork e build modificate
 
-È permesso creare fork e modificare il codice coperto dalla GPL. Un fork pubblico conforme dovrebbe:
+Il codice del core coperto da GPLv3 può essere studiato, modificato e forkato. Chi distribuisce un fork deve, tra l’altro:
 
-- mantenere GPLv3, copyright, attribuzioni e avvisi di assenza di garanzia;
-- indicare chiaramente che il progetto è stato modificato e riportare la data delle modifiche;
+- conservare la GPLv3, gli avvisi di copyright, le attribuzioni e le esclusioni di garanzia;
+- indicare chiaramente le modifiche apportate e la relativa data;
 - fornire il sorgente corrispondente completo per ogni binario distribuito;
-- distribuire sotto GPLv3 il codice derivato coperto dalla GPL senza aggiungere restrizioni ulteriori;
-- identificarsi come non ufficiale e non suggerire approvazione da parte di GianniBart, BanMod, Among Us o Innersloth;
-- non includere, estrarre o redistribuire le custom skin proprietarie BanMod, che non fanno parte del repository pubblico, salvo autorizzazione scritta separata;
-- disattivare o sostituire le integrazioni con le API BanMod ufficiali, senza usare infrastruttura ufficiale senza autorizzazione;
-- non includere mai moduli server privati, componenti remoti opzionali, chiavi, token, dati personali, report o file del gioco;
-- fornire assistenza al fork in modo indipendente, senza indirizzare i problemi specifici del fork ai canali ufficiali BanMod.
+- distribuire il codice derivato coperto dalla GPLv3 con la stessa licenza, senza ulteriori restrizioni;
+- dichiarare che il fork è non ufficiale e non suggerire approvazione da parte di GianniBart, BanMod, Among Us o Innersloth;
+- non includere skin proprietarie BanMod, componenti Premium separati, moduli server privati, chiavi, token, dati personali, segnalazioni o file di gioco;
+- sostituire o disattivare le integrazioni con le API ufficiali BanMod, salvo autorizzazione;
+- fornire supporto autonomo senza indirizzare i problemi specifici del fork ai canali ufficiali BanMod.
 
-Un fork può restare pienamente conforme alla GPL usando un proprio backend oppure nessun backend. L'idoneità ai servizi ufficiali è una decisione operativa separata e non limita il diritto di modificare il codice.
+Un fork può usare un backend proprio o nessun backend. Una build modificata o compilata autonomamente non è una release ufficiale e può non essere ammessa ai servizi o alle funzioni opzionali; ciò non elimina i diritti concessi dalla GPLv3 sul core GPL.
+
+Il progetto considera i componenti Premium distribuiti separatamente opere indipendenti e non parte del core GPL pubblicato. Il riferimento è l’ultimo paragrafo della [sezione 5 della GPLv3](https://www.gnu.org/licenses/gpl-3.0.html#section5), relativo agli aggregati. Questo richiamo non trasforma automaticamente un componente in opera indipendente: la qualificazione dipende dalla sua effettiva natura e integrazione tecnica. Nulla in questo README limita i diritti GPL sul codice che ricade realmente sotto tale licenza.
 
 ## Compilazione dal sorgente
 
-Il progetto usa **.NET 6** e pacchetti BepInEx IL2CPP.
+Il progetto usa **.NET 6** e pacchetti BepInEx IL2CPP:
 
 ```bash
 git clone https://github.com/GiannBart/BanMod.git
@@ -151,32 +161,17 @@ dotnet restore
 dotnet build -c Release
 ```
 
-Prima della compilazione controlla `BanMod.csproj`:
+Prima della compilazione, controlla `BanMod.csproj`: rimuovi percorsi Windows specifici dello sviluppatore, configura assembly e metadati IL2CPP dalla tua copia legittima del gioco e rimuovi target locali di post-build. Non pubblicare segreti, credenziali, configurazioni locali, binari di Among Us, `Among Us_Data`, `GameAssembly.dll` o altri file del gioco.
 
-- sostituisci o rimuovi i percorsi Windows assoluti specifici dello sviluppatore;
-- aggiorna i percorsi dell'assembly IL2CPP e dei metadata usando la tua installazione legittima;
-- modifica o elimina il target di copia post-build locale;
-- non pubblicare `BanMod.BuildCode.txt`, sorgenti di segreti generati, credenziali API o configurazioni locali;
-- non pubblicare o redistribuire binari di Among Us, `Among Us_Data`, `GameAssembly.dll` o altri file del gioco.
+La DLL viene normalmente generata in `bin/Release/net6.0/`.
 
-La DLL viene normalmente prodotta in `bin/Release/net6.0/`. Le build compilate autonomamente sono non ufficiali e potrebbero non collegarsi ai servizi BanMod ufficiali.
+## Contributi e crediti
 
-## Release e modifiche
+Issue e pull request per il core GPL sono benvenute se rispettano persone, legge, licenze e obiettivi del progetto. Inviando codice, dichiari di avere il diritto di contribuire e accetti che il contributo sia distribuito sotto GPLv3, salvo diverso accordo scritto. Non inviare componenti proprietari, codice di gioco ottenuto illecitamente, endpoint segreti, credenziali o dati personali.
 
-- Le note ufficiali e gli avvisi di compatibilità sono pubblicati su [banmod.online](https://banmod.online).
-- I numeri di versione nel repository o nel file di progetto possono indicare sviluppo in corso ed essere più recenti dell'ultima release pubblica. Soltanto un pacchetto pubblicato esplicitamente come ufficiale deve essere considerato una release.
+BanMod contiene lavoro originale e parti ispirate o derivate da progetti open source. Conserva tutti gli avvisi presenti nei file sorgente e in `Resources/Credits and License.txt`.
 
-## Contributi
-
-Issue e pull request per il nucleo GPL sono benvenute quando rispettano legge, persone, licenze e obiettivi del progetto.
-
-Inviando codice confermi di avere il diritto di contribuire e che il contributo può essere distribuito sotto GPLv3, salvo diverso accordo scritto. Non inviare moduli opzionali proprietari, custom skin proprietarie BanMod, codice di gioco ottenuto senza autorizzazione, endpoint segreti, credenziali, dati personali o codice copiato senza licenza compatibile e attribuzione.
-
-## Crediti
-
-BanMod contiene lavoro originale e parti ispirate o derivate da progetti open source della community. Mantieni tutti gli avvisi presenti nei file sorgente e in `Resources/Credits and License.txt`.
-
-Principali progetti accreditati:
+Progetti principali accreditati:
 
 - [Town of Host](https://github.com/tukasa0001/TownOfHost)
 - [Town of Host Enhanced](https://github.com/EnhancedNetwork/TownofHost-Enhanced)
@@ -185,32 +180,39 @@ Principali progetti accreditati:
 - [MalumMenu](https://github.com/scp222thj/MalumMenu)
 - [TheOtherRoles](https://github.com/TheOtherRolesAU/TheOtherRoles) / TheOtherHats
 - [BetterAmongUs](https://github.com/D1GQ/BetterAmongUs-Public)
-- Componenti e contributori NLayer, sotto licenza MIT dove indicato
+- [GameLogger](https://github.com/whichtwix/GameLogger)
+- componenti e contributori NLayer, sotto licenza MIT dove indicato
 
 I crediti non implicano affiliazione o approvazione.
 
-## Panoramica delle licenze
+## Licenze e componenti
 
-- **Codice sorgente del nucleo:** GNU General Public License v3.0, salvo file con un diverso avviso compatibile.
-- **Codice di terze parti:** resta soggetto agli avvisi e agli obblighi delle licenze originali.
-- **Componenti opzionali distribuiti dal server:** licenza proprietaria/privata separata; non inclusi nel repository e non coperti dalla concessione GPL del repository.
-- **Custom skin BanMod:** © 2026 GianniBart. Tutti i diritti riservati. Sono contenuti separati e non sono incluse nel codice sorgente o nel repository pubblico.
-- **Proprietà intellettuale di Among Us:** appartiene a Innersloth LLC e/o ai suoi licenzianti.
+| Componente | Licenza o titolarità | Riferimento |
+| --- | --- | --- |
+| Core e sorgente pubblico BanMod | GNU General Public License v3.0, salvo file con un diverso avviso compatibile | [LICENSE](LICENSE) · [GPLv3 §5](https://www.gnu.org/licenses/gpl-3.0.html#section5) |
+| Codice e librerie di terze parti | Licenze e avvisi originali, inclusa MIT dove indicato | [LICENSES.md](LICENSES.md) · `Resources/Credits and License.txt` |
+| Componenti Premium opzionali distribuiti dal server | Licenza privata/proprietaria separata; non inclusi nel repository | [LICENSES.md](LICENSES.md) |
+| Skin personalizzate BanMod | © 2026 GianniBart. Tutti i diritti riservati; contenuti separati dal core | [LICENSES.md](LICENSES.md) |
+| Among Us, nomi, loghi, personaggi e materiali correlati | Proprietà di Innersloth LLC e/o dei rispettivi licenzianti | [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/) |
 
-Consulta [LICENSE](LICENSE) per la GPLv3 e [LICENSES.md](LICENSES.md) per il dettaglio dei componenti. Questo riepilogo è informativo e non sostituisce i testi di licenza.
+Questa tabella è solo un riepilogo e non sostituisce i testi di licenza applicabili. La distinzione tra core GPL e componenti separati dipende anche dalla struttura e dall’integrazione effettiva del software; per decisioni legali è opportuno consultare un professionista qualificato.
 
-## Non affiliazione e dichiarazione legale
+## Avviso Innersloth, non affiliazione e responsabilità
 
-BanMod è una modifica non ufficiale realizzata dai fan per Among Us. Non è affiliata, approvata, sponsorizzata o autorizzata in altro modo da Innersloth LLC. Among Us, nomi, loghi, personaggi e materiali collegati appartengono a Innersloth LLC o ai rispettivi titolari.
+BanMod deve mostrare durante il gameplay il mod stamp richiesto dalla [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/) e non deve includere il gioco base o copie non autorizzate dei file di Among Us.
 
-La mod deve mantenere il timbro identificativo in-game richiesto dalla [Among Us Mod Policy](https://www.innersloth.com/among-us-mod-policy/). Le release BanMod non devono contenere il gioco base Among Us né copie non autorizzate dei file del gioco.
+Testo ufficiale richiesto da Innersloth, riportato senza modifiche:
 
-Il software è fornito **così com'è**, senza garanzie. Nei limiti consentiti dalla legge, gli autori non sono responsabili per ban, limitazioni dell'account, perdita di dati, incompatibilità, crash, interruzioni del servizio o danni dovuti a uso improprio, configurazioni non supportate, build modificate o violazioni di regole di terze parti.
+> This mod is not affiliated with Among Us or Innersloth LLC, and the content contained therein is not endorsed or otherwise sponsored by Innersloth LLC. Portions of the materials contained herein are property of Innersloth LLC. © Innersloth LLC.
+
+Il software è fornito **“così com’è”**, senza garanzie espresse o implicite. Nella misura massima consentita dalla legge, autori e collaboratori non rispondono di ban, restrizioni dell’account, perdita di dati, incompatibilità, crash, interruzioni dei servizi o danni derivanti dall’uso o abuso della mod, da configurazioni non supportate, da build modificate o dalla violazione di regole di terzi.
+
+L’uso della mod è a rischio dell’utente. Né questo README né il selettore di modalità garantiscono che una specifica configurazione sia conforme a ogni futura versione delle regole di Innersloth: consulta la [policy ufficiale aggiornata](https://www.innersloth.com/among-us-mod-policy/) e la [documentazione tecnica ufficiale](https://github.com/Innersloth-LLC/AmongUsModdingInformation) prima dell’uso.
 
 ## Supporto
 
 - Sito: [banmod.online](https://banmod.online)
 - Email: `banmod.giannibart@gmail.com`
-- Bug nel nucleo GPL pubblico: [GitHub Issues](https://github.com/GiannBart/BanMod/issues)
+- Bug del core GPL pubblico: [GitHub Issues](https://github.com/GiannBart/BanMod/issues)
 
-In una segnalazione indica versione BanMod, versione Among Us, piattaforma, passaggi per riprodurre il problema e log ripuliti. Non pubblicare token, friend code, identificatori dei giocatori, email, messaggi privati o altri dati personali.
+In una segnalazione indica versione BanMod, versione Among Us, piattaforma, passaggi per riprodurre il problema e log privi di dati sensibili. Non pubblicare token, friend code, identificatori giocatore, email, messaggi privati o altri dati personali.
