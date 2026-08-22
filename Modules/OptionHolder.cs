@@ -201,7 +201,8 @@ namespace BanMod
         public static OptionItem TrackImpostorTeammate;
         public static OptionItem revealVotes;
         public static OptionItem EnableGameTimer;
-        public static IntegerOptionItem GameTimerMinutes;
+        public static OptionItem PauseGameTimerDuringMeetings;
+        public static FloatOptionItem GameTimerMinutes;
         public static OptionItem GameTimerMessage;
         public static OptionItem DisableDeviceCam;
         public static OptionItem DisableDeviceAdminPanel;
@@ -499,7 +500,7 @@ namespace BanMod
                 FfaExternalBridge.SyncTeamCount();
             });
 
-            FfaTeamCount = (StringOptionItem)StringOptionItem.Create("FfaTeamCount",new[]{"2 Team","3 Team"},0,OptionCategory.FFA,true,false).SetParent(FfaTeamMode).SetColor(new Color32(255, 80, 80, 255));
+            FfaTeamCount = (StringOptionItem)StringOptionItem.Create("FfaTeamCount",new[]{"2 Team","3 Team","4 Team","5 Team" },0,OptionCategory.FFA,true,false).SetParent(FfaTeamMode).SetColor(new Color32(255, 80, 80, 255));
 
             FfaTeamCount.RegisterUpdateValueEvent((sender, args) =>
             {
@@ -533,9 +534,9 @@ namespace BanMod
             DisableDeviceAdminPanel = BooleanOptionItem.Create("DisableDeviceAdminPanel", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             DisableDeviceVitals = BooleanOptionItem.Create("DisableDeviceVitals", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             EnableGameTimer = (BooleanOptionItem)BooleanOptionItem.Create("EnableGameTimer", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
-            GameTimerMinutes = (IntegerOptionItem)IntegerOptionItem.Create("GameTimerMinutes", new(5, 60, 1), 30, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
+            GameTimerMinutes = (FloatOptionItem)FloatOptionItem.Create("GameTimerMinutes",new(1f, 60f, 0.5f),30f,OptionCategory.Gameplay,true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
             GameTimerMessage = BooleanOptionItem.Create("GameTimerMessage", false, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
-
+            PauseGameTimerDuringMeetings = BooleanOptionItem.Create("PauseGameTimerDuringMeetings",true,OptionCategory.Gameplay,true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
             // MEETINGS
             NoKillMeeting = BooleanOptionItem.Create("NoKillMeeting", false, OptionCategory.Meetings, true).SetColor(new Color32(0, 153, 255, 255));
             DisableMeetingsAndReports = BooleanOptionItem.Create("Opt_DisableMeetingsAndReports", false, OptionCategory.Meetings, true).SetColor(new Color32(0, 153, 255, 255));

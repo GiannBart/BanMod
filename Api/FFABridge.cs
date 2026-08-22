@@ -336,14 +336,18 @@ public static class FfaExternalBridge
             int selectedIndex =
                 Options.FfaTeamCount.GetValue();
 
+            // 0 = 2 team
+            // 1 = 3 team
+            // 2 = 4 team
+            // 3 = 5 team
             int teamCount =
                 selectedIndex + 2;
 
             if (teamCount < 2)
                 teamCount = 2;
 
-            if (teamCount > 3)
-                teamCount = 3;
+            if (teamCount > 5)
+                teamCount = 5;
 
             object convertedValue =
                 Convert.ChangeType(

@@ -1,3 +1,9 @@
+<div align="center">
+
+[![Join our Discord server](https://img.shields.io/badge/Join_our_Discord_server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/YtEqHr9q)
+
+</div>
+
 > [!WARNING]
 > ## Prima di usare BanMod: scegli la modalità corretta
 >
@@ -214,6 +220,7 @@ L’uso della mod è a rischio dell’utente. Né questo README né il selettore
 - Sito: [banmod.online](https://banmod.online)
 - Email: `banmod.giannibart@gmail.com`
 - Discord: `GianniBart`
+- Server Discord: [Discord](https://discord.gg/cZBGsZc7aV)
 - Telegram: [`@GianniBart`](https://t.me/GianniBart)
 - Bug del core GPL pubblico: [GitHub Issues](https://github.com/GiannBart/BanMod/issues)
 

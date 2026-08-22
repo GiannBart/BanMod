@@ -3620,158 +3620,398 @@ public static class MatchSummary1
     public static bool CrewmateWin = false;
     public static bool JesterWin = false;
     public static bool TaskWin = false;
-    public static List<string> ReportHistory = new List<string>();
+
+    public static bool GameTimerWasEnabled = false;
+    public static bool GameEndedByTimer = false;
+    public static bool GameTimerPausedDuringMeetings = false;
+
+    public static float GameTimerTotal = 0f;
+    public static float GameTimerElapsed = 0f;
+    public static float GameTimerRemaining = 0f;
+    public static float GameTimerMeetingTime = 0f;
+
+    public static List<string> ReportHistory =
+        new List<string>();
+
+    private static readonly List<string>
+        LastSavedSummaryMessages = new List<string>();
+
     public static string ImpostorName = "";
     public static string TaskWinnerName = "";
     public static string JesterName = "";
+
     private static float MatchStartTime = 0f;
     private static float MatchEndTime = 0f;
     private static bool MatchTimerRunning = false;
+
     public static void StartMatchTimer()
     {
-        MatchStartTime = UnityEngine.Time.realtimeSinceStartup;
+        MatchStartTime =
+            UnityEngine.Time.realtimeSinceStartup;
+
         MatchEndTime = 0f;
         MatchTimerRunning = true;
     }
 
     public static void StopMatchTimer()
     {
+        CaptureGameTimer();
+
         if (!MatchTimerRunning)
             return;
 
-        MatchEndTime = UnityEngine.Time.realtimeSinceStartup;
+        MatchEndTime =
+            UnityEngine.Time.realtimeSinceStartup;
+
         MatchTimerRunning = false;
     }
 
     public static string GetMatchTime()
     {
         float totalTime = MatchTimerRunning
-            ? UnityEngine.Time.realtimeSinceStartup - MatchStartTime
+            ? UnityEngine.Time.realtimeSinceStartup -
+              MatchStartTime
             : MatchEndTime - MatchStartTime;
+
+        totalTime =
+            UnityEngine.Mathf.Max(0f, totalTime);
 
         int minutes = (int)(totalTime / 60f);
         int seconds = (int)(totalTime % 60f);
 
         return $"{minutes:D2}:{seconds:D2}";
     }
+
     public static void Reset()
     {
         ImpostorWin = false;
         CrewmateWin = false;
         JesterWin = false;
         TaskWin = false;
+
         ImpostorName = "";
         TaskWinnerName = "";
         JesterName = "";
+
         ReportHistory.Clear();
+
         MatchStartTime = 0f;
         MatchEndTime = 0f;
         MatchTimerRunning = false;
+
+        GameTimerWasEnabled = false;
+        GameEndedByTimer = false;
+        GameTimerPausedDuringMeetings = false;
+
+        GameTimerTotal = 0f;
+        GameTimerElapsed = 0f;
+        GameTimerRemaining = 0f;
+        GameTimerMeetingTime = 0f;
+
+    }
+
+    public static void CaptureGameTimer()
+    {
+        if (!Options.EnableGameTimer.GetBool())
+            return;
+
+        if (GameTimeLimit.TotalTime <= 0f)
+            return;
+
+        GameTimerWasEnabled = true;
+
+        GameEndedByTimer =
+            GameEndedByTimer ||
+            GameTimeLimit.EndedByTimer;
+
+        GameTimerPausedDuringMeetings =
+            Options.PauseGameTimerDuringMeetings
+                .GetBool();
+
+        GameTimerTotal =
+            GameTimeLimit.TotalTime;
+
+        GameTimerElapsed =
+            GameTimeLimit.GetElapsedTime();
+
+        GameTimerRemaining =
+            GameTimeLimit.RemainingTime;
+
+        GameTimerMeetingTime =
+            GameTimeLimit.GetMeetingTime();
+    }
+
+    private static string BuildBaseSummaryReport()
+    {
+        var report =
+            new System.Text.StringBuilder();
+
+        if (!string.IsNullOrEmpty(
+                ImmortalManager
+                    .LastImmortalPlayerName))
+        {
+            report.AppendLine(
+                string.Format(
+                    GetString("ImmortalPlayerReport"),
+                    ImmortalManager
+                        .LastImmortalPlayerName
+                )
+            );
+        }
+
+        if (TaskWin)
+        {
+            string winnerName =
+                TaskManager.WinnerName;
+
+            float winnerTime =
+                TaskManager.WinnerTotalTime;
+
+            report.AppendLine(
+                GetString("TaskWins")
+            );
+
+            report.AppendLine(
+                $"{GetString("WinnerIs")}: " +
+                $"{winnerName}"
+            );
+
+            int minutes =
+                (int)(winnerTime / 60f);
+
+            int seconds =
+                (int)(winnerTime % 60f);
+
+            string timeFormatted =
+                $"{minutes:D2}:{seconds:D2}";
+
+            report.AppendLine(
+                $"{GetString("ScientistPlayerDiedTime")}: " +
+                $"{ToFullWidthNumbers(timeFormatted)}"
+            );
+        }
+        else if (JesterWin)
+        {
+            string jesterName =
+                PreviousMatchPopupTracker
+                    .JesterName;
+
+            report.AppendLine(
+                $"{GetString("JesterWins")}: " +
+                $"{jesterName}"
+            );
+
+            AppendTaskProgress(report);
+        }
+        else if (ImpostorWin)
+        {
+            if (GameEndedByTimer)
+            {
+                report.AppendLine(
+                    GetString("ImpostorWinsTimer")
+                );
+            }
+            else
+            {
+                report.AppendLine(
+                    GetString("ImpostorWins")
+                );
+            }
+
+            AppendImpostors(report);
+            AppendTaskProgress(report);
+        }
+        else if (CrewmateWin)
+        {
+            report.AppendLine(
+                GetString("CrewmateWins")
+            );
+
+            AppendImpostors(report);
+            AppendTaskProgress(report);
+        }
+
+        return report
+            .ToString()
+            .TrimEnd();
+    }
+
+    private static void AppendImpostors(
+        System.Text.StringBuilder report)
+    {
+        var impostors =
+            ImpostorTracker.GetImpostors();
+
+        if (impostors.Count == 0)
+        {
+            report.AppendLine(
+                GetString("NoImpostorsPresent")
+            );
+
+            return;
+        }
+
+        foreach (var imp in impostors)
+        {
+            int kills =
+                KillTracker.GetKills(
+                    imp.PlayerId
+                );
+
+            report.AppendLine(
+                $"{imp.PlayerName}: " +
+                $"{ToFullWidthNumbers(kills.ToString())} kill"
+            );
+        }
+    }
+
+    private static void AppendTaskProgress(
+        System.Text.StringBuilder report)
+    {
+        int totalDone = 0;
+        int totalTasks = 0;
+
+        foreach (
+            var data in
+            TaskTracker.GetAllTaskData())
+        {
+            totalDone += data.Done;
+            totalTasks += data.Total;
+        }
+
+        report.AppendLine(
+            $"Task: " +
+            $"{ToFullWidthNumbers(totalDone.ToString())} / " +
+            $"{ToFullWidthNumbers(totalTasks.ToString())}"
+        );
+    }
+
+    private static string BuildTimerMessage()
+    {
+        string gameTime =
+            ToFullWidthNumbers(
+                GameTimeLimit.FormatTime(
+                    GameTimerElapsed
+                )
+            );
+
+        if (!GameTimerPausedDuringMeetings)
+        {
+            return $"Game Time: {gameTime}";
+        }
+
+        string configuredTimer =
+            ToFullWidthNumbers(
+                GameTimeLimit.FormatTime(
+                    GameTimerTotal
+                )
+            );
+
+        string meetingTime =
+            ToFullWidthNumbers(
+                GameTimeLimit.FormatTime(
+                    GameTimerMeetingTime
+                )
+            );
+
+        float totalMatchSeconds =
+            GameTimerElapsed +
+            GameTimerMeetingTime;
+
+        string totalMatchTime =
+            ToFullWidthNumbers(
+                GameTimeLimit.FormatTime(
+                    totalMatchSeconds
+                )
+            );
+
+        return
+            $"Timer: {configuredTimer}\n" +
+            $"Game Time: {gameTime}\n" +
+            $"Meeting Time: {meetingTime}\n" +
+            $"Total Match Time: {totalMatchTime}";
+    }
+
+    public static List<string> GetSummaryMessages()
+    {
+        CaptureGameTimer();
+
+        string resultMessage =
+            BuildBaseSummaryReport();
+
+        if (!GameTimerWasEnabled)
+        {
+            string matchTime =
+                ToFullWidthNumbers(
+                    GetMatchTime()
+                );
+
+            return new List<string>
+            {
+                $"{resultMessage}\n" +
+                $"Match Time: {matchTime}"
+            };
+        }
+
+        string timerMessage =
+            BuildTimerMessage();
+
+        string completeMessage =
+            $"{resultMessage}\n{timerMessage}";
+
+        if (completeMessage.Length <= 120)
+        {
+            return new List<string>
+            {
+                completeMessage
+            };
+        }
+
+        return new List<string>
+        {
+            resultMessage,
+            timerMessage
+        };
     }
 
     public static string GetSummaryReport()
     {
-        var report = new System.Text.StringBuilder();
-
-        if (!string.IsNullOrEmpty(ImmortalManager.LastImmortalPlayerName))
-        {
-            report.AppendLine(string.Format(GetString("ImmortalPlayerReport"), ImmortalManager.LastImmortalPlayerName));
-        }
-        if (TaskWin)
-        {
-            string TaskWinnerName = TaskManager.WinnerName;
-            float winnerTime = TaskManager.WinnerTotalTime;
-
-            report.AppendLine(GetString("TaskWins"));
-            report.AppendLine($"{GetString("WinnerIs")}: {TaskWinnerName}");
-            int minutes = (int)(winnerTime / 60);
-            int seconds = (int)(winnerTime % 60);
-            string timeFormatted = $"{minutes:D2}:{seconds:D2}";
-
-            report.AppendLine($"{GetString("ScientistPlayerDiedTime")}: {ToFullWidthNumbers(timeFormatted)}");
-        }
-        else if (JesterWin)
-        {
-            string JesterName = PreviousMatchPopupTracker.JesterName;
-            report.AppendLine($"{GetString("JesterWins")}: {JesterName}");
-            int totalDone = 0;
-            int totalTasks = 0;
-            foreach (var data in TaskTracker.GetAllTaskData())
-            {
-                totalDone += data.Done;
-                totalTasks += data.Total;
-            }
-
-            report.AppendLine($"Task: {ToFullWidthNumbers(totalDone.ToString())} / {ToFullWidthNumbers(totalTasks.ToString())}");
-        }
-        else if (ImpostorWin)
-        {
-            report.AppendLine(GetString("ImpostorWins"));
-            var impostors = ImpostorTracker.GetImpostors();
-            if (impostors.Count == 0)
-            {
-                report.AppendLine(GetString("NoImpostorsPresent"));
-            }
-            else
-            {
-                foreach (var imp in impostors)
-                {
-                    int kills = KillTracker.GetKills(imp.PlayerId);
-                    report.AppendLine($"{imp.PlayerName}: {ToFullWidthNumbers(kills.ToString())} kill");
-                }
-            }
-            int totalDone = 0;
-            int totalTasks = 0;
-            foreach (var data in TaskTracker.GetAllTaskData())
-            {
-                totalDone += data.Done;
-                totalTasks += data.Total;
-            }
-
-            report.AppendLine($"Task: {ToFullWidthNumbers(totalDone.ToString())} / {ToFullWidthNumbers(totalTasks.ToString())}");
-        }
-        else if (CrewmateWin)
-        {
-            report.AppendLine(GetString("CrewmateWins"));
-            var impostors = ImpostorTracker.GetImpostors();
-            if (impostors.Count == 0)
-            {
-                report.AppendLine(GetString("NoImpostorsPresent"));
-            }
-            else
-            {
-                foreach (var imp in impostors)
-                {
-                    int kills = KillTracker.GetKills(imp.PlayerId);
-                    report.AppendLine($"{imp.PlayerName}: {ToFullWidthNumbers(kills.ToString())} kill");
-                }
-            }
-            int totalDone = 0;
-            int totalTasks = 0;
-            foreach (var data in TaskTracker.GetAllTaskData())
-            {
-                totalDone += data.Done;
-                totalTasks += data.Total;
-            }
-
-            report.AppendLine($"Task: {ToFullWidthNumbers(totalDone.ToString())} / {ToFullWidthNumbers(totalTasks.ToString())}");
-        }
-        report.AppendLine($"Match Time: {ToFullWidthNumbers(GetMatchTime())}");
-        return report.ToString();
+        return string.Join(
+            "\n\n",
+            GetSummaryMessages()
+        );
     }
 
     public static void SaveToHistory()
     {
-        var report = GetSummaryReport();
-        if (!string.IsNullOrWhiteSpace(report))
+        List<string> messages =
+            GetSummaryMessages();
+
+        LastSavedSummaryMessages.Clear();
+
+        foreach (string message in messages)
         {
-            ReportHistory.Add(report);
+            if (string.IsNullOrWhiteSpace(message))
+                continue;
+
+            ReportHistory.Add(message);
+            LastSavedSummaryMessages.Add(message);
         }
     }
 
     public static string GetLastSavedReport()
     {
-        return ReportHistory.LastOrDefault();
+        return string.Join(
+            "\n\n",
+            LastSavedSummaryMessages
+        );
+    }
+
+    public static List<string> GetLastSavedReports()
+    {
+        return new List<string>(
+            LastSavedSummaryMessages
+        );
     }
 }
 public static class TaskTracker

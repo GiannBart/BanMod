@@ -999,30 +999,9 @@ namespace BanMod
                 yield break;
             }
 
-            if (!BanModDeviceIdentity.Available)
-            {
-                Debug.LogError("[BANMOD][AUTH] Device identity unavailable. Windows CNG key creation failed.");
-                callback(false);
-                yield break;
-            }
-
             string buildId = BanModBuildSecret.BuildId ?? "";
             string banModSha256 = SafeGetOwnBanModSha256();
             string clientVersion = GetCurrentClientVersion();
-            string deviceSignature = BanModDeviceIdentity.SignActivation(
-                challenge.nonce,
-                _friendCode,
-                buildId,
-                banModSha256,
-                clientVersion
-            );
-
-            if (string.IsNullOrWhiteSpace(deviceSignature))
-            {
-                Debug.LogError("[BANMOD][AUTH] Device challenge signing failed.");
-                callback(false);
-                yield break;
-            }
 
             string body = "{"
                 + "\"FriendCode\":" + JsonString(_friendCode) + ","
@@ -1030,12 +1009,7 @@ namespace BanMod
                 + "\"Nonce\":" + JsonString(challenge.nonce) + ","
                 + "\"ClientVersion\":" + JsonString(clientVersion) + ","
                 + "\"BuildId\":" + JsonString(buildId) + ","
-                + "\"BanModSha256\":" + JsonString(banModSha256) + ","
-                + "\"DeviceProtocol\":1,"
-                + "\"DeviceKeyId\":" + JsonString(BanModDeviceIdentity.KeyId) + ","
-                + "\"DevicePublicKey\":" + JsonString(BanModDeviceIdentity.PublicKey) + ","
-                + "\"DeviceProvider\":" + JsonString(BanModDeviceIdentity.Provider) + ","
-                + "\"DeviceSignature\":" + JsonString(deviceSignature)
+                + "\"BanModSha256\":" + JsonString(banModSha256)
                 + "}";
 
             UnityWebRequest v = new UnityWebRequest(ActivationVerifyUrl, "POST");

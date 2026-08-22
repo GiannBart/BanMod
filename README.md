@@ -1,3 +1,9 @@
+<div align="center">
+
+[![Join our Discord server](https://img.shields.io/badge/Join_our_Discord_server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/YtEqHr9q)
+
+</div>
+
 [🇮🇹 Read this README in Italian](https://github.com/GiannBart/BanMod/blob/main/README_IT.md)
 
 > [!WARNING]
@@ -216,6 +222,7 @@ Use of the mod is at the user's own risk. Neither this README nor the mode selec
 - Website: [banmod.online](https://banmod.online)
 - Email: `banmod.giannibart@gmail.com`
 - Discord: `GianniBart`
+- Server Discord: [Discord](https://discord.gg/cZBGsZc7aV)
 - Telegram: [`@GianniBart`](https://t.me/GianniBart)
 - Bugs in the public GPL core: [GitHub Issues](https://github.com/GiannBart/BanMod/issues)
 

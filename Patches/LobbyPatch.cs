@@ -46,19 +46,35 @@ public class LobbyStartPatch
     {
         yield return new WaitForSeconds(5f);
 
-        if (LobbyStartPatch.hasSentSummary || LobbyStartPatch.hasSentSummary1)
-            yield break;
-
-        string report1 = "";
-        if (Options.SendSummary.GetBool())
+        if (LobbyStartPatch.hasSentSummary ||
+            LobbyStartPatch.hasSentSummary1)
         {
-            report1 = MatchSummary1.GetLastSavedReport();
-
+            yield break;
         }
 
-        if (!string.IsNullOrWhiteSpace(report1))
+        if (!Options.SendSummary.GetBool())
+            yield break;
+
+        List<string> reports =
+            MatchSummary1.GetLastSavedReports();
+
+        bool sentAtLeastOne = false;
+
+        foreach (string report in reports)
         {
-            Utils.SendMessage(report1, 255);
+            if (string.IsNullOrWhiteSpace(report))
+                continue;
+
+            Utils.SendMessage(report, 255);
+            sentAtLeastOne = true;
+
+            // Evita che i due messaggi si sovrappongano
+            // o vengano bloccati come spam.
+            yield return new WaitForSeconds(0.75f);
+        }
+
+        if (sentAtLeastOne)
+        {
             LobbyStartPatch.hasSentSummary1 = true;
         }
     }

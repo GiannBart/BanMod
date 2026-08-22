@@ -1,9 +1,11 @@
-//credits and licenses in the resources folder/
+// Credits and licenses in the resources folder.
 using HarmonyLib;
 using UnityEngine;
 using static BanMod.Options;
 using static BanMod.Utils;
+
 namespace BanMod;
+
 public static class GameTimeLimit
 {
     public static float TotalTime { get; private set; }
@@ -12,7 +14,14 @@ public static class GameTimeLimit
     public static bool IsRunning { get; private set; }
     public static bool IsPaused { get; private set; }
 
+    // Indica che la partita è terminata perché il timer ha raggiunto zero.
+    public static bool EndedByTimer { get; private set; }
+    public static float MeetingTime { get; private set; }
+
+    private static bool MeetingActive;
+    private static float MeetingStartedAt;
     private static bool EndGameSent;
+    private static bool PausedByMeeting;
 
     public static void Start()
     {
@@ -22,12 +31,20 @@ public static class GameTimeLimit
             return;
         }
 
-        TotalTime = GameTimerMinutes.GetInt() * 60f;
+        // L'opzione è espressa in minuti.
+        // Internamente il timer utilizza i secondi.
+        TotalTime = GameTimerMinutes.GetFloat() * 60f;
         RemainingTime = TotalTime;
 
         IsRunning = true;
         IsPaused = false;
+
+        PausedByMeeting = false;
         EndGameSent = false;
+        EndedByTimer = false;
+        MeetingTime = 0f;
+        MeetingStartedAt = 0f;
+        MeetingActive = false;
     }
 
     public static void Update(float deltaTime)
@@ -38,9 +55,12 @@ public static class GameTimeLimit
         if (!IsRunning || IsPaused || EndGameSent)
             return;
 
+        // Solo l'host deve aggiornare il timer e terminare la partita.
         if (AmongUsClient.Instance == null ||
             !AmongUsClient.Instance.AmHost)
+        {
             return;
+        }
 
         RemainingTime -= deltaTime;
 
@@ -50,6 +70,20 @@ public static class GameTimeLimit
         RemainingTime = 0f;
         IsRunning = false;
         EndGameSent = true;
+        EndedByTimer = true;
+
+        // Salva immediatamente i dati per il riepilogo,
+        // prima che il timer venga resettato.
+        MatchSummary1.CaptureGameTimer();
+
+        if (GameTimerMessage.GetBool())
+        {
+            Utils.SendMessage(
+                "Gli impostori hanno vinto a causa del timer di gioco"
+            );
+
+            MessageBlocker.UpdateLastMessageTime();
+        }
 
         if (GameManager.Instance != null)
         {
@@ -65,7 +99,7 @@ public static class GameTimeLimit
         if (!EnableGameTimer.GetBool())
             return;
 
-        if (!IsRunning)
+        if (!IsRunning || EndGameSent)
             return;
 
         IsPaused = true;
@@ -82,14 +116,74 @@ public static class GameTimeLimit
         IsPaused = false;
     }
 
+    public static void OnMeetingStarted()
+    {
+        if (!EnableGameTimer.GetBool())
+            return;
+
+        if (!MeetingActive)
+        {
+            MeetingActive = true;
+            MeetingStartedAt = Time.realtimeSinceStartup;
+        }
+
+        if (!PauseGameTimerDuringMeetings.GetBool())
+            return;
+
+        if (!IsRunning || EndGameSent)
+            return;
+
+        PausedByMeeting = true;
+        Pause();
+    }
+
+    public static void OnMeetingEnded()
+    {
+        if (MeetingActive)
+        {
+            MeetingTime += Mathf.Max(
+                0f,
+                Time.realtimeSinceStartup - MeetingStartedAt
+            );
+
+            MeetingActive = false;
+            MeetingStartedAt = 0f;
+        }
+
+        if (!PausedByMeeting)
+            return;
+
+        PausedByMeeting = false;
+        Resume();
+    }
+    public static float GetMeetingTime()
+    {
+        float total = MeetingTime;
+
+        if (MeetingActive)
+        {
+            total += Mathf.Max(
+                0f,
+                Time.realtimeSinceStartup - MeetingStartedAt
+            );
+        }
+
+        return total;
+    }
     public static void Stop()
     {
         IsRunning = false;
         IsPaused = false;
+
+        PausedByMeeting = false;
         EndGameSent = false;
+        EndedByTimer = false;
 
         TotalTime = 0f;
         RemainingTime = 0f;
+        MeetingTime = 0f;
+        MeetingStartedAt = 0f;
+        MeetingActive = false;
     }
 
     public static float GetElapsedTime()
@@ -97,6 +191,8 @@ public static class GameTimeLimit
         return Mathf.Max(0f, TotalTime - RemainingTime);
     }
 
+    // Formato per countdown e tempi effettivi.
+    // Esempio: 4.5 minuti -> 04:30.
     public static string FormatTime(float seconds)
     {
         int totalSeconds = Mathf.CeilToInt(
@@ -106,13 +202,19 @@ public static class GameTimeLimit
         int minutes = totalSeconds / 60;
         int secs = totalSeconds % 60;
 
-        if (minutes == 0)
-            return $"{secs} sec";
+        return $"{minutes:D2}:{secs:D2}";
+    }
 
-        if (secs == 0)
-            return $"{minutes} min";
+    // Formato in minuti decimali.
+    // Esempi: 4, 4.5, 5, 5.5.
+    public static string FormatMinutes(float seconds)
+    {
+        float minutes = Mathf.Max(0f, seconds) / 60f;
 
-        return $"{minutes}:{secs:00}";
+        return minutes.ToString(
+            "0.#",
+            System.Globalization.CultureInfo.InvariantCulture
+        );
     }
 
     public static void SendTimeMessage()
@@ -120,25 +222,37 @@ public static class GameTimeLimit
         if (!EnableGameTimer.GetBool())
             return;
 
-        string elapsed = ToFullWidthNumbers(FormatTime(GetElapsedTime()));
-        string remaining = ToFullWidthNumbers(FormatTime(RemainingTime));
+        string configuredMinutes = ToFullWidthNumbers(
+            FormatMinutes(TotalTime)
+        );
 
-        string messages =
-            $"Game Timer\n" +
+        string elapsed = ToFullWidthNumbers(
+            FormatTime(GetElapsedTime())
+        );
+
+        string remaining = ToFullWidthNumbers(
+            FormatTime(RemainingTime)
+        );
+
+        string message =
+            "Game Timer\n" +
+            $"Duration: {configuredMinutes} min\n" +
             $"Elapsed: {elapsed}\n" +
             $"Remaining: {remaining}";
 
-        if (AmongUsClient.Instance.AmHost &&
+        if (AmongUsClient.Instance != null &&
+            AmongUsClient.Instance.AmHost &&
+            PlayerControl.LocalPlayer?.Data != null &&
             PlayerControl.LocalPlayer.Data.IsDead)
         {
-            Utils.RequestProxyMessage(messages);
-            MessageBlocker.UpdateLastMessageTime();
+            Utils.RequestProxyMessage(message);
         }
         else
         {
-            Utils.SendMessage(messages);
-            MessageBlocker.UpdateLastMessageTime();
+            Utils.SendMessage(message);
         }
+
+        MessageBlocker.UpdateLastMessageTime();
     }
 }
 
@@ -149,10 +263,39 @@ public static class GameTimerUpdatePatch
     {
         if (AmongUsClient.Instance == null ||
             !AmongUsClient.Instance.AmHost)
+        {
             return;
+        }
 
         GameTimeLimit.Update(Time.deltaTime);
     }
 }
+[HarmonyPatch(typeof(MeetingHud), "Start")]
+public static class GameTimerMeetingStartPatch
+{
+    public static void Postfix()
+    {
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
 
+        GameTimeLimit.OnMeetingStarted();
+    }
+}
 
+[HarmonyPatch(typeof(MeetingHud), "OnDestroy")]
+public static class GameTimerMeetingEndPatch
+{
+    public static void Prefix()
+    {
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
+
+        GameTimeLimit.OnMeetingEnded();
+    }
+}

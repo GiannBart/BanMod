@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.7.6";
+    public static string modVersion = "3.7.8";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.7.6";
+    public const string PluginVersion = "3.7.8";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.8.18" };
@@ -127,7 +127,7 @@ public partial class BanMod : BasePlugin
     public static bool ShowUpdateButton = true;
     public static readonly string GitsiteUrl = "https://github.com/GiannBart/BanMod";
     public static readonly string LobbysiteUrl = "https://banmod.online/";
-    public static readonly string DiscordInviteUrl = "https://discord.gg/YtEqHr9q";
+    public static readonly string DiscordInviteUrl = "https://discord.gg/cZBGsZc7aV";
     public static readonly string KaitositeUrl = "https://telegra.ph/KaitoRun-Fungle-Lobby-11-16";
     public static bool hasSentHackWarning = false;
     public static bool hasKilled = false;

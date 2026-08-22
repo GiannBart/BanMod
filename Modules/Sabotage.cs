@@ -269,12 +269,23 @@ public static class BlockCloseDoorsPatch
 {
     public static bool Prefix(SystemTypes room)
     {
+        GameModeType gameMode1 = (GameModeType)Options.GameMode.GetValue();
+
         if (Options.DisableDoorSabotage.GetBool())
         {
             BMLogger.Info($"[BlockCloseDoorsPatch] Tentativo di chiudere porta in {room} bloccato.");
             return false; 
         }
+        if (gameMode1 == GameModeType.FFA)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.SnS)
+        {
+            return false;
+        }
         return true;
+        
     }
 }
 [HarmonyPatch(typeof(MushroomMixupSabotageSystem), nameof(MushroomMixupSabotageSystem.UpdateSystem))]

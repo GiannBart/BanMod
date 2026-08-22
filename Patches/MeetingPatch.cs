@@ -131,6 +131,7 @@ public static class CombinedReportDeadBodyPatch
     public static bool Prefix(PlayerControl __instance, [HarmonyArgument(0)] NetworkedPlayerInfo target)
     {
         GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+
         if (!AmongUsClient.Instance.AmHost)
             return true;
 
@@ -146,6 +147,10 @@ public static class CombinedReportDeadBodyPatch
         GameModeType gameMode1 = (GameModeType)Options.GameMode.GetValue();
 
         if (gameMode1 == GameModeType.FFA)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.SnS)
         {
             return false;
         }
