@@ -185,8 +185,7 @@ namespace BanMod
 
             try
             {
-                int modeValue = Options.GameMode.GetValue();
-                if (modeValue == (int)GameModeType.FFA || modeValue == 6)
+                if (Options.GameMode.GetValue(GameModeType.FFA))
                     return true;
             }
             catch { }
@@ -1706,7 +1705,7 @@ namespace BanMod
                 return true;
             }
 
-            GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+            GameModeType gameMode = Options.GameMode.Selected;
 
             if (Options.Jester.GetBool() && !Jester.JesterSelected)
             {
@@ -1722,11 +1721,14 @@ namespace BanMod
             bool jesterActive = Options.Jester.GetBool() || Jester.ForcedJesterSelected;
             bool hideAndSeek = GameManager.Instance.IsHideAndSeek();
             bool taskRun = gameMode == GameModeType.TaskRun;
-            bool fourImpActive = !taskRun && !hideAndSeek && ForcedRoleHelpers.ShouldForceFourImpostors(allPlayersList.Count);
+            bool zombieMode = gameMode == GameModeType.ZombieMode;
+            bool hotpotatoMode = gameMode == GameModeType.HotPotato;
+            bool zeroImpostorsMode = taskRun || zombieMode || hotpotatoMode;
+            bool fourImpActive = !zeroImpostorsMode && !hideAndSeek && ForcedRoleHelpers.ShouldForceFourImpostors(allPlayersList.Count);
 
             ForcedRoleSystem.ForcedRoleLog($"SelectRoles flags | taskRun={taskRun} hideAndSeek={hideAndSeek} jesterActive={jesterActive} forceImpostor={BanMod.forceImpostor} hasForcedImpostors={hasForcedImpostors} hasForcedExactRoles={hasForcedExactRoles} fourImpActive={fourImpActive} forcedRolesCount={ForcedRoleSystem.ForcedRoles.Count}");
 
-            if (!taskRun &&
+            if (!zeroImpostorsMode &&
                 !hideAndSeek &&
                 !jesterActive &&
                 !BanMod.forceImpostor &&
@@ -1861,17 +1863,17 @@ namespace BanMod
 
             try
             {
-                int adjustedNumImpostors = taskRun
+                int adjustedNumImpostors = zeroImpostorsMode
                     ? 0
                     : gameOptions.GetAdjustedNumImpostors(allPlayersList.Count);
 
-                if (!taskRun && ForcedRoleHelpers.ShouldForceFourImpostors(allPlayersList.Count))
+                if (!zeroImpostorsMode && ForcedRoleHelpers.ShouldForceFourImpostors(allPlayersList.Count))
                 {
                     adjustedNumImpostors = Math.Min(4, allPlayersList.Count);
 
                 }
 
-                if (!taskRun && allPlayersList.Count > 0)
+                if (!zeroImpostorsMode && allPlayersList.Count > 0)
                 {
                     int requiredForcedImpostorSlots = ForcedRoleSystem.ForcedRoles
                         .Where(entry => allPlayersList.Any(p => p.PlayerId == entry.Key))

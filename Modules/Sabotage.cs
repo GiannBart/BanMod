@@ -18,7 +18,7 @@ namespace BanMod
     {
         public static void Postfix(MapBehaviour __instance)
         {
-            GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+            GameModeType gameMode = Options.GameMode.Selected;
             byte mapId = GameOptionsManager.Instance.CurrentGameOptions.MapId;
             Transform parentTransform = __instance.infectedOverlay?.transform;
 
@@ -154,7 +154,7 @@ public static class ShipStatus_FixedUpdate_Patch
     [HarmonyPrefix]
     public static bool Prefix(ShipStatus __instance)
     {
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
 
         if (!AmongUsClient.Instance.AmHost)
             return true;
@@ -164,6 +164,15 @@ public static class ShipStatus_FixedUpdate_Patch
             return true;
 
         if (gameMode == GameModeType.SnS)
+        {
+            FixSabotage(__instance, SystemTypes.Reactor);
+            FixSabotage(__instance, SystemTypes.Laboratory);
+            FixSabotage(__instance, SystemTypes.HeliSabotage);
+            FixSabotage(__instance, SystemTypes.LifeSupp);
+            FixSabotage(__instance, SystemTypes.Electrical);
+            return true;
+        }
+        if (gameMode == GameModeType.PnS)
         {
             FixSabotage(__instance, SystemTypes.Reactor);
             FixSabotage(__instance, SystemTypes.Laboratory);
@@ -269,7 +278,7 @@ public static class BlockCloseDoorsPatch
 {
     public static bool Prefix(SystemTypes room)
     {
-        GameModeType gameMode1 = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode1 = Options.GameMode.Selected;
 
         if (Options.DisableDoorSabotage.GetBool())
         {
@@ -281,6 +290,10 @@ public static class BlockCloseDoorsPatch
             return false;
         }
         if (gameMode1 == GameModeType.SnS)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.PnS)
         {
             return false;
         }

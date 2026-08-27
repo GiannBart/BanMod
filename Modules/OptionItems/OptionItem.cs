@@ -35,7 +35,10 @@ namespace BanMod
 
                 OptionCategory.GameMode
                     or OptionCategory.SNS
+                    or OptionCategory.PNS
                     or OptionCategory.FFA
+                    or OptionCategory.HotPotato
+                    or OptionCategory.Zombie 
                     or OptionCategory.Seeker
                     or OptionCategory.Gameplay
                     or OptionCategory.Meetings
@@ -100,6 +103,9 @@ namespace BanMod
                 // GAME MODES
                 OptionCategory.GameMode => "TabGroup.GameMode",
                 OptionCategory.SNS => "TabGroup.SNS",
+                OptionCategory.PNS => "TabGroup.PNS",
+                OptionCategory.Zombie => "TabGroup.Zombie",
+                OptionCategory.HotPotato => "TabGroup.HotPotato",
                 OptionCategory.FFA => "TabGroup.FFA",
                 OptionCategory.Seeker => "Seeker",
 
@@ -194,6 +200,15 @@ namespace BanMod
 
         public static IReadOnlyList<OptionItem> SNSOptions
             => GetOptions(OptionCategory.SNS);
+
+        public static IReadOnlyList<OptionItem> PNSOptions
+            => GetOptions(OptionCategory.PNS);
+
+        public static IReadOnlyList<OptionItem> HotPotatoOptions
+            => GetOptions(OptionCategory.HotPotato);
+
+        public static IReadOnlyList<OptionItem> ZombieOptions
+            => GetOptions(OptionCategory.Zombie);
 
         public static IReadOnlyList<OptionItem> FFAOptions
             => GetOptions(OptionCategory.FFA);
@@ -744,7 +759,7 @@ namespace BanMod
                 return;
 
             GameModeType gameMode =
-                (GameModeType)Options.GameMode.GetValue();
+                Options.GameMode.Selected;
 
 
             if (BanMod.AllPlayerControls.Count() <= 0)
@@ -763,7 +778,10 @@ namespace BanMod
             if (
                 GameManager.Instance.IsHideAndSeek() ||
                 gameMode == GameModeType.SnS ||
+                gameMode == GameModeType.PnS ||
                 gameMode == GameModeType.TaskRun ||
+                gameMode == GameModeType.ZombieMode ||
+                gameMode == GameModeType.HotPotato ||
                 gameMode == GameModeType.FFA
             )
             {
@@ -843,7 +861,10 @@ namespace BanMod
         // GAME MODES
         GameMode,
         SNS,
+        PNS,
         FFA,
+        HotPotato,
+        Zombie,
         Seeker,
 
         // MODERATION

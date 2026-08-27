@@ -20,7 +20,7 @@ public static class TaskManager
     {
         if (!AmongUsClient.Instance.AmHost) return;
         if (player == null || player.Data == null || player.Data.IsDead) return;
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
         if (gameMode != GameModeType.TaskRun) return;
         if (taskAssigned) return;
         if (!PlayerTask.AllTasksCompleted(player)) return;
@@ -78,7 +78,7 @@ public static class TaskManager_CompleteTask_Patch
 {
     public static void Postfix(PlayerControl __instance, uint idx)
     {
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
         if (!AmongUsClient.Instance.AmHost) return;
         if (gameMode != GameModeType.TaskRun) return;
 

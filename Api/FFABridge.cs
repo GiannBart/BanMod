@@ -201,7 +201,7 @@ public static class FfaExternalBridge
 
             bool enabled =
                 Options.GameMode != null &&
-                Options.GameMode.GetValue() == 6;
+                Options.GameMode.GetValue(GameModeType.FFA);
 
             EnabledField?.SetValue(
                 null,
@@ -293,7 +293,7 @@ public static class FfaExternalBridge
 
             bool ffaEnabled =
                 Options.GameMode != null &&
-                Options.GameMode.GetValue() == 6;
+                Options.GameMode.GetValue(GameModeType.FFA);
 
             bool teamModeEnabled = false;
 

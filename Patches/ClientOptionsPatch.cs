@@ -9,7 +9,8 @@ namespace BanMod;
 public static class OptionsMenuBehaviourStartPatch
 {
     private static ClientOptionItem ShowFPS;
-    private static ClientOptionItem EnableLog;
+    private static ClientOptionItem EnableMatchLog;
+    private static ClientOptionItem EnableChatLog;
     private static ClientOptionItem GM;
     private static ClientOptionItem DarkTheme;
     private static ClientOptionItem DisableLobbyMusic;
@@ -30,9 +31,13 @@ public static class OptionsMenuBehaviourStartPatch
     {
         if (__instance.DisableMouseMovement == null) return;
 
-        if (EnableLog == null || EnableLog.ToggleButton == null)
+        if (EnableMatchLog == null || EnableMatchLog.ToggleButton == null)
         {
-            EnableLog = ClientOptionItem.Create("EnableLog", BanMod.EnableLog, __instance);
+            EnableMatchLog = ClientOptionItem.Create("EnableMatchLog", BanMod.EnableMatchLog, __instance);
+        }
+        if (EnableChatLog == null || EnableChatLog.ToggleButton == null)
+        {
+            EnableChatLog = ClientOptionItem.Create("EnableChatLog", BanMod.EnableChatLog, __instance);
         }
         if (ShowFPS == null || ShowFPS.ToggleButton == null)
         {

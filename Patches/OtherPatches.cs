@@ -524,7 +524,7 @@ public static class LobbyHistoryPatch
             return;
 
         GameModeType gameMode =
-            (GameModeType)Options.GameMode.GetValue();
+            Options.GameMode.Selected;
 
         string gameCode =
             GameCode.IntToGameName(__instance.GameId);
@@ -553,6 +553,7 @@ public static class LobbyHistoryPatch
 
         if (GameManager.Instance.IsHideAndSeek() ||
             gameMode == GameModeType.SnS ||
+            gameMode == GameModeType.PnS ||
             gameMode == GameModeType.TaskRun ||
             gameMode == GameModeType.FFA)
         {
@@ -623,7 +624,7 @@ internal static class CheckShapeshiftPatch
     public static bool Prefix(PlayerControl __instance, ref PlayerControl target, ref bool shouldAnimate)
     {
         if (!AmongUsClient.Instance.AmHost) return true;
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
         if (gameMode == GameModeType.SnS && !GameStates.isHideNSeek && __instance.isNew)
         {
             BMLogger.Info($"Blocco Shapeshift per {__instance.Data.PlayerName} (Misfire attivo).");
@@ -638,8 +639,8 @@ internal static class BlockShapeshiftPatch
 {
     public static bool Prefix(PlayerControl __instance)
     {
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
-        if (gameMode == GameModeType.SnS && MurderPlayerCombinedPatch.isBlocked)
+        GameModeType gameMode = Options.GameMode.Selected;
+        if (gameMode == GameModeType.SnS && MurderPlayerCombinedPatch.isShapeBlocked)
         {
             return false;
         }

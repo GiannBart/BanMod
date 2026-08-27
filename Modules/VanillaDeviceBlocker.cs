@@ -128,9 +128,8 @@ public static class VanillaDeviceBlocker
 
     private static bool IsJbMode()
     {
-        return
-            (GameModeType)Options.GameMode.GetValue() ==
-            GameModeType.JBMode;
+        return Options.GameMode != null &&
+               Options.GameMode.GetValue(GameModeType.JBMode);
     }
 
     private static bool ShouldBlock(DeviceType type)

@@ -380,11 +380,13 @@ namespace BanMod
         public static OptionItem KickVentCheat;
         public static OptionItem SabotageCheat2;
         public static OptionItem UseVentCheat;
-        public static StringOptionItem GameMode;
+        public static GameModeOptionItem GameMode;
         public static StringOptionItem PresetSelection;
         public static OptionItem TcommandforAll;
-        public static OptionItem MisfiresToSuicide;
-        public static OptionItem CantKillTime;
+        public static OptionItem MisfiresToSuicideSns;
+        public static OptionItem CantKillTimeSns;
+        public static OptionItem MisfiresToSuicidePns;
+        public static OptionItem CantKillTimePns;
         public static OptionItem ProtectFirstHost;
         public static IntegerOptionItem NumSeekers;
         public static IntegerOptionItem DecontaminationTime;
@@ -407,10 +409,26 @@ namespace BanMod
         public static StringOptionItem FfaTeamMode;
         public static StringOptionItem FfaTeamCount;
         public static OptionItem RandomVentSpawn;
-
+        //public static StringOptionItem ZombieInitialSelection;
+        public static IntegerOptionItem ZombieInitialInfectionDelay;
+        public static FloatOptionItem ZombieSpeedMultiplier;
+        public static FloatOptionItem ZombieVisionMultiplier;
         public static bool IsLoaded = false;
         private static bool _reOpenSettingsScheduled = false;
-
+        public static bool IsZombieMode => GameMode != null && GameMode.Selected == GameModeType.ZombieMode;
+        public static readonly GameModeType[] GameModeOrder =
+        {
+            GameModeType.Default,
+            GameModeType.BanMod,
+            GameModeType.KaitoRun,
+            GameModeType.TaskRun,
+            GameModeType.JBMode,
+            GameModeType.SnS,
+            GameModeType.PnS,
+            GameModeType.ZombieMode,
+            GameModeType.HotPotato,
+            GameModeType.FFA
+        };
         public static void Load()
         {
             if (IsLoaded) return;
@@ -439,12 +457,17 @@ namespace BanMod
                 }
             });
 
-            GameMode = (StringOptionItem)StringOptionItem.Create("GameMode", new[] { "SnS", "BanMod", "KaitoRun", "Default", "TaskRun", "JBMode", "FFA" }, 3,
-            OptionCategory.GameMode,
-            true,
-            true,
-            BanMod.ApplyPresetAutomatically
-            ).SetColor(new Color32(255, 204, 0, 255));
+            GameMode = new GameModeOptionItem(
+                "GameMode",
+                GameModeOrder,
+                GameModeType.Default,
+                OptionCategory.GameMode,
+                true,
+                true,
+                BanMod.ApplyPresetAutomatically
+            );
+
+            GameMode.SetColor(new Color32(255, 204, 0, 255));
 
             GameMode.RegisterUpdateValueEvent((sender, args) =>
             {
@@ -510,8 +533,18 @@ namespace BanMod
                 FfaExternalBridge.SyncTeamMode();
                 FfaExternalBridge.SyncTeamCount();
             });
-            MisfiresToSuicide = (IntegerOptionItem)IntegerOptionItem.Create("SuicideAfterMisfiresAmount", new(1, 10, 1), 2, OptionCategory.SNS, false).SetColor(new Color32(0, 153, 255, 255));
-            CantKillTime = (IntegerOptionItem)IntegerOptionItem.Create("MisfireKillCooldown", new(0, 60, 5), 20, OptionCategory.SNS, false).SetColor(new Color32(0, 153, 255, 255));
+
+            MisfiresToSuicideSns = (IntegerOptionItem)IntegerOptionItem.Create("SuicideAfterMisfiresAmount", new(1, 10, 1), 2, OptionCategory.SNS, false).SetColor(new Color32(0, 153, 255, 255));
+            CantKillTimeSns = (IntegerOptionItem)IntegerOptionItem.Create("MisfireKillCooldown", new(0, 60, 5), 20, OptionCategory.SNS, false).SetColor(new Color32(0, 153, 255, 255));
+
+            MisfiresToSuicidePns = (IntegerOptionItem)IntegerOptionItem.Create("SuicideAfterMisfiresAmountPns", new(1, 10, 1), 2, OptionCategory.PNS, false).SetColor(new Color32(0, 153, 255, 255));
+            CantKillTimePns = (IntegerOptionItem)IntegerOptionItem.Create("MisfireKillCooldownPns", new(0, 60, 5), 20, OptionCategory.PNS, false).SetColor(new Color32(0, 153, 255, 255));
+
+            Color32 zombieColor = new Color32(0, 200, 80, 255);
+            //ZombieInitialSelection = (StringOptionItem)StringOptionItem.Create("ZombieInitialSelection",new[] { "MostCompletedTasks", "LeastCompletedTasks", "MostRemainingTasks", "LeastRemainingTasks" },0, OptionCategory.Zombie,true,true).SetColor(zombieColor);
+            ZombieInitialInfectionDelay = (IntegerOptionItem)IntegerOptionItem.Create("ZombieInitialInfectionDelay",new(5, 180, 5),30,OptionCategory.Zombie,true).SetColor(zombieColor);
+            ZombieSpeedMultiplier = (FloatOptionItem)FloatOptionItem.Create("ZombieSpeedMultiplier",new(0f, 100f, 5f),90f,OptionCategory.Zombie,true).SetColor(zombieColor);
+            ZombieVisionMultiplier = (FloatOptionItem)FloatOptionItem.Create("ZombieVisionMultiplier",new(0f, 100f, 5f),90f,OptionCategory.Zombie,true).SetColor(zombieColor);
 
             nocountdown = BooleanOptionItem.Create("nocountdown", false, OptionCategory.Lobby, true).SetColor(new Color32(0, 153, 255, 255));
             ShareLobbyCode = BooleanOptionItem.Create("ShareLobbyCode", false, OptionCategory.Lobby, true).SetColor(new Color32(0, 153, 255, 255));
@@ -850,13 +883,13 @@ namespace BanMod
             try
             {
 
-                GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+                GameModeType gameMode = Options.GameMode.Selected;
 
                 if (GameStates.isHideNSeek)
                 {
                     if (gameMode == GameModeType.FFA)
                     {
-                        Options.GameMode.SetValue(3);
+                        Options.GameMode.SetValue(GameModeType.Default);
                     }
 
                     seekerSyncTimer += Time.deltaTime;

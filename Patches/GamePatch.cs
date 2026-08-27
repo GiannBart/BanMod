@@ -44,7 +44,7 @@ public static class GameEndPatch
         Judge.ResetJudge();
         Profiler.ResetProfiler();
         Watcher.ResetWatcher();
-        MurderPlayerCombinedPatch.misfireCount.Clear();
+        MurderPlayerCombinedPatch.misfireCountShape.Clear();
         BanMod.RoomZoneManagerInstance.ClearAllData();
         GuessManager.ResetForNewGame();
         ExilerManager.ResetForNewGame();
@@ -74,7 +74,7 @@ public static class GameStartPatch
         if (!AmongUsClient.Instance.AmHost) return;
         if (FakeMapLobbyUtility.Active) return;
         FirstMeetingProtectionManager.ResetForNewGame();
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
         if (Options.Jester.GetBool())
         {
             Jester.SelectJester();
@@ -373,8 +373,9 @@ public static class CheckEndCriteriaPatch
             !p.Data.Role.IsImpostor);
         int impostoriVivi = 0;
         bool mutanteInPunizione = false;
+        bool phantomInPunizione = false;
         bool showAd = !DataManager.Player.Ads.HasPurchasedAdRemoval;
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
 
         foreach (var player in PlayerControl.AllPlayerControls)
         {
@@ -419,6 +420,32 @@ public static class CheckEndCriteriaPatch
                 return false;
             }
             if (impostoriVivi == 0 && !mutanteInPunizione)
+            {
+                return true;
+            }
+        }
+        if (gameMode == GameModeType.PnS)
+        {
+            foreach (var player in PlayerControl.AllPlayerControls)
+            {
+                if (!player.Data.IsDead)
+                {
+                    if (player.Data.Role.IsImpostor)
+                    {
+                        impostoriVivi++;
+                    }
+                    else if (player.isNew && gameMode == GameModeType.PnS)
+                    {
+                        phantomInPunizione = true;
+                        BMLogger.Info($"[CHECK_WIN] Trovato phantom in punizione ({player.Data.PlayerName}). Blocco fine game.");
+                    }
+                }
+            }
+            if (impostoriVivi == 0 && phantomInPunizione)
+            {
+                return false;
+            }
+            if (impostoriVivi == 0 && !phantomInPunizione)
             {
                 return true;
             }

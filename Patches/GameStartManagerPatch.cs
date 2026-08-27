@@ -175,7 +175,7 @@ public static class GameStartManagerPatch
 
                     bool showGameMode =
                         Options.GameMode != null &&
-                        Options.GameMode.GetInt() != 3;
+                        !Options.GameMode.GetValue(GameModeType.Default);
 
                     string gameModeLine = showGameMode
                         ? $"\n<size=65%><color=#00FFFFFF>GameMode: <b>{currentGameMode}</b></color></size>"

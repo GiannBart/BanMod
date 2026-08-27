@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.7.8";
+    public static string modVersion = "3.7.9";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.7.8";
+    public const string PluginVersion = "3.7.9";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.8.18" };
@@ -501,7 +501,8 @@ public partial class BanMod : BasePlugin
             HostSelfSetTimes = new List<DateTime>(); 
         }
     }
-    public static ConfigEntry<bool> EnableLog { get; private set; }
+    public static ConfigEntry<bool> EnableMatchLog { get; private set; }
+    public static ConfigEntry<bool> EnableChatLog { get; private set; }
     public static ConfigEntry<bool> ShowFPS { get; private set; }
     public static ConfigEntry<bool> GM { get; private set; }
     public static ConfigEntry<bool> DarkTheme { get; private set; }
@@ -582,7 +583,8 @@ public partial class BanMod : BasePlugin
         BMLogger.Init(PluginLogger);
         try { BanModCore.Init(Log); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.Init failed: " + ex.Message); } catch { } }
 
-        EnableLog = Config.Bind("Client Options", "EnableLog", true);
+        EnableMatchLog = Config.Bind("Client Options", "EnableMatchLog", true); 
+        EnableChatLog = Config.Bind("Client Options", "EnableChatLog", true);
         ShowFPS = Config.Bind("Client Options", "ShowFPS", false);
         GM = Config.Bind("Client Options", "GM", false);
         DarkTheme = Config.Bind("Client Options", "DarkTheme", false);
@@ -643,9 +645,11 @@ public partial class BanMod : BasePlugin
         TemplateLoader.LoadTemplate("WelcomeTemplateKaitoRun");
         TemplateLoader.LoadTemplate("WelcomeTemplateTaskRun");
         TemplateLoader.LoadTemplate("WelcomeTemplateJBMode");
+        TemplateLoader.LoadTemplate("WelcomeTemplatePns");
         TemplateLoader.LoadTemplate("WelcomeTemplateFFA");
         TemplateLoader.LoadTemplate("RulesInfo");
         TemplateLoader.LoadTemplate("RulesInfoSns");
+        TemplateLoader.LoadTemplate("RulesInfoPns");
         TemplateLoader.LoadTemplate("RulesInfoKaitoRun");
         TemplateLoader.LoadTemplate("RulesInfoTaskRun");
         TemplateLoader.LoadTemplate("RulesInfoJBMode");
@@ -724,16 +728,22 @@ public partial class BanMod : BasePlugin
             bool modOptionsOpen = GameSettingMenuPatch.SettingsTab != null && GameSettingMenuPatch.SettingsTab.gameObject != null && GameSettingMenuPatch.SettingsTab.gameObject.activeInHierarchy;
             try
             {
-                if (GameStates.isLobby && (GameModeType)Options.GameMode.GetValue() != GameModeType.BanMod)
+                if (GameStates.isLobby && !Options.GameMode.GetValue(GameModeType.BanMod))
                 {
                     if (Options.DisableRole.GetBool())
                     {
                         BanMod.DisableAllRoles();
                     }
                 }
-                if (modOptionsOpen && GameStates.isLobby && Options.GameMode != null && Options.GameMode.GetInt() == 6 && !FfaExternalBridge.IsAvailable())
+                if (Options.GameMode != null && !Options.GameMode.GetValue(GameModeType.Default) && GameManager.Instance.IsHideAndSeek())
                 {
-                    Options.GameMode.SetValue(0);
+                    Options.GameMode.SetValue(GameModeType.Default);
+                    Options.ReOpenSettings();
+                    return;
+                }
+                if (modOptionsOpen && GameStates.isLobby && Options.GameMode != null && Options.GameMode.GetValue(GameModeType.FFA) && !FfaExternalBridge.IsAvailable())
+                {
+                    Options.GameMode.SetValue(GameModeType.Default);
                     Options.ReOpenSettings();
                     return;
                 }

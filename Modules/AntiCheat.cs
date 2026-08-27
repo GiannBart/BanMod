@@ -1210,50 +1210,8 @@ namespace BanMod
                         operationGrace ||
                         now < hostVentActionGraceUntil;
 
-                    bool walkingAnimationPersisted = Persisted(
-                        $"walking-animation:{playerId}",
-                        player.inVent && player.walkingToVent,
-                        now
-                    );
-
-                    bool canCheckMovement =
-                        !player.walkingToVent || walkingAnimationPersisted;
-
-                    // Sempre attivo, FFA compresa: se è davvero inVent non può
-                    // essere mobile né cambiare posizione camminando.
-                    if (player.inVent &&
-                        canCheckMovement &&
-                        player.moveable &&
-                        !suppressPhysicalChecks)
-                    {
-                        Report(
-                            player,
-                            "Vent_Walking_While_Inside",
-                            "risulta mobile mentre è dentro una vent"
-                        );
-                    }
-
-                    if (player.inVent && suppressPhysicalChecks)
-                    {
-                        VentAnchorPosition[playerId] = position;
-                    }
-                    else if (player.inVent &&
-                             canCheckMovement &&
-                             !suppressPhysicalChecks)
-                    {
-                        if (!VentAnchorPosition.TryGetValue(playerId, out Vector2 anchor))
-                        {
-                            VentAnchorPosition[playerId] = position;
-                        }
-                        else if ((position - anchor).sqrMagnitude > MovementThresholdSquared)
-                        {
-                            Report(
-                                player,
-                                "Vent_Movement_While_Inside",
-                                "ha camminato mentre risultava dentro una vent"
-                            );
-                        }
-                    }
+                    // Rilevazione camminata/movimento dentro le vent disattivata
+                    // per evitare falsi positivi. La rilevazione di immortalità resta attiva.
 
                     // Controllato in tutte le modalità, FFA compresa.
                     bool expectedInside =

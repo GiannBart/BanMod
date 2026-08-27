@@ -92,7 +92,11 @@ namespace BanMod
         Default = 3,
         TaskRun = 4,
         JBMode = 5,
-        FFA = 6
+        FFA = 6,
+        ZombieMode = 7,
+        PnS = 8,
+        HotPotato = 9
+
     }
 
     public enum PresetSelectionType
@@ -184,7 +188,7 @@ namespace BanMod
             }
 
             GameModeType gameMode =
-                (GameModeType)Options.GameMode.GetValue();
+                Options.GameMode.Selected;
 
             PresetSelectionType presetSelection =
                 (PresetSelectionType)Options.PresetSelection.GetValue();
@@ -221,8 +225,17 @@ namespace BanMod
                 case GameModeType.SnS:
                     return LoadOrCreateGameModePreset("SnS.json", CreateSnSDefaults());
 
+                case GameModeType.PnS:
+                    return LoadOrCreateGameModePreset("PnS.json", CreatePnSDefaults());
+
+                case GameModeType.ZombieMode:
+                    return LoadOrCreateGameModePreset("ZombieMode.json", CreateZombieModeDefaults());
+
+                case GameModeType.HotPotato:
+                    return LoadOrCreateGameModePreset("HotPotato.json", CreateHotPotatoDefaults());
+
                 case GameModeType.BanMod:
-                    return LoadOrCreateGameModePreset("BanMod.json", CreateBanModDefaults());
+                    return LoadOrCreateGameModePreset("BanMod.json", CreateBanModDefaults()); 
 
                 case GameModeType.KaitoRun:
                     return LoadOrCreateGameModePreset("KaitoRun.json", CreateKaitoRunDefaults());
@@ -349,7 +362,7 @@ namespace BanMod
 
             try
             {
-                GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+                GameModeType gameMode = Options.GameMode.Selected;
                 PresetSelectionType presetSelection = (PresetSelectionType)Options.PresetSelection.GetValue();
                 fallback = ResolveOptions(gameMode, presetSelection);
             }
@@ -948,7 +961,10 @@ namespace BanMod
             switch (gameMode)
             {
                 case GameModeType.SnS: return "SnS";
-                case GameModeType.BanMod: return "BanMod";
+                case GameModeType.PnS: return "PnS";
+                case GameModeType.HotPotato: return "HotPotato";
+                case GameModeType.ZombieMode: return "ZombieMode"; 
+                case GameModeType.BanMod: return "BanMod"; 
                 case GameModeType.KaitoRun: return "KaitoRun";
                 case GameModeType.Default: return "Default";
                 case GameModeType.TaskRun: return "TaskRun";
@@ -1035,6 +1051,9 @@ namespace BanMod
                 string[] names =
                 {
                     GetGameModePresetName(GameModeType.SnS),
+                    GetGameModePresetName(GameModeType.PnS),
+                    GetGameModePresetName(GameModeType.HotPotato),
+                    GetGameModePresetName(GameModeType.ZombieMode),
                     GetGameModePresetName(GameModeType.BanMod),
                     GetGameModePresetName(GameModeType.KaitoRun),
                     GetGameModePresetName(GameModeType.Default),
@@ -1060,7 +1079,7 @@ namespace BanMod
             try
             {
                 if (Options.GameMode != null)
-                    return (GameModeType)Options.GameMode.GetValue();
+                    return  Options.GameMode.Selected;
             }
             catch
             {
@@ -1076,8 +1095,17 @@ namespace BanMod
                 case GameModeType.SnS:
                     return "SnS.json";
 
+                case GameModeType.PnS:
+                    return "PnS.json";
+
+                case GameModeType.HotPotato:
+                    return "HotPotato.json";
+
+                case GameModeType.ZombieMode:
+                    return "ZombieMode.json";
+
                 case GameModeType.BanMod:
-                    return "BanMod.json";
+                    return "BanMod.json"; 
 
                 case GameModeType.KaitoRun:
                     return "KaitoRun.json";
@@ -1239,183 +1267,6 @@ namespace BanMod
             }
         }
 
-        private static CustomOptions CreateRunOrDeathDefaults()
-        {
-            return new CustomOptions
-            {
-                MaxPlayers = 15,
-                NumImpostors = 1,
-                PlayerSpeedMod = 1.75f,
-                CrewLightMod = 1f,
-                ImpostorLightMod = 2.0f,
-                KillCooldown = 10f,
-                NumCommonTasks = 1,
-                NumLongTasks = 1,
-                NumShortTasks = 1,
-                NumEmergencyMeetings = 2,
-                AnonymousVotes = false,
-                TaskBarMode = (AmongUs.GameOptions.TaskBarMode)1,
-                KillDistance = 0,
-                EmergencyCooldown = 15,
-                DiscussionTime = 45,
-                VotingTime = 60,
-                IsDefaults = true,
-                ConfirmImpostor = true,
-                VisualTasks = false,
-                Roles = new RoleSettings
-                {
-                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
-                    Phantom = new RoleOption { Count = 0, Chance = 100 },
-                    Scientist = new RoleOption { Count = 0, Chance = 100 },
-                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
-                    Engineer = new RoleOption { Count = 0, Chance = 100 },
-                    Noisemaker = new RoleOption { Count = 15, Chance = 100 },
-                    Tracker = new RoleOption { Count = 0, Chance = 100 },
-                    Viper = new RoleOption { Count = 1, Chance = 100 },
-                    Detective = new RoleOption { Count = 0, Chance = 100 },
-                    Judge = new RoleOption { Count = 0, Chance = 100 },
-
-                    viperDissolveTime = 10f,
-                    DetectiveSuspectLimit = 3f,
-                    JudgeTaskRequirementPercentage = 50f,
-                    EngineerCooldown = 5f,
-                    EngineerInVentMaxTime = 5f,
-                    GuardianAngelCooldown = 35f,
-                    GuardianAngelDuration = 25f,
-                    ScientistCooldown = 10f,
-                    ScientistBattery = 30f,
-                    TrackerCooldown = 10f,
-                    TrackerDelay = 0f,
-                    TrackerDuration = 30f,
-                    NoisemakerAlert = true,
-                    NoisemakerDuration = 10f,
-                    ShapeshifterLeaveSkin = false,
-                    ShapeshifterCooldown = 0f,
-                    ShapeshifterDuration = 30f,
-                    PhantomCooldown = 10f,
-                    PhantomDuration = 30f
-                }
-            };
-        }
-
-        private static CustomOptions CreateStopOrDeathDefaults()
-        {
-            return new CustomOptions
-            {
-                MaxPlayers = 15,
-                NumImpostors = 1,
-                PlayerSpeedMod = 1.75f,
-                CrewLightMod = 1f,
-                ImpostorLightMod = 2.0f,
-                KillCooldown = 30f,
-                NumCommonTasks = 1,
-                NumLongTasks = 1,
-                NumShortTasks = 1,
-                NumEmergencyMeetings = 2,
-                AnonymousVotes = false,
-                TaskBarMode = (AmongUs.GameOptions.TaskBarMode)1,
-                KillDistance = 0,
-                EmergencyCooldown = 15,
-                DiscussionTime = 45,
-                VotingTime = 60,
-                IsDefaults = true,
-                ConfirmImpostor = true,
-                VisualTasks = false,
-                Roles = new RoleSettings
-                {
-                    Shapeshifter = new RoleOption { Count = 1, Chance = 100 },
-                    Phantom = new RoleOption { Count = 1, Chance = 100 },
-                    Scientist = new RoleOption { Count = 0, Chance = 100 },
-                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
-                    Engineer = new RoleOption { Count = 0, Chance = 100 },
-                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
-                    Tracker = new RoleOption { Count = 0, Chance = 100 },
-                    Viper = new RoleOption { Count = 1, Chance = 100 },
-                    Detective = new RoleOption { Count = 0, Chance = 100 },
-                    Judge = new RoleOption { Count = 0, Chance = 100 },
-
-                    viperDissolveTime = 10f,
-                    DetectiveSuspectLimit = 3f,
-                    JudgeTaskRequirementPercentage = 50f,
-                    EngineerCooldown = 5f,
-                    EngineerInVentMaxTime = 5f,
-                    GuardianAngelCooldown = 35f,
-                    GuardianAngelDuration = 25f,
-                    ScientistCooldown = 10f,
-                    ScientistBattery = 30f,
-                    TrackerCooldown = 10f,
-                    TrackerDelay = 0f,
-                    TrackerDuration = 30f,
-                    NoisemakerAlert = true,
-                    NoisemakerDuration = 10f,
-                    ShapeshifterLeaveSkin = false,
-                    ShapeshifterCooldown = 0f,
-                    ShapeshifterDuration = 30f,
-                    PhantomCooldown = 10f,
-                    PhantomDuration = 30f
-                }
-            };
-        }
-
-        private static CustomOptions CreateFollowOrDeathDefaults()
-        {
-            return new CustomOptions
-            {
-                MaxPlayers = 15,
-                NumImpostors = 1,
-                PlayerSpeedMod = 1.75f,
-                CrewLightMod = 1f,
-                ImpostorLightMod = 2.0f,
-                KillCooldown = 30f,
-                NumCommonTasks = 0,
-                NumLongTasks = 1,
-                NumShortTasks = 0,
-                NumEmergencyMeetings = 2,
-                AnonymousVotes = false,
-                TaskBarMode = (AmongUs.GameOptions.TaskBarMode)1,
-                KillDistance = 0,
-                EmergencyCooldown = 15,
-                DiscussionTime = 45,
-                VotingTime = 60,
-                IsDefaults = true,
-                ConfirmImpostor = true,
-                VisualTasks = false,
-                Roles = new RoleSettings
-                {
-                    Shapeshifter = new RoleOption { Count = 1, Chance = 100 },
-                    Phantom = new RoleOption { Count = 1, Chance = 100 },
-                    Scientist = new RoleOption { Count = 0, Chance = 100 },
-                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
-                    Engineer = new RoleOption { Count = 0, Chance = 100 },
-                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
-                    Tracker = new RoleOption { Count = 0, Chance = 100 },
-                    Viper = new RoleOption { Count = 1, Chance = 100 },
-                    Detective = new RoleOption { Count = 0, Chance = 100 },
-                    Judge = new RoleOption { Count = 0, Chance = 100 },
-
-                    viperDissolveTime = 10f,
-                    DetectiveSuspectLimit = 3f,
-                    JudgeTaskRequirementPercentage = 50f,
-                    EngineerCooldown = 5f,
-                    EngineerInVentMaxTime = 5f,
-                    GuardianAngelCooldown = 35f,
-                    GuardianAngelDuration = 25f,
-                    ScientistCooldown = 10f,
-                    ScientistBattery = 30f,
-                    TrackerCooldown = 10f,
-                    TrackerDelay = 0f,
-                    TrackerDuration = 30f,
-                    NoisemakerAlert = true,
-                    NoisemakerDuration = 10f,
-                    ShapeshifterLeaveSkin = false,
-                    ShapeshifterCooldown = 0f,
-                    ShapeshifterDuration = 30f,
-                    PhantomCooldown = 10f,
-                    PhantomDuration = 30f
-                }
-            };
-        }
-
         private static CustomOptions CreateSnSDefaults()
         {
             return new CustomOptions
@@ -1475,6 +1326,181 @@ namespace BanMod
             };
         }
 
+        private static CustomOptions CreatePnSDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 3,
+                PlayerSpeedMod = 1.75f,
+                CrewLightMod = 0.75f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 0.001f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 1,
+                NumEmergencyMeetings = 2,
+                AnonymousVotes = false,
+                TaskBarMode = AmongUs.GameOptions.TaskBarMode.Normal,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = true,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 15, Chance = 100 },
+                    Phantom = new RoleOption { Count = 3, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 0, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+
+                    viperDissolveTime = 10f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 5f,
+                    EngineerInVentMaxTime = 30f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+
+        private static CustomOptions CreateZombieModeDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 1,
+                PlayerSpeedMod = 2f,
+                CrewLightMod = 1.5f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 0.001f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 1,
+                NumEmergencyMeetings = 2,
+                AnonymousVotes = false,
+                TaskBarMode = AmongUs.GameOptions.TaskBarMode.Normal,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = true,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 15, Chance = 100 },
+                    Phantom = new RoleOption { Count = 3, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 0, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+
+                    viperDissolveTime = 10f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 5f,
+                    EngineerInVentMaxTime = 30f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+        private static CustomOptions CreateHotPotatoDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 1,
+                PlayerSpeedMod = 2f,
+                CrewLightMod = 1.5f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 0.001f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 1,
+                NumEmergencyMeetings = 2,
+                AnonymousVotes = false,
+                TaskBarMode = AmongUs.GameOptions.TaskBarMode.Normal,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = true,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 15, Chance = 100 },
+                    Phantom = new RoleOption { Count = 3, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 0, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+
+                    viperDissolveTime = 10f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 5f,
+                    EngineerInVentMaxTime = 30f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
         private static CustomOptions CreateBanModDefaults()
         {
             return new CustomOptions

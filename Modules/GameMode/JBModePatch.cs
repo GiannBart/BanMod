@@ -14,7 +14,7 @@ public static class SabotageSystemType_UpdateSystem_Patch
 
     public static bool Prefix(PlayerControl player, MessageReader msgReader)
     {
-        if ((GameModeType)Options.GameMode.GetValue() != GameModeType.JBMode)
+        if (!Options.GameMode.GetValue(GameModeType.JBMode))
             return true;
 
         if (!AmongUsClient.Instance.AmHost)
@@ -102,7 +102,7 @@ public static class LogicGameFlowNormal_CheckEndCriteria_Patch
 {
     public static void Prefix()
     {
-        if ((GameModeType)Options.GameMode.GetValue() != GameModeType.JBMode)
+        if (!Options.GameMode.GetValue(GameModeType.JBMode))
             return;
 
         if (!AmongUsClient.Instance.AmHost)

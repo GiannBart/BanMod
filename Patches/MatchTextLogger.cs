@@ -1413,7 +1413,7 @@ public static class MatchTextLogger
     {
         try
         {
-            return ((GameModeType)Options.GameMode.GetValue()).ToString();
+            return (Options.GameMode.Selected).ToString();
         }
         catch
         {
@@ -1578,7 +1578,7 @@ internal static class MatchTextLoggerStartPatch
     [HarmonyPostfix]
     private static void Postfix()
     {
-        if (!FakeMapLobbyUtility.Active && BanMod.EnableLog.Value)
+        if (!FakeMapLobbyUtility.Active && BanMod.EnableMatchLog.Value)
             MatchTextLogger.StartMatch();
     }
 }
@@ -1589,7 +1589,7 @@ internal static class MatchTextLoggerRolePatch
     [HarmonyPostfix]
     private static void Postfix()
     {
-        if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost && BanMod.EnableLog.Value)
+        if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost && BanMod.EnableMatchLog.Value)
         {
             LateTask.New(
                 MatchTextLogger.CaptureInitialRoles,
@@ -1607,7 +1607,7 @@ internal static class MatchTextLoggerTaskPatch
     [HarmonyPostfix]
     private static void Postfix(PlayerControl __instance, [HarmonyArgument(0)] uint idx)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordTask(__instance, idx);
         }
@@ -1624,7 +1624,7 @@ internal static class MatchTextLoggerMeetingStartPatch
         [HarmonyArgument(1)] NetworkedPlayerInfo reportedBody,
         [HarmonyArgument(2)] Il2CppReferenceArray<NetworkedPlayerInfo> deadBodies)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.StartMeeting(__instance, reporter, reportedBody, deadBodies);
         }
@@ -1637,7 +1637,7 @@ internal static class MatchTextLoggerVotePatch
     [HarmonyPostfix]
     private static void Postfix(MeetingHud __instance)
     {
-        if (!BanMod.EnableLog.Value ||
+        if (!BanMod.EnableMatchLog.Value ||
             __instance == null ||
             __instance.playerStates == null)
         {
@@ -1665,7 +1665,7 @@ internal static class MatchTextLoggerVotingCompletePatch
         [HarmonyArgument(1)] NetworkedPlayerInfo exiled,
         [HarmonyArgument(2)] bool isTie)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.FinishMeeting(exiled, isTie, true);
         }
@@ -1678,7 +1678,7 @@ internal static class MatchTextLoggerMeetingDestroyPatch
     [HarmonyPrefix]
     private static void Prefix()
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.FinishMeeting();
         }
@@ -1694,7 +1694,7 @@ internal static class MatchTextLoggerMurderPatch
         [HarmonyArgument(0)] PlayerControl target,
         [HarmonyArgument(1)] MurderResultFlags resultFlags)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordMurder(__instance, target, resultFlags);
         }
@@ -1709,7 +1709,7 @@ internal static class MatchTextLoggerProtectionPatch
         PlayerControl __instance,
         [HarmonyArgument(0)] PlayerControl target)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordProtection(__instance, target);
         }
@@ -1724,7 +1724,7 @@ internal static class MatchTextLoggerEnterVentPatch
         PlayerPhysics __instance,
         [HarmonyArgument(0)] int id)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordVent(__instance, id, true);
         }
@@ -1739,7 +1739,7 @@ internal static class MatchTextLoggerExitVentPatch
         PlayerPhysics __instance,
         [HarmonyArgument(0)] int id)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordVent(__instance, id, false);
         }
@@ -1771,7 +1771,7 @@ internal static class MatchTextLoggerSystemPatch
     {
         if (reader == null)
             return;
-        if (!BanMod.EnableLog.Value) return;
+        if (!BanMod.EnableMatchLog.Value) return;
 
         int position = reader.Position;
         byte amount = reader.ReadByte();
@@ -1787,7 +1787,7 @@ internal static class MatchTextLoggerSabotageFixedPatch
     [HarmonyPostfix]
     private static void Postfix([HarmonyArgument(0)] PlayerTask task)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordSabotageFixed(task);
         }
@@ -1800,7 +1800,7 @@ internal static class MatchTextLoggerNoisemakerPatch
     [HarmonyPostfix]
     private static void Postfix(NoisemakerRole __instance)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordNoisemaker(__instance);
         }
@@ -1819,7 +1819,7 @@ internal static class MatchTextLoggerDisconnectPatch
         [HarmonyArgument(0)] PlayerControl player,
         [HarmonyArgument(1)] DisconnectReasons reason)
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.RecordDisconnect(player, reason);
         }
@@ -1832,7 +1832,7 @@ internal static class MatchTextLoggerEndGamePatch
     [HarmonyPostfix]
     private static void Postfix()
     {
-        if (BanMod.EnableLog.Value)
+        if (BanMod.EnableMatchLog.Value)
         {
             MatchTextLogger.SaveReport();
         }
@@ -1866,7 +1866,7 @@ internal static class MatchTextLoggerChatCommandPatch
         {
             return true;
         }
-        if (!BanMod.EnableLog.Value)
+        if (!BanMod.EnableMatchLog.Value)
         {
             return true;
         }

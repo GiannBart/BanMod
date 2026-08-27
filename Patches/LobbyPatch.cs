@@ -21,7 +21,7 @@ public class LobbyStartPatch
 
     public static void Postfix(LobbyBehaviour __instance)
     {
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
 
         if (BanMod.AktiveLobby.Value)
         {
@@ -658,6 +658,7 @@ public static class LobbyBehaviour_Update_Patch
                 string templateName = mode switch
                 {
                     "SnS" => "WelcomeTemplateSns",
+                    "PnS" => "WelcomeTemplatePns",
                     "KaitoRun" => "WelcomeTemplateKaitoRun",
                     "Default" => "WelcomeTemplate",
                     "TaskRun" => "WelcomeTemplateTaskRun",

@@ -9,8 +9,11 @@ public static class VentRestriction
     public static bool ShouldBlock(
         PlayerControl player)
     {
-        if (Options.GameMode.GetValue() != 0)
+        if (!Options.GameMode.GetValue(GameModeType.SnS) &&
+            !Options.GameMode.GetValue(GameModeType.PnS))
+        {
             return false;
+        }
 
         if (player?.Data?.Role == null)
             return false;

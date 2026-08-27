@@ -899,7 +899,7 @@ public static class Utils
     public static string GetCurrentLobbyMode()
     {
         string lobbymode = "";
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
         bool hideAndSeek = GameManager.Instance.IsHideAndSeek();
         bool Normal = GameManager.Instance.IsNormal();
         if (hideAndSeek)
@@ -913,6 +913,10 @@ public static class Utils
         else if (Normal && gameMode == GameModeType.SnS)
         {
             lobbymode = "SnS";
+        }
+        else if (Normal && gameMode == GameModeType.PnS)
+        {
+            lobbymode = "PnS";
         }
         else if (Normal && gameMode == GameModeType.BanMod)
         {
@@ -1503,6 +1507,7 @@ public static class Utils
         string templateName = mode switch
         {
             "SnS" => "RulesInfoSns",
+            "PnS" => "RulesInfoPns",
             "KaitoRun" => "RulesInfoKaitoRun",
             "Default" => "RulesInfo",
             "TaskRun" => "RulesInfoTaskRun",
@@ -1739,6 +1744,8 @@ public static class Utils
                 "Welcome {player} to BanMod");
             CreateTemplate("WelcomeTemplateSns",
                 "Welcome {player} to BanMod\n Here we're playing SNS mode.");
+            CreateTemplate("WelcomeTemplatePns",
+                "Welcome {player} to BanMod\n Here we're playing PNS mode.");
             CreateTemplate("WelcomeTemplateKaitoRun",
                 "Welcome {player} to BanMod\n Here we're playing KaitoRun mode.");
             CreateTemplate("WelcomeTemplateTaskRun",
@@ -1752,6 +1759,8 @@ public static class Utils
                 "Add Rules for NormalMod");
             CreateTemplate("RulesInfoSns",
                 "Add Rules for SNS");
+            CreateTemplate("RulesInfoPns",
+                "Add Rules for PNS");
             CreateTemplate("RulesInfoKaitoRun",
                 "Add Rules for KaitoRun");
             CreateTemplate("RulesInfoTaskRun",
@@ -3592,7 +3601,9 @@ public static class Utils
             default:
                 return false;
         }
+
     }
+
     public static class VoteContextManager
     {
         public static bool IsForcedVote = false;
@@ -3616,6 +3627,11 @@ public static class Utils
 
 public static class MatchSummary1
 {
+    public static bool ZombieWin = false;
+    public static bool ZombieCrewmateWin = false;
+    public static bool HotPotatoWin = false;
+    public static string HotPotatoWinnerName = "";
+
     public static bool ImpostorWin = false;
     public static bool CrewmateWin = false;
     public static bool JesterWin = false;
@@ -3684,6 +3700,11 @@ public static class MatchSummary1
 
     public static void Reset()
     {
+        ZombieWin = false;
+        ZombieCrewmateWin = false;
+        HotPotatoWin = false;
+        HotPotatoWinnerName = "";
+
         ImpostorWin = false;
         CrewmateWin = false;
         JesterWin = false;
@@ -3758,8 +3779,28 @@ public static class MatchSummary1
                 )
             );
         }
+        if (HotPotatoWin && (Options.GameMode.Selected == GameModeType.HotPotato))
+        {
+            report.AppendLine(
+                "Hot Potato");
 
-        if (TaskWin)
+            report.AppendLine(
+                $"{GetString("WinnerIs")}: " +
+                HotPotatoWinnerName);
+        }
+        else if (ZombieWin && (Options.GameMode.Selected == GameModeType.ZombieMode))
+        {
+            report.AppendLine(
+                GetString("ZombieWins"));
+            AppendTaskProgress(report);
+        }
+        else if (ZombieCrewmateWin && (Options.GameMode.Selected == GameModeType.ZombieMode))
+        {
+            report.AppendLine(
+                GetString("CrewmateWins"));
+            AppendTaskProgress(report);
+        }
+        else if (TaskWin)
         {
             string winnerName =
                 TaskManager.WinnerName;
@@ -4142,7 +4183,7 @@ public class SpawnProtectionChecker : MonoBehaviour
     private void Update()
     {
         if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return;
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
         if (gameMode == GameModeType.KaitoRun)
         {
             if (currentMap == (MapNames)(-1) && ShipStatus.Instance != null)

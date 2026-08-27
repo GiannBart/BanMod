@@ -65,6 +65,9 @@ namespace BanMod
             // GAME MODES
             OptionCategory.GameMode,
             OptionCategory.SNS,
+            OptionCategory.PNS,
+            OptionCategory.HotPotato,
+            OptionCategory.Zombie,
             OptionCategory.FFA,
             OptionCategory.Seeker,
             OptionCategory.Gameplay,
@@ -719,34 +722,37 @@ namespace BanMod
 
             if (option.Category == OptionCategory.Seeker)
             {
-                return IsHideAndSeekSafe();
+                return GameManager.Instance.IsHideAndSeek();
             }
 
+            if (option.Category == OptionCategory.GameMode && GameManager.Instance.IsHideAndSeek())
+            {
+                return false;
+            }
 
-            if (
-                option.Category == OptionCategory.GameMode &&
-                IsHideAndSeekSafe()
-            )
+            if (option.Category == OptionCategory.Zombie && !IsZombieMode())
+            {
+                return false;
+            }
+
+            if (option.Category == OptionCategory.HotPotato && !IsHotPotatoMode())
+            {
+                return false;
+            }
+
+            if (option.Category == OptionCategory.SNS && !IsSnSMode())
             {
                 return false;
             }
 
 
-
-            if (
-                option.Category == OptionCategory.SNS &&
-                !IsSnSMode()
-            )
+            if (option.Category == OptionCategory.PNS && !IsPnSMode())
             {
                 return false;
             }
 
 
-
-            if (
-                option.Category == OptionCategory.FFA &&
-                !IsFFAMode()
-            )
+            if (option.Category == OptionCategory.FFA && !IsFFAMode())
             {
                 return false;
             }
@@ -810,11 +816,8 @@ namespace BanMod
         {
             try
             {
-                return
-                    Options.GameMode != null &&
-                    (GameModeType)
-                        Options.GameMode.GetValue()
-                    == GameModeType.SnS;
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.SnS);
             }
             catch
             {
@@ -822,41 +825,57 @@ namespace BanMod
             }
         }
 
+        private static bool IsZombieMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.ZombieMode);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
+        private static bool IsHotPotatoMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.HotPotato);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool IsPnSMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.PnS);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         private static bool IsFFAMode()
         {
             try
             {
-                return
-                    Options.GameMode != null &&
-                    (GameModeType)
-                        Options.GameMode.GetValue()
-                    == GameModeType.FFA;
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.FFA);
             }
             catch
             {
                 return false;
             }
         }
-
-
-
-        private static bool IsHideAndSeekSafe()
-        {
-            try
-            {
-                return
-                    GameManager.Instance != null &&
-                    GameManager.Instance.IsHideAndSeek();
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-
 
         private static void SetButtonColor(
             PassiveButton button,

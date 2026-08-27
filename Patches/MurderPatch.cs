@@ -18,7 +18,7 @@ internal static class CmdCheckMurder
 {
     public static bool Prefix(PlayerControl __instance)
     {
-        if (__instance == PlayerControl.LocalPlayer && MurderPlayerCombinedPatch.isBlocked)
+        if (__instance == PlayerControl.LocalPlayer && MurderPlayerCombinedPatch.isShapeBlocked)
         {
             return false;
         }
@@ -29,11 +29,11 @@ internal static class CmdCheckMurder
 [HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.MurderPlayer))]
 internal static class MurderPlayerCombinedPatch
 {
-    public static readonly Dictionary<byte, int> misfireCount = new();
-    public static bool isBlocked = false;
+    public static readonly Dictionary<byte, int> misfireCountShape = new();
+    public static bool isShapeBlocked = false;
     public static void Postfix(PlayerControl __instance, [HarmonyArgument(0)] PlayerControl target, [HarmonyArgument(1)] MurderResultFlags resultFlags)
     {
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
 
         if (!AmongUsClient.Instance.AmHost)
         {
@@ -57,26 +57,25 @@ internal static class MurderPlayerCombinedPatch
             if (succeeded)
             {
                 byte playerId = __instance.Data.PlayerId;
-
                 if (target.Data.PlayerId != __instance.shapeshiftTargetPlayerId)
                 {
-                    if (!misfireCount.ContainsKey(playerId))
-                        misfireCount[playerId] = 0;
+                    if (!misfireCountShape.ContainsKey(playerId))
+                        misfireCountShape[playerId] = 0;
 
-                    misfireCount[playerId]++;
-                    int currentMisfires = misfireCount[playerId];
-                    float maxAllowed = Options.MisfiresToSuicide.GetFloat();
+                    misfireCountShape[playerId]++;
+                    int currentMisfires = misfireCountShape[playerId];
+                    float maxAllowed = Options.MisfiresToSuicideSns.GetFloat();
 
                     if (currentMisfires < maxAllowed)
                     {
-                        float penaltyTime = Options.CantKillTime.GetFloat();
+                        float penaltyTime = Options.CantKillTimeSns.GetFloat();
 
                         if (__instance == PlayerControl.LocalPlayer)
                         {
-                            isBlocked = true;
+                            isShapeBlocked = true;
                             LateTask.New(() =>
                             {
-                                isBlocked = false;
+                                isShapeBlocked = false;
                             }, (int)penaltyTime, "SNSResetRole");
                         }
                         else

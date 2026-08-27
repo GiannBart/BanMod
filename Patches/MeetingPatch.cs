@@ -116,7 +116,7 @@ public static class MeetingHudClosePatch
         DoorsReset.ResetDoors();
         if (AmongUsClient.Instance.IsGameOver) return;
         if (GameStates.isLobby) return;
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
         if (Options.Protection10Sec.GetBool())
         {
             Block.StartShieldTimer(PlayerControl.LocalPlayer, 15);
@@ -130,7 +130,7 @@ public static class CombinedReportDeadBodyPatch
 {
     public static bool Prefix(PlayerControl __instance, [HarmonyArgument(0)] NetworkedPlayerInfo target)
     {
-        GameModeType gameMode = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode = Options.GameMode.Selected;
 
         if (!AmongUsClient.Instance.AmHost)
             return true;
@@ -144,13 +144,17 @@ public static class CombinedReportDeadBodyPatch
             return false;
         }
 
-        GameModeType gameMode1 = (GameModeType)Options.GameMode.GetValue();
+        GameModeType gameMode1 = Options.GameMode.Selected;
 
         if (gameMode1 == GameModeType.FFA)
         {
             return false;
         }
         if (gameMode1 == GameModeType.SnS)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.PnS)
         {
             return false;
         }
@@ -172,6 +176,7 @@ public static class CombinedReportDeadBodyPatch
             return false;
 
         if (gameMode == GameModeType.SnS) return false;
+        if (gameMode == GameModeType.PnS) return false;
 
         try
         {

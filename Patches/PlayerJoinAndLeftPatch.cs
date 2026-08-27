@@ -87,7 +87,7 @@ public static class PlayerControlStartUnifiedPatch
         {
             __instance.StartCoroutine(InitialHandshake());
         }
-        if (AmongUsClient.Instance.AmHost && __instance.AmOwner && (GameModeType)Options.GameMode.GetValue() == GameModeType.FFA)
+        if (AmongUsClient.Instance.AmHost && __instance.AmOwner && Options.GameMode.Selected == GameModeType.FFA)
         {
             FfaExternalBridge.SyncGameMode();
             FfaExternalBridge.SyncVentSeconds();
