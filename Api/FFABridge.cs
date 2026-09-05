@@ -7,35 +7,12 @@ namespace BanMod;
 
 public static class OptionalPluginAvailability
 {
-    public static bool Any =>
-        Ffa ||
-        Translate ||
-        Invite ||
-        Chat;
-
     public static bool Ffa => BanModCore.IsAnyPluginLoaded(
         "ffa",
         "Ffa",
         "FFA",
         "freeforall",
         "free_for_all"
-    );
-
-    public static bool Translate => BanModCore.IsAnyPluginLoaded(
-        "translate",
-        "translator",
-        "livetranslator",
-        "live_translator"
-    );
-
-    public static bool Invite => BanModCore.IsAnyPluginLoaded(
-        "invite",
-        "invites"
-    );
-
-    public static bool Chat => BanModCore.IsAnyPluginLoaded(
-        "Chat",
-        "chat"
     );
 }
 
@@ -46,10 +23,12 @@ public static class FfaExternalBridge
     private static FieldInfo EnabledField;
     private static FieldInfo MaxVentSecondsField;
     private static FieldInfo VentBootModeField;
-
-    // NUOVO: modalità a gruppi.
     private static FieldInfo TeamsEnabledField;
     private static FieldInfo TeamCountField;
+
+    private static FieldInfo HotPotatoEnabledField;
+    private static FieldInfo HotPotatoExplosionSecondsField;
+    private static FieldInfo HotPotatoFirstDelaySecondsField;
 
     private static Type VentBootModeEnumType;
 
@@ -57,8 +36,7 @@ public static class FfaExternalBridge
     {
         try
         {
-            return OptionalPluginAvailability.Ffa &&
-                   TryResolve();
+            return OptionalPluginAvailability.Ffa && TryResolve();
         }
         catch
         {
@@ -76,92 +54,81 @@ public static class FfaExternalBridge
                 return false;
             }
 
-            if (FfaAssembly != null &&
-                EnabledField != null)
-            {
+            if (FfaAssembly != null && EnabledField != null)
                 return true;
-            }
 
             ResetCache();
 
             FfaAssembly = AppDomain.CurrentDomain
                 .GetAssemblies()
                 .FirstOrDefault(assembly =>
-                    assembly.GetType(
-                        "FFA.FFAOptions",
-                        false
-                    ) != null
+                    assembly.GetType("FFA.FFAOptions", false) != null
                 );
 
             if (FfaAssembly == null)
                 return false;
 
-            Type ffaOptionsType =
-                FfaAssembly.GetType(
-                    "FFA.FFAOptions",
-                    false
-                );
+            Type ffaOptionsType = FfaAssembly.GetType(
+                "FFA.FFAOptions",
+                false
+            );
 
             Type ventOptionsType =
-                FfaAssembly.GetType(
-                    "FFA.FfaVentOptions",
-                    false
-                ) ??
+                FfaAssembly.GetType("FFA.FfaVentOptions", false) ??
                 FfaAssembly.GetType(
                     "FFA.FfaVentLimitPatch+FfaVentOptions",
                     false
                 );
 
-            Type ventBootOptionsType =
-                FfaAssembly.GetType(
-                    "FFA.FfaVentBootOptions",
-                    false
-                );
-
-            VentBootModeEnumType =
-                FfaAssembly.GetType(
-                    "FFA.FfaVentBootMode",
-                    false
-                );
-
-            EnabledField = ffaOptionsType?.GetField(
-                "Enabled",
-                BindingFlags.Public |
-                BindingFlags.NonPublic |
-                BindingFlags.Static
+            Type ventBootOptionsType = FfaAssembly.GetType(
+                "FFA.FfaVentBootOptions",
+                false
             );
 
-            // NUOVO.
-            TeamsEnabledField = ffaOptionsType?.GetField(
-                "TeamsEnabled",
-                BindingFlags.Public |
-                BindingFlags.NonPublic |
-                BindingFlags.Static
+            VentBootModeEnumType = FfaAssembly.GetType(
+                "FFA.FfaVentBootMode",
+                false
             );
 
-            // NUOVO.
-            TeamCountField = ffaOptionsType?.GetField(
-                "TeamCount",
-                BindingFlags.Public |
-                BindingFlags.NonPublic |
-                BindingFlags.Static
+            EnabledField = FindStaticField(
+                ffaOptionsType,
+                "Enabled"
             );
 
-            MaxVentSecondsField =
-                ventOptionsType?.GetField(
-                    "MaxVentSeconds",
-                    BindingFlags.Public |
-                    BindingFlags.NonPublic |
-                    BindingFlags.Static
-                );
+            TeamsEnabledField = FindStaticField(
+                ffaOptionsType,
+                "TeamsEnabled"
+            );
 
-            VentBootModeField =
-                ventBootOptionsType?.GetField(
-                    "Mode",
-                    BindingFlags.Public |
-                    BindingFlags.NonPublic |
-                    BindingFlags.Static
-                );
+            TeamCountField = FindStaticField(
+                ffaOptionsType,
+                "TeamCount"
+            );
+
+            HotPotatoEnabledField = FindStaticField(
+                ffaOptionsType,
+                "HotPotatoEnabled"
+            );
+
+            HotPotatoExplosionSecondsField = FindStaticField(
+                ffaOptionsType,
+                "HotPotatoExplosionSeconds"
+            );
+
+            HotPotatoFirstDelaySecondsField = FindStaticField(
+                ffaOptionsType,
+                "HotPotatoFirstDelaySeconds"
+            );
+
+            MaxVentSecondsField = FindStaticField(
+                ventOptionsType,
+                "MaxVentSeconds"
+            );
+
+            VentBootModeField = FindStaticField(
+                ventBootOptionsType,
+                "Mode"
+            );
 
             if (EnabledField == null)
             {
@@ -178,18 +145,34 @@ public static class FfaExternalBridge
         }
     }
 
+    private static FieldInfo FindStaticField(
+        Type type,
+        string name)
+    {
+        return type?.GetField(
+            name,
+            BindingFlags.Public |
+            BindingFlags.NonPublic |
+            BindingFlags.Static
+        );
+    }
+
     public static void SyncAll()
     {
         if (!IsAvailable())
             return;
 
         SyncGameMode();
+
         SyncVentSeconds();
         SyncVentMode();
 
-        // NUOVO.
         SyncTeamMode();
         SyncTeamCount();
+
+        SyncHotPotatoMode();
+        SyncHotPotatoExplosionSeconds();
+        SyncHotPotatoFirstDelaySeconds();
     }
 
     public static void SyncGameMode()
@@ -203,8 +186,8 @@ public static class FfaExternalBridge
                 Options.GameMode != null &&
                 Options.GameMode.GetValue(GameModeType.FFA);
 
-            EnabledField?.SetValue(
-                null,
+            SetConvertedValue(
+                EnabledField,
                 enabled
             );
         }
@@ -217,27 +200,15 @@ public static class FfaExternalBridge
     {
         try
         {
-            if (!TryResolve())
-                return;
-
-            if (Options.FfaVentMaxSeconds == null ||
-                MaxVentSecondsField == null)
+            if (!TryResolve() ||
+                Options.FfaVentMaxSeconds == null)
             {
                 return;
             }
 
-            int seconds =
-                Options.FfaVentMaxSeconds.GetValue();
-
-            object convertedValue =
-                Convert.ChangeType(
-                    seconds,
-                    MaxVentSecondsField.FieldType
-                );
-
-            MaxVentSecondsField.SetValue(
-                null,
-                convertedValue
+            SetConvertedValue(
+                MaxVentSecondsField,
+                Options.FfaVentMaxSeconds.GetInt()
             );
         }
         catch
@@ -249,26 +220,18 @@ public static class FfaExternalBridge
     {
         try
         {
-            if (!TryResolve())
-                return;
-
-            if (Options.FFAVentTeleportMode == null)
-                return;
-
-            if (VentBootModeField == null ||
+            if (!TryResolve() ||
+                Options.FFAVentTeleportMode == null ||
+                VentBootModeField == null ||
                 VentBootModeEnumType == null)
             {
                 return;
             }
 
-            int mode =
-                Options.FFAVentTeleportMode.GetValue();
-
-            object enumValue =
-                Enum.ToObject(
-                    VentBootModeEnumType,
-                    mode
-                );
+            object enumValue = Enum.ToObject(
+                VentBootModeEnumType,
+                Options.FFAVentTeleportMode.GetValue()
+            );
 
             VentBootModeField.SetValue(
                 null,
@@ -280,7 +243,6 @@ public static class FfaExternalBridge
         }
     }
 
-
     public static void SyncTeamMode()
     {
         try
@@ -288,31 +250,22 @@ public static class FfaExternalBridge
             if (!TryResolve())
                 return;
 
-            if (TeamsEnabledField == null)
-                return;
+            bool ffaEnabled = IsFfaSelected();
 
-            bool ffaEnabled =
-                Options.GameMode != null &&
-                Options.GameMode.GetValue(GameModeType.FFA);
+            bool hotPotatoEnabled =
+                ffaEnabled &&
+                Options.FfaHotPotatoMode != null &&
+                Options.FfaHotPotatoMode.GetValue() == 1;
 
-            bool teamModeEnabled = false;
+            bool teamModeEnabled =
+                ffaEnabled &&
+                !hotPotatoEnabled &&
+                Options.FfaTeamMode != null &&
+                Options.FfaTeamMode.GetValue() == 1;
 
-            if (ffaEnabled &&
-                Options.FfaTeamMode != null)
-            {
-                teamModeEnabled =
-                    Options.FfaTeamMode.GetValue() == 1;
-            }
-
-            object convertedValue =
-                Convert.ChangeType(
-                    teamModeEnabled,
-                    TeamsEnabledField.FieldType
-                );
-
-            TeamsEnabledField.SetValue(
-                null,
-                convertedValue
+            SetConvertedValue(
+                TeamsEnabledField,
+                teamModeEnabled
             );
         }
         catch
@@ -324,40 +277,23 @@ public static class FfaExternalBridge
     {
         try
         {
-            if (!TryResolve())
-                return;
-
-            if (Options.FfaTeamCount == null ||
-                TeamCountField == null)
+            if (!TryResolve() ||
+                Options.FfaTeamCount == null)
             {
                 return;
             }
 
-            int selectedIndex =
-                Options.FfaTeamCount.GetValue();
-
-            // 0 = 2 team
-            // 1 = 3 team
-            // 2 = 4 team
-            // 3 = 5 team
             int teamCount =
-                selectedIndex + 2;
+                Options.FfaTeamCount.GetValue() + 2;
 
-            if (teamCount < 2)
-                teamCount = 2;
+            teamCount = Math.Max(
+                2,
+                Math.Min(5, teamCount)
+            );
 
-            if (teamCount > 5)
-                teamCount = 5;
-
-            object convertedValue =
-                Convert.ChangeType(
-                    teamCount,
-                    TeamCountField.FieldType
-                );
-
-            TeamCountField.SetValue(
-                null,
-                convertedValue
+            SetConvertedValue(
+                TeamCountField,
+                teamCount
             );
         }
         catch
@@ -365,16 +301,123 @@ public static class FfaExternalBridge
         }
     }
 
+    public static void SyncHotPotatoMode()
+    {
+        try
+        {
+            if (!TryResolve())
+                return;
+
+            bool enabled =
+                IsFfaSelected() &&
+                Options.FfaHotPotatoMode != null &&
+                Options.FfaHotPotatoMode.GetValue() == 1;
+
+            SetConvertedValue(
+                HotPotatoEnabledField,
+                enabled
+            );
+        }
+        catch
+        {
+        }
+    }
+
+    public static void SyncHotPotatoExplosionSeconds()
+    {
+        try
+        {
+            if (!TryResolve() ||
+                Options.FfaHotPotatoExplosionSeconds == null)
+            {
+                return;
+            }
+
+            int seconds = Math.Max(
+                5,
+                Math.Min(
+                    120,
+                    Options.FfaHotPotatoExplosionSeconds.GetInt()
+                )
+            );
+
+            SetConvertedValue(
+                HotPotatoExplosionSecondsField,
+                seconds
+            );
+        }
+        catch
+        {
+        }
+    }
+
+    public static void SyncHotPotatoFirstDelaySeconds()
+    {
+        try
+        {
+            if (!TryResolve() ||
+                Options.FfaHotPotatoFirstDelaySeconds == null)
+            {
+                return;
+            }
+
+            int seconds = Math.Max(
+                0,
+                Math.Min(
+                    30,
+                    Options.FfaHotPotatoFirstDelaySeconds.GetInt()
+                )
+            );
+
+            SetConvertedValue(
+                HotPotatoFirstDelaySecondsField,
+                seconds
+            );
+        }
+        catch
+        {
+        }
+    }
+
+    private static bool IsFfaSelected()
+    {
+        return Options.GameMode != null &&
+               Options.GameMode.GetValue(GameModeType.FFA);
+    }
+
+    private static void SetConvertedValue(
+        FieldInfo field,
+        object value)
+    {
+        if (field == null || value == null)
+            return;
+
+        object convertedValue = Convert.ChangeType(
+            value,
+            field.FieldType
+        );
+
+        field.SetValue(
+            null,
+            convertedValue
+        );
+    }
+
     public static void ResetCache()
     {
         FfaAssembly = null;
 
         EnabledField = null;
+
         MaxVentSecondsField = null;
         VentBootModeField = null;
 
         TeamsEnabledField = null;
         TeamCountField = null;
+
+        HotPotatoEnabledField = null;
+        HotPotatoExplosionSecondsField = null;
+        HotPotatoFirstDelaySecondsField = null;
 
         VentBootModeEnumType = null;
     }

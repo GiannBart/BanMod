@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.7.9";
+    public static string modVersion = "3.8.3";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.7.9";
+    public const string PluginVersion = "3.8.3";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.8.18" };
@@ -78,9 +78,9 @@ public partial class BanMod : BasePlugin
     public static PlayerControl RainbowTarget = null;
     private readonly List<UnityEngine.Component> _banModComponents = new();
     private bool _disableAlreadyStarted = false;
-    public static bool IsBanModDisabled { get; private set; } = false;
+    public static bool instantstart = false;
+
     private static readonly string saveFilePath = Path.Combine(Application.persistentDataPath, "host_setimp_times.txt");
-    //public static void ShowChat(string msg) => DestroyableSingleton<HudManager>.Instance.Chat.AddChat(PlayerControl.LocalPlayer, msg);
 
     public static bool IsProtected(ClientData client)
     {
@@ -98,15 +98,7 @@ public partial class BanMod : BasePlugin
         return Utils.IsVip(friendCode) ||
                Utils.IsModerator(friendCode);
     }
-    private T AddTrackedComponent<T>() where T : UnityEngine.Component
-    {
-        T component = AddComponent<T>();
 
-        if (component != null)
-            _banModComponents.Add(component);
-
-        return component;
-    }
     public float Timer { get; set; }
     public static readonly List<(string Message, byte ReceiverID)> MessagesToSend = [];
     public static readonly Dictionary<byte, Color32> PlayerColors = [];
@@ -366,125 +358,6 @@ public partial class BanMod : BasePlugin
         }
     }
     
-    public static void DisableMod()
-    {
-        BanMod.Instance.Unload();
-        Harmony.UnpatchID("com.GianniBart.BanMod");
-    }
-    public static void ForceDisableMod(string reason = null)
-    {
-        try
-        {
-            if (Instance != null)
-                Instance.DisableBanModInternal(reason);
-        }
-        catch (Exception ex)
-        {
-            try { BMLogger.LogError("[BANMOD] ForceDisableMod failed: " + ex.Message); } catch { }
-        }
-    }
-
-    private void DisableBanModInternal(string reason = null)
-    {
-        if (_disableAlreadyStarted)
-            return;
-
-        _disableAlreadyStarted = true;
-        IsBanModDisabled = true;
-
-        try
-        {
-            BMLogger.LogWarning("[BANMOD] Disabling BANMOD. Reason: " + (reason ?? "No reason provided"));
-        }
-        catch { }
-
-        try
-        {
-            PlayerControl.LocalPlayer.StopAllCoroutines();
-        }
-        catch { }
-
-        try
-        {
-            EveryRandomActive = false;
-            forceImpostor = false;
-        }
-        catch { }
-
-        try
-        {
-            TracersHandler.HideAllArrows();
-        }
-        catch { }
-
-        try
-        {
-            originalIsDeadStates.Clear();
-            playerDeathTimes.Clear();
-            ShieldedPlayers.Clear();
-            UnreportableBodies.Clear();
-            PlayerStates.Clear();
-            ModdedClients.Clear();
-            forcedImpostorIds.Clear();
-            MessagesToSend.Clear();
-            PlayerColors.Clear();
-            SayStartTimes.Clear();
-            SayBanwordsTimes.Clear();
-        }
-        catch { }
-
-        try
-        {
-            foreach (var component in _banModComponents.ToArray())
-            {
-                if (component != null)
-                    Object.Destroy(component);
-            }
-
-            _banModComponents.Clear();
-        }
-        catch (Exception ex)
-        {
-            try { BMLogger.LogError("[BANMOD] Error while destroying components: " + ex.Message); } catch { }
-        }
-
-        try
-        {
-            keyBindOptions = null;
-            hostControl = null;
-            moderatorUi = null;
-            msgMenu = null;
-            playerUI = null;
-            setplayerUI = null;
-            skinUI = null;
-            nameUI = null;
-            visualOptions = null;
-            playerTaskManager = null;
-            RainbowTarget = null;
-            RoomZoneManagerInstance = null;
-        }
-        catch { }
-
-        try { BanModLoginRuntime.Shutdown(); } catch { }
-        try { BanModCore.StopAllPremiumModules(); } catch { }
-
-        try
-        {
-            Harmony.UnpatchSelf();
-        }
-        catch (Exception ex)
-        {
-            try { BMLogger.LogError("[BANMOD] Harmony UnpatchSelf failed: " + ex.Message); } catch { }
-
-            try { HarmonyLib.Harmony.UnpatchID(PluginGuid); } catch { }
-        }
-
-        try
-        {
-            BMLogger.LogWarning("[BANMOD] BANMOD disabled successfully.");
-        }
-        catch { }
-    }
     public static void LoadHostSetTimes()
     {
         try
@@ -501,6 +374,7 @@ public partial class BanMod : BasePlugin
             HostSelfSetTimes = new List<DateTime>(); 
         }
     }
+    public static bool UnlockingAllChat = false;
     public static ConfigEntry<bool> EnableMatchLog { get; private set; }
     public static ConfigEntry<bool> EnableChatLog { get; private set; }
     public static ConfigEntry<bool> ShowFPS { get; private set; }
@@ -515,7 +389,7 @@ public partial class BanMod : BasePlugin
     public static ConfigEntry<bool> AddBanToList { get; private set; }
     public static ConfigEntry<bool> NoGameEnd { get; private set; }
     public static ConfigEntry<bool> EnableZoom { get; private set; }
-    //public static ConfigEntry<bool> Teleport { get; private set; }
+    public static ConfigEntry<bool> EnableAllChat { get; private set; }
     public static ConfigEntry<bool> SwitchVanilla { get; private set; }
     public static ConfigEntry<bool> SeeRoleMeeting { get; private set; }
     public static ConfigEntry<bool> VoteLockEnabled { get; private set; }
@@ -536,6 +410,13 @@ public partial class BanMod : BasePlugin
     public static bool ShowInfo { get; set; }
     public static bool UseCustomNames { get; set; }
     public static ConfigEntry<bool> CustomMouse;
+    public static bool IsBanModDisabled { get; private set; } = false;
+    public static void DisableMod()
+    {
+        BanMod.Instance.Unload();
+        Harmony.UnpatchID("com.GianniBart.BanMod");
+        IsBanModDisabled = true;
+    }
     public static void DisableAllRoles()
     {
         if (!Options.DisableRole.GetBool()) return;
@@ -577,12 +458,9 @@ public partial class BanMod : BasePlugin
     }
     public override void Load()
     {
-        if (BanMod.IsBanModDisabled) return;
         Instance = this;
         PluginLogger = Log;
         BMLogger.Init(PluginLogger);
-        try { BanModCore.Init(Log); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.Init failed: " + ex.Message); } catch { } }
-
         EnableMatchLog = Config.Bind("Client Options", "EnableMatchLog", true); 
         EnableChatLog = Config.Bind("Client Options", "EnableChatLog", true);
         ShowFPS = Config.Bind("Client Options", "ShowFPS", false);
@@ -597,7 +475,7 @@ public partial class BanMod : BasePlugin
         AddBanToList = Config.Bind("Client Options", "AddBanToList", true);
         NoGameEnd = Config.Bind("Client Options", "NoGameEnd", false);
         EnableZoom = Config.Bind("Client Options", "EnableZoom", false);
-        //Teleport = Config.Bind("Client Options", "Teleport", true);
+        EnableAllChat = Config.Bind("Client Options", "EnableAllChat", false);
         SeeRoleMeeting = Config.Bind("Client Options", "SeeRoleMeeting", true);
         VoteLockEnabled = Config.Bind("Client Options", "VoteLockEnabled", true);
         SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", true);
@@ -637,7 +515,8 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<BanModLoginUi>();
         ClassInjector.RegisterTypeInIl2Cpp<PresetMenuUi>();
         ClassInjector.RegisterTypeInIl2Cpp<ServerSelectionMenu>();
-
+        ClassInjector.RegisterTypeInIl2Cpp<AutoFriendInviteUi>();
+        ClassInjector.RegisterTypeInIl2Cpp<LiveTranslatorMenu>();
 
         TemplateLoader.InitTemplates();
         TemplateLoader.LoadTemplate("WelcomeTemplate");
@@ -666,29 +545,33 @@ public partial class BanMod : BasePlugin
         SetRecommendationsPatch.LoadUserPresetFile(2);
         SetRecommendationsPatch.LoadUserPresetFile(3);
         SetRecommendationsPatch.LoadUserPresetFile(4);
-        keyBindOptions = AddTrackedComponent<KeyBindOptions>();
-        hostControl = AddTrackedComponent<HostControl>();
-        moderatorUi = AddTrackedComponent<ModeratorUi>();
-        msgMenu = AddTrackedComponent<MsgMenu>();
-        skinUI = AddTrackedComponent<SkinUI>();
-        nameUI = AddTrackedComponent<NameUI>();
-        visualOptions = AddTrackedComponent<VisualOptions>();
-        playerTaskManager = AddTrackedComponent<PlayerTaskManager>();
-        playerUI = AddTrackedComponent<PlayerUI>();
-        setplayerUI = AddTrackedComponent<SetPlayerUi>();
-        AddTrackedComponent<SpawnProtectionChecker>();
-        AddTrackedComponent<SpawnProtectionChecker1>();
-        AddTrackedComponent<PlayerPositionUpdater>();
-        AddTrackedComponent<PlayerMouseController>();
-        AddTrackedComponent<BanModUpdateHandler>();
-        AddTrackedComponent<BanModGUI>();
-        AddTrackedComponent<PremiumChatUI>();
-        AddTrackedComponent<PreviousMatchSummaryUi>();
-        AddTrackedComponent<BanModCommunicationUi>();
-        AddTrackedComponent<BanModLoginUi>();
-        AddTrackedComponent<CustomHatSceneRenderer>();
-        AddTrackedComponent<PresetMenuUi>();
-        AddTrackedComponent<ServerSelectionMenu>();
+        keyBindOptions = AddComponent<KeyBindOptions>();
+        hostControl = AddComponent<HostControl>();
+        moderatorUi = AddComponent<ModeratorUi>();
+        msgMenu = AddComponent<MsgMenu>();
+        skinUI = AddComponent<SkinUI>();
+        nameUI = AddComponent<NameUI>();
+        visualOptions = AddComponent<VisualOptions>();
+        playerTaskManager = AddComponent<PlayerTaskManager>();
+        playerUI = AddComponent<PlayerUI>();
+        setplayerUI = AddComponent<SetPlayerUi>();
+        AddComponent<SpawnProtectionChecker>();
+        AddComponent<SpawnProtectionChecker1>();
+        AddComponent<PlayerPositionUpdater>();
+        AddComponent<PlayerMouseController>();
+        AddComponent<BanModUpdateHandler>();
+        AddComponent<BanModGUI>();
+        AddComponent<PremiumChatUI>();
+        AddComponent<PreviousMatchSummaryUi>();
+        AddComponent<BanModCommunicationUi>();
+        AddComponent<BanModLoginUi>();
+        AddComponent<CustomHatSceneRenderer>();
+        AddComponent<PresetMenuUi>();
+        AddComponent<ServerSelectionMenu>();
+        AddComponent<AutoFriendInviteUi>();
+        AddComponent<LiveTranslatorMenu>();
+
+        LiveTranslator.Initialize(Config);
 
         BMLogger.LogInfo("[BanMod] BanModManager creato e avviato correttamente ✅");
         TracersHandler.ArrowSprite = LoadSprite("BanMod.Resources.image.Arrow.png", 100f);
@@ -701,20 +584,17 @@ public partial class BanMod : BasePlugin
         FixedUpdateUnifiedPatch.LoadCustomNames();
         CustomHatManager.InitEmbeddedHats();
         Harmony.PatchAll();
-        try { BanModCore.RequestStartup(); } catch (Exception ex) { try { BMLogger.LogError("[BANMOD] BanModCore.RequestStartup failed: " + ex.Message); } catch { } }
-        try { AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { BanModLoginRuntime.Shutdown(); } catch { } try { BanModCore.StopAllPremiumModules(); } catch { } }; } catch { }
         BMLogger.LogInfo("BanMod loaded successfully!");
         visualOptions.LoadSettings();
         BMLogger.LogInfo("BanMod loaded and settings synchronized!");
-   
+        IsBanModDisabled = false;
+
     }
     [HarmonyPatch(typeof(ModManager), nameof(ModManager.LateUpdate))]
     class ModManagerLateUpdatePatch
     {
         public static void Prefix(ModManager __instance)
         {
-            if (BanMod.IsBanModDisabled) return;
-
             LateTask.Update(Time.deltaTime);
         }
     }
@@ -723,8 +603,6 @@ public partial class BanMod : BasePlugin
     {
         void Update()
         {
-            if (BanMod.IsBanModDisabled)
-                return;
             bool modOptionsOpen = GameSettingMenuPatch.SettingsTab != null && GameSettingMenuPatch.SettingsTab.gameObject != null && GameSettingMenuPatch.SettingsTab.gameObject.activeInHierarchy;
             try
             {
@@ -735,7 +613,7 @@ public partial class BanMod : BasePlugin
                         BanMod.DisableAllRoles();
                     }
                 }
-                if (Options.GameMode != null && !Options.GameMode.GetValue(GameModeType.Default) && GameManager.Instance.IsHideAndSeek())
+                if (GameStates.isLobby && Options.GameMode != null && !Options.GameMode.GetValue(GameModeType.Default) && GameManager.Instance.IsHideAndSeek())
                 {
                     Options.GameMode.SetValue(GameModeType.Default);
                     Options.ReOpenSettings();

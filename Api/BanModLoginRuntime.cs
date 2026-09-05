@@ -4,6 +4,7 @@ using System.Collections;
 using System.Reflection;
 using System.Text.Json;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
+using HarmonyLib;
 using UnityEngine;
 
 namespace BanMod
@@ -43,6 +44,59 @@ namespace BanMod
 
     public sealed class BanModLoginRuntimeHost
     {
+        private static readonly object UiSync = new object();
+        private static string _pendingModelJson = "";
+        private static Action<string> _pendingSubmit;
+
+        internal static bool HasPendingLoginMenu
+        {
+            get
+            {
+                lock (UiSync)
+                    return _pendingSubmit != null && !string.IsNullOrWhiteSpace(_pendingModelJson);
+            }
+        }
+
+        internal static void TryPresentPendingLoginMenu()
+        {
+            string modelJson;
+            Action<string> callback;
+            lock (UiSync)
+            {
+                modelJson = _pendingModelJson;
+                callback = _pendingSubmit;
+            }
+
+            if (callback == null || string.IsNullOrWhiteSpace(modelJson))
+                return;
+
+            try
+            {
+                BanModLoginUi.EnsureCreated();
+                if (BanModLoginUi.Instance == null)
+                    return;
+
+                BanModLoginSubmitBridge.SetCallback(callback);
+                if (!BanModLoginUi.IsOpen)
+                {
+                    BanModLoginUi.Instance.ShowFromJson(modelJson);
+                    Debug.Log("[BANMOD][LOGIN] Premium selector opened.");
+                }
+            }
+            catch (Exception ex)
+            {
+                try { Debug.LogError("[BANMOD][LOGIN] Pending UI presentation failed: " + ex); } catch { }
+            }
+        }
+
+        private static void ClearPendingLoginMenu()
+        {
+            lock (UiSync)
+            {
+                _pendingModelJson = "";
+                _pendingSubmit = null;
+            }
+        }
         public string GetSnapshotJson()
         {
             var payload = new
@@ -50,7 +104,6 @@ namespace BanMod
                 api_base_url = BanModCore.PublicApiBaseUrl,
                 friend_code = BanModCore.GetCurrentFriendCode(),
                 player_name = BanModCore.GetCurrentPlayerName(),
-                activation_token = BanModCore.GetCurrentActivationToken(),
                 banmod_sha256 = BanModCore.GetCurrentBanModSha256(),
                 build_id = BanModCore.GetCurrentBuildId(),
                 login_bin_sha256 = BanModLoginRuntime.LoginBinSha256,
@@ -63,20 +116,17 @@ namespace BanMod
 
         public void ShowLoginMenu(string modelJson, Action<string> onSubmit)
         {
-            try
-            {
-                BanModLoginSubmitBridge.SetCallback(onSubmit);
-                BanModLoginUi.EnsureCreated();
+            if (onSubmit == null)
+                throw new ArgumentNullException(nameof(onSubmit));
 
-                if (BanModLoginUi.Instance == null)
-                    throw new InvalidOperationException("The login UI component could not be created.");
-
-                BanModLoginUi.Instance.ShowFromJson(modelJson);
-            }
-            catch
+            lock (UiSync)
             {
-                BanModLoginSubmitBridge.ClearCallback();
+                _pendingModelJson = modelJson ?? "{}";
+                _pendingSubmit = onSubmit;
             }
+
+            try { Debug.Log("[BANMOD][LOGIN] Premium selector queued."); } catch { }
+            TryPresentPendingLoginMenu();
         }
 
         public void SetLoginStatus(string message, bool isError)
@@ -91,6 +141,7 @@ namespace BanMod
 
         public void CloseLoginMenu()
         {
+            ClearPendingLoginMenu();
             try { BanModLoginUi.Instance?.Close(); } catch { }
             BanModLoginSubmitBridge.ClearCallback();
         }
@@ -105,19 +156,14 @@ namespace BanMod
             BanModCore.RequestPremiumRefresh();
         }
 
-        public void DisableMod(string reason)
-        {
-            BanMod.ForceDisableMod(reason);
-        }
-
         public void LogInfo(string message)
         {
-            _ = message;
+            try { Debug.Log("[BANMOD][LOGIN] " + (message ?? "")); } catch { }
         }
 
         public void LogWarning(string message)
         {
-            _ = message;
+            try { Debug.LogWarning("[BANMOD][LOGIN] " + (message ?? "")); } catch { }
         }
     }
 
@@ -249,6 +295,25 @@ namespace BanMod
         internal static void LogWarning(string message)
         {
             _ = message;
+        }
+    }
+
+
+    [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.Update))]
+    internal static class BanModLoginUiBootstrapPatch
+    {
+        public static void Postfix()
+        {
+            try
+            {
+                BanModLoginUi.EnsureCreated();
+                if (BanModLoginRuntimeHost.HasPendingLoginMenu)
+                    BanModLoginRuntimeHost.TryPresentPendingLoginMenu();
+            }
+            catch (Exception ex)
+            {
+                try { Debug.LogError("[BANMOD][LOGIN] UI bootstrap failed: " + ex); } catch { }
+            }
         }
     }
 }

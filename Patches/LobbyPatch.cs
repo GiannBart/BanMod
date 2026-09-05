@@ -664,6 +664,8 @@ public static class LobbyBehaviour_Update_Patch
                     "TaskRun" => "WelcomeTemplateTaskRun",
                     "JBMode" => "WelcomeTemplateJBMode",
                     "FFA" => "WelcomeTemplateFFA",
+                    "ZombieMode" => "WelcomeTemplateZombieMode",
+                    "HotPotato" => "WelcomeTemplateHotPotato",
                     _ => "WelcomeTemplate"
                 };
 

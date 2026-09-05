@@ -1038,6 +1038,7 @@ namespace BanMod
 
             private static float nextScanTime;
             private static float hostVentActionGraceUntil;
+            private static bool meetingWasActive;
 
             private static bool VentExists(int ventId)
             {
@@ -1064,6 +1065,19 @@ namespace BanMod
                 LastAlertAt.Clear();
                 nextScanTime = 0f;
                 hostVentActionGraceUntil = 0f;
+                meetingWasActive = false;
+            }
+
+            private static void ResetTransientVentState(float now)
+            {
+                ExpectedVentByPlayer.Clear();
+                LastOperationTime.Clear();
+                VentAnchorPosition.Clear();
+                LastInVentState.Clear();
+                LastInVentStateChangedAt.Clear();
+                ConditionStartedAt.Clear();
+                nextScanTime = 0f;
+                hostVentActionGraceUntil = now + HostVentActionGraceSeconds;
             }
 
             public static void RegisterOperation(
@@ -1148,13 +1162,35 @@ namespace BanMod
                     !Options.EnableAntiCheat.GetBool() ||
                     !Options.KickVentCheat.GetBool() ||
                     AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started ||
-                    ShipStatus.Instance == null ||
-                    MeetingHud.Instance != null)
+                    ShipStatus.Instance == null)
                 {
                     return;
                 }
 
                 float now = Time.realtimeSinceStartup;
+                bool meetingActive = MeetingHud.Instance != null;
+
+                // Un meeting forza l'uscita dalle vent e rende obsoleto lo stato
+                // ExpectedVentByPlayer. Lo puliamo sia all'apertura sia alla chiusura
+                // del meeting per evitare falsi positivi post-meeting.
+                if (meetingActive)
+                {
+                    if (!meetingWasActive)
+                    {
+                        ResetTransientVentState(now);
+                        meetingWasActive = true;
+                        LogDebug("Vent state cleared at meeting start.");
+                    }
+
+                    return;
+                }
+
+                if (meetingWasActive)
+                {
+                    ResetTransientVentState(now);
+                    meetingWasActive = false;
+                    LogDebug("Vent state cleared at meeting end.");
+                }
 
                 if (now < nextScanTime)
                     return;
@@ -1226,7 +1262,7 @@ namespace BanMod
                         now
                     );
 
-                    if (!operationGrace && fakeInsidePersisted)
+                    if (!suppressPhysicalChecks && fakeInsidePersisted)
                     {
                         Report(
                             player,
@@ -1486,7 +1522,12 @@ public static class ShipStatus_UpdateSystem_Patch
         [HarmonyArgument(2)] Hazel.MessageReader reader)
     {
         if (!AmongUsClient.Instance.AmHost || player == null || reader == null) return;
-        if (MeetingHud.Instance != null) return;
+
+        bool meetingActive = MeetingHud.Instance != null;
+
+        // Durante il meeting ignoriamo gli altri sistemi, ma continuiamo
+        // a leggere Ventilation per accettare eventuali operazioni di cleanup.
+        if (meetingActive && systemType != SystemTypes.Ventilation) return;
 
         SystemTypes[] monitoredSystems = new SystemTypes[]
         {
@@ -1526,17 +1567,34 @@ public static class ShipStatus_UpdateSystem_Patch
                     VentilationSystem.Operation operation =
                         (VentilationSystem.Operation)rawOperation;
 
-                    AntiCheat.VentStateMonitor.RegisterOperation(
-                        player,
-                        operation,
-                        ventId
-                    );
+                    bool canRegisterOperation =
+                        !meetingActive ||
+                        operation == VentilationSystem.Operation.Exit ||
+                        operation == VentilationSystem.Operation.StartCleaning ||
+                        operation == VentilationSystem.Operation.BootImpostors;
 
-                    BMLogger.LogDebug(
-                        $"Vent state registered | Player={playerName} | " +
-                        $"Sid={sequenceId} | Operation={operation} | Vent={ventId}",
-                        LogTag
-                    );
+                    if (canRegisterOperation)
+                    {
+                        AntiCheat.VentStateMonitor.RegisterOperation(
+                            player,
+                            operation,
+                            ventId
+                        );
+
+                        BMLogger.LogDebug(
+                            $"Vent state registered | Player={playerName} | " +
+                            $"Sid={sequenceId} | Operation={operation} | Vent={ventId}",
+                            LogTag
+                        );
+                    }
+                    else
+                    {
+                        BMLogger.LogDebug(
+                            $"Vent state ignored during meeting | Player={playerName} | " +
+                            $"Sid={sequenceId} | Operation={operation} | Vent={ventId}",
+                            LogTag
+                        );
+                    }
                 }
             }
             catch (Exception ex)
@@ -1551,7 +1609,9 @@ public static class ShipStatus_UpdateSystem_Patch
                 reader.Position = originalVentReaderPosition;
             }
 
-            AntiCheat.VentAntiCheat.RegisterVentBoot(player);
+            if (!meetingActive)
+                AntiCheat.VentAntiCheat.RegisterVentBoot(player);
+
             return;
         }
 

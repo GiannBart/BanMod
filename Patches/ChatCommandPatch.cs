@@ -502,12 +502,13 @@ internal class ChatCommands
 
             case "/instantstart":
                 {
-                    bool oldNocountdown = Options.nocountdown.GetBool();
                     var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
+                    BanMod.instantstart = true;
                     if (manager != null)
                     {
                         manager.BeginGame();
                     }
+                    BanMod.instantstart = false;
                     return true;
                 }
 
@@ -2085,6 +2086,18 @@ internal class ChatCommands
             return false;
         }
     }
+    private static void ReportModChat(
+    PlayerControl moderator,
+    string action,
+    PlayerControl target = null)
+    {
+        ModeratorAuthority.ReportModeratorUsage(
+            moderator,
+            action,
+            target?.PlayerId ?? byte.MaxValue,
+            "CHAT"
+        );
+    }
     private static PlayerControl FindPlayerByIdOrColor(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -2182,8 +2195,17 @@ internal class ChatCommands
             case "/sbanon":
                 {
                     canceled = true;
-                    if (!isModerator) return;
+
+                    if (!isModerator)
+                        return;
+
                     superban = true;
+
+                    ReportModChat(
+                        player,
+                        "Enable SuperBan (/sbanon)"
+                    );
+
                     return;
                 }
             case "/sban":
@@ -2226,16 +2248,29 @@ internal class ChatCommands
                     SilentPermanentFriendCodeBan.Initialize();
                     SilentPermanentFriendCodeBan.AddDeferred(friendCode);
                     superban = false;
+                    ReportModChat(
+                        player,
+                        "SuperBan (/sban)",
+                        targetPlayer
+                    );
                     return;
                 }
 
             case "/public":
             case "/private":
                 {
-                    if (!isModerator) return;
-                    {
-                        CmdPrivate_Public();
-                    }
+                    if (!isModerator)
+                        return;
+
+                    ReportModChat(
+                        player,
+                        command == "/public"
+                            ? "Public Lobby (/public)"
+                            : "Private Lobby (/private)"
+                    );
+
+                    CmdPrivate_Public();
+
                     return;
                 }
             case "/end":
@@ -2249,75 +2284,169 @@ internal class ChatCommands
 
             case "/instantstart":
                 {
-                    if (!isModerator) return;
-                    bool oldNocountdown = Options.nocountdown.GetBool();
-                    var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
+                    if (!isModerator)
+                        return;
+
+                    var manager =
+                        UnityEngine.Object.FindObjectOfType<GameStartManager>();
+
                     if (manager != null)
                     {
+                        ReportModChat(
+                            player,
+                            "Instant Start (/instantstart)"
+                        );
+                        BanMod.instantstart = true;
                         manager.BeginGame();
+                        BanMod.instantstart = false;
                     }
+
                     return;
                 }
 
             case "/start":
                 {
-                    if (!isModerator) return;
+                    if (!isModerator)
+                        return;
+
                     bool oldNocountdown = Options.nocountdown.GetBool();
-                    var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
+
+                    var manager =
+                        UnityEngine.Object.FindObjectOfType<GameStartManager>();
+
                     if (manager != null)
                     {
+                        ReportModChat(
+                            player,
+                            "Start Game (/start)"
+                        );
+
                         manager.BeginGame();
                     }
+
                     return;
                 }
 
             case "/meeting":
                 {
-                    if (!isModerator) return;
+                    if (!isModerator)
+                        return;
+
+                    ReportModChat(
+                        player,
+                        "Call Meeting (/meeting)"
+                    );
+
                     player.CmdReportDeadBody(null);
+
                     return;
                 }
             case "/destroy":
                 {
-                    if (!isModerator) return;
+                    if (!isModerator)
+                        return;
+
+                    ReportModChat(
+                        player,
+                        "Destroy Lobby (/destroy)"
+                    );
+
                     Utils.DestroyMap();
-                    ShowChat("<color=#ff0000>[MapCheats]</color> Map/Lobby successfully destroyed!");
+
+                    ShowChat(
+                        "<color=#ff0000>[MapCheats]</color> Map/Lobby successfully destroyed!"
+                    );
+
                     return;
                 }
 
             case "/spawn":
             case "/lobby":
                 {
-                    if (!isModerator) return;
+                    if (!isModerator)
+                        return;
+
+                    ReportModChat(
+                        player,
+                        command == "/spawn"
+                            ? "Spawn Lobby (/spawn)"
+                            : "Spawn Lobby (/lobby)"
+                    );
+
                     Utils.SpawnLobby();
-                    ShowChat("<color=#00ffff>[MapCheats]</color> Lobby successfully created!");
+
+                    ShowChat(
+                        "<color=#00ffff>[MapCheats]</color> Lobby successfully created!"
+                    );
+
                     return;
                 }
             case "/endgame":
                 {
-                    if (!isModerator) return;
-                    GameManager.Instance.RpcEndGame(GameOverReason.CrewmatesByTask, false);
+                    if (!isModerator)
+                        return;
+
+                    if (GameManager.Instance == null)
+                        return;
+
+                    ReportModChat(
+                        player,
+                        "End Game (/endgame)"
+                    );
+
+                    GameManager.Instance.RpcEndGame(
+                        GameOverReason.CrewmatesByTask,
+                        false
+                    );
+
                     return;
                 }
 
             case "/endmeeting":
-                if (!isModerator) return;
-                PlayerControl.LocalPlayer.StartCoroutine(Utils.DelayedCloseMeeting());
-                return;
+                {
+                    if (!isModerator)
+                        return;
+
+                    if (MeetingHud.Instance == null)
+                        return;
+
+                    ReportModChat(
+                        player,
+                        "End Meeting (/endmeeting)"
+                    );
+
+                    PlayerControl.LocalPlayer.StartCoroutine(
+                        Utils.DelayedCloseMeeting()
+                    );
+
+                    return;
+                }
 
             case "/every":
-                if (!isModerator) return;
                 {
-                    subArgs = args.Length < 2 ? "" : args[1];
-                    byte color = Utils.MsgToColor(subArgs, true);
-                    if (color == byte.MaxValue)
-                    {
+                    if (!isModerator)
                         return;
-                    }
+
+                    subArgs = args.Length < 2 ? "" : args[1];
+
+                    byte color = Utils.MsgToColor(
+                        subArgs,
+                        true
+                    );
+
+                    if (color == byte.MaxValue)
+                        return;
+
+                    ReportModChat(
+                        player,
+                        $"Set Everyone Color (/every {subArgs})"
+                    );
+
                     foreach (var allplayer in PlayerControl.AllPlayerControls)
                     {
                         allplayer.RpcSetColor(color);
                     }
+
                     return;
                 }
 
@@ -2356,12 +2485,26 @@ internal class ChatCommands
                         return;
                     }
 
-                    BanManager.AddBanPlayer(client, "ModeratorBan", true);
+                    ReportModChat(
+                        player,
+                        "Ban (/ban)",
+                        targetPlayer
+                    );
+
+                    BanManager.AddBanPlayer(
+                        client,
+                        "ModeratorBan",
+                        true
+                    );
 
                     try
                     {
                         BanMod.AddBanToList.Value = false;
-                        AmongUsClient.Instance.KickPlayer(client.Id, true);
+
+                        AmongUsClient.Instance.KickPlayer(
+                            client.Id,
+                            true
+                        );
                     }
                     finally
                     {
@@ -2403,17 +2546,39 @@ internal class ChatCommands
                     {
                         return;
                     }
-                    AmongUsClient.Instance.KickPlayer(client.Id, false);
+
+                    ReportModChat(
+                        player,
+                        "Kick (/kick)",
+                        targetPlayer
+                    );
+
+                    AmongUsClient.Instance.KickPlayer(
+                        client.Id,
+                        false
+                    );
+
                     return;
                 }
 
             case "/summary":
                 {
-                    if (!isModerator) return;
-                    string report1 = MatchSummary1.GetSummaryReport();
-                    {
-                        Utils.SendMessage(report1, 255);
-                    }
+                    if (!isModerator)
+                        return;
+
+                    string report1 =
+                        MatchSummary1.GetSummaryReport();
+
+                    ReportModChat(
+                        player,
+                        "Match Summary (/summary)"
+                    );
+
+                    Utils.SendMessage(
+                        report1,
+                        255
+                    );
+
                     return;
                 }
 

@@ -418,16 +418,16 @@ namespace BanMod
 
         private static async Task SendToServerWhenReadyAsync(string friendCode, string hashedPuid, string playerName, string platform, string hackUsed)
         {
-            string token = await WaitForActivationTokenAsync();
-            if (string.IsNullOrWhiteSpace(token))
+            string apiFriendCode = await WaitForFriendCodeAsync();
+            if (string.IsNullOrWhiteSpace(apiFriendCode))
             {
-                BMLogger.Warn("[CheaterManager] Token non disponibile: cheater mantenuto solo nel file locale.", "AntiCheat");
+                BMLogger.Warn("[CheaterManager] FriendCode non disponibile: cheater mantenuto solo nel file locale.", "AntiCheat");
                 return;
             }
 
             for (int attempt = 1; attempt <= StartupHttpAttempts; attempt++)
             {
-                if (await SendToServerAsync(token, friendCode, hashedPuid, playerName, platform, hackUsed))
+                if (await SendToServerAsync(apiFriendCode, friendCode, hashedPuid, playerName, platform, hackUsed))
                     return;
 
                 if (attempt < StartupHttpAttempts)
@@ -435,7 +435,7 @@ namespace BanMod
             }
         }
 
-        private static async Task<bool> SendToServerAsync(string token, string friendCode, string hashedPuid, string playerName, string platform, string hackUsed)
+        private static async Task<bool> SendToServerAsync(string apiFriendCode, string friendCode, string hashedPuid, string playerName, string platform, string hackUsed)
         {
             try
             {
@@ -448,11 +448,7 @@ namespace BanMod
                     + "}";
 
                 using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, BanModApiConfig.CheatersAddUrl);
-                request.Headers.Add("Authorization", "Bearer " + token);
-                request.Headers.Add("X-BANMOD-ModId", BanModApiTokenManager.ModId);
-                request.Headers.Add("X-BANMOD-FriendCode", BanModCore.GetCurrentFriendCode());
-                request.Headers.Add("X-BANMOD-PlayerName", BanModCore.GetCurrentPlayerName());
-                request.Headers.Add("X-BANMOD-Platform", "Unknown");
+                request.Headers.Add("X-BANMOD-FriendCode", apiFriendCode);
                 request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 using HttpResponseMessage response = await httpClient.SendAsync(request);
@@ -491,11 +487,11 @@ namespace BanMod
 
         private static async Task SyncFromServerAtStartupAsync()
         {
-            string token = await WaitForActivationTokenAsync();
+            string apiFriendCode = await WaitForFriendCodeAsync();
 
-            if (string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(apiFriendCode))
             {
-                BMLogger.Warn("[CheaterManager] Sincronizzazione iniziale saltata: token non disponibile.", "AntiCheat");
+                BMLogger.Warn("[CheaterManager] Sincronizzazione iniziale saltata: FriendCode non disponibile.", "AntiCheat");
                 return;
             }
 
@@ -504,17 +500,13 @@ namespace BanMod
                 try
                 {
                     using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, BanModApiConfig.CheatersUrl);
-                    request.Headers.Add("Authorization", "Bearer " + token);
-                    request.Headers.Add("X-BANMOD-ModId", BanModApiTokenManager.ModId);
-                    request.Headers.Add("X-BANMOD-FriendCode", BanModCore.GetCurrentFriendCode());
-                    request.Headers.Add("X-BANMOD-PlayerName", BanModCore.GetCurrentPlayerName());
-                    request.Headers.Add("X-BANMOD-Platform", "Unknown");
+                    request.Headers.Add("X-BANMOD-FriendCode", apiFriendCode);
 
                     using HttpResponseMessage response = await httpClient.SendAsync(request);
 
                     if ((int)response.StatusCode == 401)
                     {
-                        BMLogger.Warn("[CheaterManager] Token rifiutato durante la sincronizzazione iniziale.", "AntiCheat");
+                        BMLogger.Warn("[CheaterManager] FriendCode rifiutato durante la sincronizzazione iniziale.", "AntiCheat");
                         return;
                     }
 
@@ -556,13 +548,13 @@ namespace BanMod
             }
         }
 
-        private static async Task<string> WaitForActivationTokenAsync()
+        private static async Task<string> WaitForFriendCodeAsync()
         {
             for (int i = 0; i < StartupTokenWaitAttempts; i++)
             {
-                string token = GetAvailableActivationToken();
-                if (!string.IsNullOrWhiteSpace(token))
-                    return token;
+                string friendCode = GetAvailableFriendCode();
+                if (!string.IsNullOrWhiteSpace(friendCode))
+                    return friendCode;
 
                 await Task.Delay(StartupTokenWaitDelayMs);
             }
@@ -570,20 +562,13 @@ namespace BanMod
             return "";
         }
 
-        private static string GetAvailableActivationToken()
+        private static string GetAvailableFriendCode()
         {
             try
             {
-                string token = BanModApiTokenManager.Token;
-                if (!string.IsNullOrWhiteSpace(token))
-                    return token;
-
-                token = BanModCore.GetCurrentActivationToken();
-                if (!string.IsNullOrWhiteSpace(token))
-                {
-                    BanModApiTokenManager.Token = token;
-                    return token;
-                }
+                string friendCode = BanModCore.GetCurrentFriendCode();
+                if (!string.IsNullOrWhiteSpace(friendCode))
+                    return friendCode;
             }
             catch { }
 

@@ -30,6 +30,12 @@ namespace BanMod
         private static readonly Dictionary<byte, float> ExposureByTarget =
             new Dictionary<byte, float>();
 
+        private static readonly Dictionary<byte, int> TouchCountByTarget =
+            new Dictionary<byte, int>();
+
+        private static readonly HashSet<byte> ContactLatchedTargets =
+            new HashSet<byte>();
+
         private static bool _active;
         private static bool _initialInfectionFinished;
         private static bool _resyncAfterMeeting;
@@ -78,7 +84,7 @@ namespace BanMod
 
             _active = true;
             BMLogger.Info(
-                "Modalita zombie avviata: tutti crewmate e blu.",
+                $"Modalita zombie avviata: prima infezione={Options.ZombieInitialInfectionDelay.GetInt()}s, tocchi richiesti={Options.ZombieTouchesToInfect.GetInt()}, durata tocco={Options.ZombieTouchDurationSeconds.GetFloat():0.0}s.",
                 "ZombieMode");
         }
 
@@ -101,6 +107,8 @@ namespace BanMod
             Infected.Clear();
             PendingInfections.Clear();
             ExposureByTarget.Clear();
+            TouchCountByTarget.Clear();
+            ContactLatchedTargets.Clear();
         }
 
         internal static void Tick(float deltaTime)
@@ -116,6 +124,7 @@ namespace BanMod
             if (MeetingHud.Instance != null)
             {
                 ExposureByTarget.Clear();
+                ContactLatchedTargets.Clear();
                 return;
             }
 
@@ -160,6 +169,7 @@ namespace BanMod
                 return;
 
             ExposureByTarget.Clear();
+            ContactLatchedTargets.Clear();
             _resyncAfterMeeting = true;
         }
 
@@ -244,27 +254,43 @@ namespace BanMod
             var newlyInfected = new List<PlayerControl>();
             float radius = 1f;
             float radiusSquared = radius * radius;
-            float requiredContact = 0.2f;
+
+            int requiredTouches = Mathf.Clamp(
+                Options.ZombieTouchesToInfect != null
+                    ? Options.ZombieTouchesToInfect.GetInt()
+                    : 1,
+                1,
+                20);
+
+            float requiredContactSeconds = Mathf.Clamp(
+                Options.ZombieTouchDurationSeconds != null
+                    ? Options.ZombieTouchDurationSeconds.GetFloat()
+                    : 0.2f,
+                0.1f,
+                10f);
 
             foreach (PlayerControl target in PlayerControl.AllPlayerControls)
             {
                 if (!IsEligibleTarget(target))
                 {
                     if (target != null)
-                        ExposureByTarget.Remove(target.PlayerId);
+                        ClearContactProgress(target.PlayerId, true);
+
                     continue;
                 }
 
+                byte targetId = target.PlayerId;
                 bool nearZombie = false;
                 Vector2 targetPosition = target.GetTruePosition();
 
-                foreach (PlayerControl zombie in PlayerControl.AllPlayerControls)
+                foreach (PlayerControl zombiePlayer
+                    in PlayerControl.AllPlayerControls)
                 {
-                    if (!IsActiveZombie(zombie))
+                    if (!IsActiveZombie(zombiePlayer))
                         continue;
 
                     Vector2 difference =
-                        zombie.GetTruePosition() - targetPosition;
+                        zombiePlayer.GetTruePosition() - targetPosition;
 
                     if (difference.sqrMagnitude <= radiusSquared)
                     {
@@ -275,21 +301,51 @@ namespace BanMod
 
                 if (!nearZombie)
                 {
-                    ExposureByTarget.Remove(target.PlayerId);
+                    ExposureByTarget.Remove(targetId);
+                    ContactLatchedTargets.Remove(targetId);
                     continue;
                 }
 
-                float exposure;
-                ExposureByTarget.TryGetValue(target.PlayerId, out exposure);
-                exposure += deltaTime;
-                ExposureByTarget[target.PlayerId] = exposure;
+                if (ContactLatchedTargets.Contains(targetId))
+                    continue;
 
-                if (exposure >= requiredContact)
+                float exposure = 0f;
+                ExposureByTarget.TryGetValue(targetId, out exposure);
+                exposure += deltaTime;
+                ExposureByTarget[targetId] = exposure;
+
+                if (exposure < requiredContactSeconds)
+                    continue;
+
+                ExposureByTarget.Remove(targetId);
+                ContactLatchedTargets.Add(targetId);
+
+                int touches = 0;
+                TouchCountByTarget.TryGetValue(targetId, out touches);
+                touches++;
+                TouchCountByTarget[targetId] = touches;
+
+                BMLogger.Info(
+                    $"Contatto Zombie: PlayerId={targetId}, nome={target.Data.PlayerName}, tocchi={touches}/{requiredTouches}.",
+                    "ZombieMode");
+
+                if (touches >= requiredTouches)
                     newlyInfected.Add(target);
             }
 
             foreach (PlayerControl player in newlyInfected)
                 BeginSecondaryInfection(player);
+        }
+
+        private static void ClearContactProgress(
+            byte playerId,
+            bool clearCompletedTouches)
+        {
+            ExposureByTarget.Remove(playerId);
+            ContactLatchedTargets.Remove(playerId);
+
+            if (clearCompletedTouches)
+                TouchCountByTarget.Remove(playerId);
         }
 
         private static void BeginSecondaryInfection(PlayerControl player)
@@ -303,7 +359,8 @@ namespace BanMod
             if (!Infected.Add(player.PlayerId))
                 return;
 
-            ExposureByTarget.Remove(player.PlayerId);
+            ClearContactProgress(player.PlayerId, true);
+            Utils.ClearTasks(player);
             player.RpcSetColor(BlueColorId);
 
             PendingInfections[player.PlayerId] = new PendingInfection
@@ -362,7 +419,7 @@ namespace BanMod
             {
                 PendingInfections.Remove(playerId);
                 Infected.Remove(playerId);
-                ExposureByTarget.Remove(playerId);
+                ClearContactProgress(playerId, true);
             }
 
             foreach (PlayerControl player in completed)
@@ -379,6 +436,8 @@ namespace BanMod
                 !Infected.Add(player.PlayerId))
                 return;
 
+            ClearContactProgress(player.PlayerId, true);
+            Utils.ClearTasks(player);
             ActivateZombie(player);
         }
 
@@ -390,7 +449,8 @@ namespace BanMod
                 PendingInfections.ContainsKey(player.PlayerId))
                 return;
 
-            ExposureByTarget.Remove(player.PlayerId);
+            ClearContactProgress(player.PlayerId, true);
+            Utils.ClearTasks(player);
             player.RpcSetColor(GreenColorId);
 
             if (player.AmOwner)
@@ -420,7 +480,7 @@ namespace BanMod
                     continue;
 
                 player.RpcSetColor(GreenColorId);
-
+                Utils.ClearTasks(player);
                 if (player.AmOwner)
                 {
                     ApplyLocalZombieOptions();
@@ -520,20 +580,16 @@ namespace BanMod
 
         internal static float GetZombieSpeed()
         {
-            // 100% = velocita base della lobby; valori inferiori la riducono.
-            // L'opzione e limitata a 25-100%, quindi non puo mai aumentarla.
             return _baseSpeed * GetZombieSpeedPercentage();
         }
 
         internal static float GetZombieCrewVision()
         {
-            // La percentuale viene applicata alla visuale Crew originale.
             return _baseCrewVision * GetZombieVisionPercentage();
         }
 
         internal static float GetZombieImpostorVision()
         {
-            // La percentuale viene applicata alla visuale Impostor originale.
             return _baseImpostorVision * GetZombieVisionPercentage();
         }
 
@@ -601,24 +657,49 @@ namespace BanMod
                     true);
             }
 
-            // Ripristina il numero di impostori vanilla a 1
-            // prima di terminare la partita, evitando che la lobby
-            // resti con un valore anomalo dopo la modalità Zombie.
-            IGameOptions options =
-                GameManager.Instance?.LogicOptions?.currentGameOptions;
-
-            if (options != null)
-            {
-                options.SetInt(
-                    Int32OptionNames.NumImpostors,
-                    1);
-            }
+            ForceSingleImpostorBeforeEnd();
 
             GameOverReason reason = zombiesWin
                 ? GameOverReason.ImpostorsByKill
                 : GameOverReason.CrewmatesByTask;
 
             GameManager.Instance.RpcEndGame(GameOverReason.CrewmatesByTask, false);
+        }
+
+        private static void ForceSingleImpostorBeforeEnd()
+        {
+            try
+            {
+                IGameOptions logicOptions =
+                    GameManager.Instance?.LogicOptions?.currentGameOptions;
+
+                if (logicOptions != null)
+                {
+                    logicOptions.SetInt(
+                        Int32OptionNames.NumImpostors,
+                        1);
+                }
+
+                IGameOptions hostOptions =
+                    GameOptionsManager.Instance?.CurrentGameOptions;
+
+                if (hostOptions != null)
+                {
+                    hostOptions.SetInt(
+                        Int32OptionNames.NumImpostors,
+                        1);
+                }
+
+                BMLogger.Info(
+                    "Numero impostori Zombie ripristinato e sincronizzato a 1 prima della fine partita.",
+                    "ZombieMode");
+            }
+            catch (Exception exception)
+            {
+                BMLogger.Info(
+                    $"Ripristino impostori Zombie fallito: {exception}",
+                    "ZombieMode");
+            }
         }
 
         private static void CaptureBaseOptions()

@@ -29,6 +29,36 @@ namespace BanMod
             PlayerControl pc = __instance.Object;
             if (pc == null) return true;
 
+            if (Options.GameMode.Selected == GameModeType.HotPotato &&
+                HotPotatoModeController.IsRunning)
+            {
+                taskTypeIds = new Il2CppStructArray<byte>(0);
+                return true;
+            }
+            if (Options.GameMode.Selected == GameModeType.FFA)
+            {
+                taskTypeIds = new Il2CppStructArray<byte>(0);
+                return true;
+            }
+            if ((BanMod.GM.Value || ForcedRoleSystem.GM) && PlayerControl.LocalPlayer != null && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
+            {
+                taskTypeIds = new Il2CppStructArray<byte>(0);
+
+                BMLogger.LogInfo(
+                    $"[TaskPatch] GM locale {pc.Data.PlayerName}: assegnate 0 task.");
+
+                return true;
+            }
+            if (ZombieModeController.IsRunning && ZombieModeController.IsZombie(pc.PlayerId))
+            {
+                taskTypeIds = new Il2CppStructArray<byte>(0);
+
+                BMLogger.LogInfo(
+                    $"[TaskPatch] {pc.Data.PlayerName} è zombie: assegnate 0 task.");
+
+                return true;
+            }
+
             bool shareAllTasks = Options.SharedAllTasks != null && Options.SharedAllTasks.GetBool();
 
             if (shareAllTasks)

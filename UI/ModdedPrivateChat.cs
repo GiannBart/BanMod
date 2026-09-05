@@ -221,7 +221,7 @@ namespace BanMod
 
             GUI.backgroundColor = new Color(0.05f, 0.75f, 0.15f, 1f);
             if (GUILayout.Button("Translate", _menuBtnStyle, GUILayout.Width(w), GUILayout.Height(h)))
-                EmulateLiveTranslatorCtrlT();
+                LiveTranslatorMenu.Instance.ToggleMenu();
 
             GUI.backgroundColor = oldBg;
 
@@ -293,85 +293,6 @@ namespace BanMod
             public ushort wParamH;
         }
 
-        private static void EmulateLiveTranslatorCtrlT()
-        {
-            INPUT[] inputs =
-            {
-        // CTRL down
-        new INPUT
-        {
-            type = INPUT_KEYBOARD,
-            U = new InputUnion
-            {
-                ki = new KEYBDINPUT
-                {
-                    wVk = VK_CONTROL,
-                    dwFlags = 0
-                }
-            }
-        },
-
-        // T down
-        new INPUT
-        {
-            type = INPUT_KEYBOARD,
-            U = new InputUnion
-            {
-                ki = new KEYBDINPUT
-                {
-                    wVk = VK_T,
-                    dwFlags = 0
-                }
-            }
-        },
-
-        // T up
-        new INPUT
-        {
-            type = INPUT_KEYBOARD,
-            U = new InputUnion
-            {
-                ki = new KEYBDINPUT
-                {
-                    wVk = VK_T,
-                    dwFlags = KEYEVENTF_KEYUP
-                }
-            }
-        },
-
-        // CTRL up
-        new INPUT
-        {
-            type = INPUT_KEYBOARD,
-            U = new InputUnion
-            {
-                ki = new KEYBDINPUT
-                {
-                    wVk = VK_CONTROL,
-                    dwFlags = KEYEVENTF_KEYUP
-                }
-            }
-        }
-    };
-
-            uint sent = SendInput(
-                (uint)inputs.Length,
-                inputs,
-                Marshal.SizeOf(typeof(INPUT))
-            );
-
-            if (sent != inputs.Length)
-            {
-                try
-                {
-                    UnityEngine.Debug.LogWarning(
-                        "[BanMod] Emulazione CTRL+T incompleta. Eventi inviati: "
-                        + sent + "/" + inputs.Length
-                    );
-                }
-                catch { }
-            }
-        }
         private void DrawMenuRow(string l, MenuRouter.Panel lp, string r, MenuRouter.Panel rp, float w, float h)
         {
             GUILayout.BeginHorizontal();

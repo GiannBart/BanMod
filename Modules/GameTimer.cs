@@ -13,15 +13,12 @@ public static class GameTimeLimit
 
     public static bool IsRunning { get; private set; }
     public static bool IsPaused { get; private set; }
-
-    // Indica che la partita è terminata perché il timer ha raggiunto zero.
     public static bool EndedByTimer { get; private set; }
     public static float MeetingTime { get; private set; }
 
     private static bool MeetingActive;
     private static float MeetingStartedAt;
     private static bool EndGameSent;
-    private static bool PausedByMeeting;
 
     public static void Start()
     {
@@ -39,7 +36,6 @@ public static class GameTimeLimit
         IsRunning = true;
         IsPaused = false;
 
-        PausedByMeeting = false;
         EndGameSent = false;
         EndedByTimer = false;
         MeetingTime = 0f;
@@ -62,6 +58,14 @@ public static class GameTimeLimit
             return;
         }
 
+        // Se l'opzione è attiva e c'è un meeting,
+        // il timer rimane fermo.
+        if (PauseGameTimerDuringMeetings.GetBool() &&
+            MeetingHud.Instance)
+        {
+            return;
+        }
+
         RemainingTime -= deltaTime;
 
         if (RemainingTime > 0f)
@@ -72,8 +76,6 @@ public static class GameTimeLimit
         EndGameSent = true;
         EndedByTimer = true;
 
-        // Salva immediatamente i dati per il riepilogo,
-        // prima che il timer venga resettato.
         MatchSummary1.CaptureGameTimer();
 
         if (GameTimerMessage.GetBool())
@@ -121,40 +123,25 @@ public static class GameTimeLimit
         if (!EnableGameTimer.GetBool())
             return;
 
-        if (!MeetingActive)
-        {
-            MeetingActive = true;
-            MeetingStartedAt = Time.realtimeSinceStartup;
-        }
-
-        if (!PauseGameTimerDuringMeetings.GetBool())
+        if (MeetingActive)
             return;
 
-        if (!IsRunning || EndGameSent)
-            return;
-
-        PausedByMeeting = true;
-        Pause();
+        MeetingActive = true;
+        MeetingStartedAt = Time.realtimeSinceStartup;
     }
 
     public static void OnMeetingEnded()
     {
-        if (MeetingActive)
-        {
-            MeetingTime += Mathf.Max(
-                0f,
-                Time.realtimeSinceStartup - MeetingStartedAt
-            );
-
-            MeetingActive = false;
-            MeetingStartedAt = 0f;
-        }
-
-        if (!PausedByMeeting)
+        if (!MeetingActive)
             return;
 
-        PausedByMeeting = false;
-        Resume();
+        MeetingTime += Mathf.Max(
+            0f,
+            Time.realtimeSinceStartup - MeetingStartedAt
+        );
+
+        MeetingActive = false;
+        MeetingStartedAt = 0f;
     }
     public static float GetMeetingTime()
     {
@@ -175,7 +162,6 @@ public static class GameTimeLimit
         IsRunning = false;
         IsPaused = false;
 
-        PausedByMeeting = false;
         EndGameSent = false;
         EndedByTimer = false;
 

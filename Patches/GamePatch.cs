@@ -352,9 +352,33 @@ public static class CheckEndCriteriaPatch
 {
     public static bool Prefix(LogicGameFlowNormal __instance)
     {
+        GameModeType gameMode = Options.GameMode.Selected;
+
         if (BanMod.IsBanModDisabled) return true;
         if (!AmongUsClient.Instance.AmHost) return true;
 
+        if (gameMode == GameModeType.TaskRun)
+        {
+            {
+                return false;
+            }
+
+        }
+
+        if (gameMode == GameModeType.HotPotato)
+        {
+            {
+                return false;
+            }
+
+        }
+        if (gameMode == GameModeType.FFA)
+        {
+            {
+                return false;
+            }
+
+        }
         TaskTracker.Clear();
         ImpostorTracker.Clear();
         ImpostorTracker.DetectImpostors();
@@ -375,7 +399,8 @@ public static class CheckEndCriteriaPatch
         bool mutanteInPunizione = false;
         bool phantomInPunizione = false;
         bool showAd = !DataManager.Player.Ads.HasPurchasedAdRemoval;
-        GameModeType gameMode = Options.GameMode.Selected;
+
+        if (BanMod.NoGameEnd.Value) return false;
 
         foreach (var player in PlayerControl.AllPlayerControls)
         {
@@ -384,20 +409,13 @@ public static class CheckEndCriteriaPatch
             TaskTracker.UpdatePlayerTask(player);
 
         }
-        if (BanMod.NoGameEnd.Value) return false;
 
         if (MeetingHud.Instance != null && impVivi == 0)
         {
             if (LastImpostorMeetingEndDelay.TryStart(__instance, showAd))
                 return false;
         }
-        if (gameMode == GameModeType.TaskRun)
-        {
-            {
-                return false;
-            }
 
-        }
         if (gameMode == GameModeType.SnS) 
         {
             foreach (var player in PlayerControl.AllPlayerControls)
@@ -486,7 +504,19 @@ class CheckTaskCompletionPatch
 {
     public static bool Prefix(ref bool __result)
     {
+        GameModeType gameMode = Options.GameMode.Selected;
+
         if (BanMod.NoGameEnd.Value)
+        {
+            __result = false;
+            return false;
+        }
+        if (gameMode == GameModeType.HotPotato)
+        {
+            __result = false;
+            return false;
+        }
+        if (gameMode == GameModeType.FFA)
         {
             __result = false;
             return false;
@@ -742,3 +772,23 @@ public static class UpdateSeekerNamesPatch
         }
     }
 }
+//[HarmonyPatch(typeof(GameManager), nameof(GameManager.RpcEndGame))]
+//public static class AllChatRpcEndGamePatch
+//{
+//    public static bool Prefix(
+//        [HarmonyArgument(0)] GameOverReason endReason)
+//    {
+//        if (BanMod.UnlockingAllChat &&
+//            endReason == GameOverReason.CrewmatesByTask)
+//        {
+//            BMLogger.Info(
+//                "[AllChat] Bloccato CrewmatesByTask causato dal report artificiale.",
+//                "AllChat"
+//            );
+
+//            return false;
+//        }
+
+//        return true;
+//    }
+//}

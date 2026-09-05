@@ -273,6 +273,12 @@ namespace BanMod
                         ForcedRoleSystem.SetForcedRole(selectedPlayer.PlayerId, RoleTypes.Detective);
                         ChatCommands.ShowChat($"Detective: {selectedPlayer.name}");
                     }
+
+                    if (GUILayout.Button("JUDGE", buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
+                    {
+                        ForcedRoleSystem.SetForcedRole(selectedPlayer.PlayerId, RoleTypes.Judge);
+                        ChatCommands.ShowChat($"Judge: {selectedPlayer.name}");
+                    }
                 }),
 
                 new CategoryBlock("CUSTOM ROLES", () =>

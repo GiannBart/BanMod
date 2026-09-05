@@ -305,31 +305,6 @@ public static class ProtectPlayerPatch
     }
 }
 
-[HarmonyPatch(typeof(LogicOptions), nameof(LogicOptions.GetKillDistance))]
-public static class Patch_KillDistanceOverride
-{
-    static bool Prefix(LogicOptions __instance, ref float __result)
-    {
-        int index = __instance.currentGameOptions.GetInt(Int32OptionNames.KillDistance);
-        if (index == 0 && Options.Veryshort.GetBool()) 
-        {
-            __result = 0.4f; 
-            return false; 
-        }
-        if (index == 1 && Options.Veryshort.GetBool())
-        {
-            __result = 0.4f;
-            return false;
-        }
-        if (index == 2 && Options.Veryshort.GetBool())
-        {
-            __result = 0.4f;
-            return false;
-        }
-        return true; 
-    }
-}
-
 [HarmonyPatch(typeof(NotificationPopper))]
 public static class NotificationPopper_AddInfoMessagePatch
 {

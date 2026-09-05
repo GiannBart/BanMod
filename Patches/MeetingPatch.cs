@@ -135,6 +135,15 @@ public static class CombinedReportDeadBodyPatch
         if (!AmongUsClient.Instance.AmHost)
             return true;
 
+        if (BanMod.UnlockingAllChat && target == null && PlayerControl.LocalPlayer != null && __instance.PlayerId == PlayerControl.LocalPlayer.PlayerId)
+        {
+            BMLogger.Info(
+                "[AllChat] Consentito report artificiale per abilitare la chat.",
+                "AllChat");
+
+            return true;
+        }
+
         if (Options.DisableMeetingsAndReports.GetBool())
             return false;
 

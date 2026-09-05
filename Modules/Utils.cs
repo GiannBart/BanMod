@@ -173,6 +173,34 @@ public static class Utils
 
         return role;
     }
+    public static void ClearTasks(PlayerControl player)
+    {
+        if (player.Data == null)
+            return;
+
+        try
+        {
+            player.ClearTasks();
+
+            if (player.Data.Tasks != null)
+                player.Data.Tasks.Clear();
+
+            player.Data.MarkDirty();
+
+            player.Data.RpcSetTasks(new byte[0]);
+
+            if (GameData.Instance != null)
+                GameData.Instance.RecomputeTaskCounts();
+
+            BMLogger.Info(
+                $"Task FORZATAMENTE rimosse: PlayerId={player.PlayerId}, nome={player.Data.PlayerName}");
+        }
+        catch (Exception exception)
+        {
+            BMLogger.Info(
+                $"Errore rimozione task PlayerId={player.PlayerId}: {exception}");
+        }
+    }
     public static class MeetingVoteCloser
     {
         private static readonly MethodInfo ForceSkipAllMethod =
@@ -1513,6 +1541,8 @@ public static class Utils
             "TaskRun" => "RulesInfoTaskRun",
             "JBMode" => "RulesInfoJBMode",
             "FFA" => "RulesInfoFFA",
+            "HotPotato" => "RulesInfoHotPotato",
+            "ZombieMode" => "RulesInfoZombieMode",
             _ => "WelcomeTemplate"
         };
 
@@ -1754,6 +1784,10 @@ public static class Utils
                 "Welcome {player} to BanMod\n Here we're playing JBMode.");
             CreateTemplate("WelcomeTemplateFFA",
                 "Welcome {player} to BanMod\n Here we're playing FFA mode.");
+            CreateTemplate("WelcomeTemplateZombieMode",
+                "Welcome {player} to BanMod\n Here we're playing ZombieMode.");
+            CreateTemplate("WelcomeTemplateHotPotato",
+                "Welcome {player} to BanMod\n Here we're playing HotPotato.");
             //Rules
             CreateTemplate("RulesInfo",
                 "Add Rules for NormalMod");
@@ -1769,6 +1803,10 @@ public static class Utils
                 "Add Rules for JBMode");
             CreateTemplate("RulesInfoFFA",
                 "Add Rules for FFA");
+            CreateTemplate("RulesInfoZombieMode",
+                "Add Rules for ZombieMode");
+            CreateTemplate("RulesInfoHotPotato",
+                "Add Rules for HotPotato");
 
         }
 
@@ -4069,10 +4107,14 @@ public static class TaskTracker
 
     public static void UpdatePlayerTask(PlayerControl player)
     {
+        GameModeType gameMode = Options.GameMode.Selected;
+
         if (player?.Data == null || player.Data.Tasks == null)
             return;
         if (player.Data.Role?.TeamType == RoleTeamTypes.Impostor)
             return;
+        if (gameMode == GameModeType.FFA) return;
+        if (gameMode == GameModeType.HotPotato) return;
         int total = player.Data.Tasks.Count; 
         int done = 0;
         foreach (var task in player.Data.Tasks)

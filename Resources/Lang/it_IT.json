@@ -184,6 +184,7 @@
   "DisableAlignEngineOutput": "Disattiva Align Engine Output",
   "DisableAlignTelescope": "Disattiva Align Telescope",
   "DisableAllSabotages": "Disattiva tutto",
+  "DisableAllSabotagesForDeadImpostor": "Disattiva tutto\nPer Impostori Morti",
   "DisableAssembleArtifact": "Disattiva Assemble Artifact",
   "DisableBuildSandcastle": "Disattiva Build Sandcastle",
   "DisableBuyBeverage": "Disattiva Buy Beverage",
@@ -1366,5 +1367,9 @@
   "TabGroup.HotPotato": "<b><color=#f3f315>HOTPOTATO",
   "ZombieMode": "ZombieMode",
   "HotPotato": "HotPotato",
+    "HotPotatoFirstDelaySeconds": "Primo Timer (sec)",
+  "HotPotatoExplosionSeconds": "Timer Esplosione (sec)",
+    "ZombieTouchesToInfect": "Tocchi per infettare",
+  "ZombieTouchDurationSeconds": "Durata Tocchi (sec)",
   "ZombieVisionMultiplier": "Visione Zombie (%)"
 }

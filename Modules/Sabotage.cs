@@ -314,6 +314,29 @@ class Patch_MushroomMixupBlock
         return true; 
     }
 }
+[HarmonyPatch(
+    typeof(SabotageSystemType),
+    nameof(SabotageSystemType.UpdateSystem))]
+public static class DeadImpostorSabotageBlock_Patch
+{
+    public static bool Prefix(PlayerControl player)
+    {
+        if (!AmongUsClient.Instance.AmHost)
+            return true;
+
+        if (Options.GameMode.GetValue(GameModeType.JBMode))
+            return true;
+
+        if (!Options.DisableDeadImpostorSabotage.GetBool())
+            return true;
+
+        if (player?.Data?.Role == null)
+            return true;
+
+        return !(player.Data.IsDead &&
+                 player.Data.Role.IsImpostor);
+    }
+}
 [HarmonyPatch(typeof(SwitchSystem), nameof(SwitchSystem.UpdateSystem))]
 class SwitchUpdatePatch
 {

@@ -204,6 +204,143 @@ namespace BanMod
             return false;
         }
 
+        private static bool IsActualModerator(PlayerControl player)
+        {
+            if (player?.Data == null || AmongUsClient.Instance == null)
+                return false;
+
+            string friendCode = player.Data.FriendCode;
+
+            if (string.IsNullOrWhiteSpace(friendCode))
+            {
+                int clientId = player.GetClientId();
+
+                if (clientId >= 0)
+                {
+                    ClientData client = AmongUsClient.Instance.GetClient(clientId);
+                    friendCode = client?.FriendCode;
+                }
+            }
+
+            return !string.IsNullOrWhiteSpace(friendCode) &&
+                   AllowedManager.IsModerator(friendCode);
+        }
+
+        private static string GetModeratorActionName(ModeratorAction action)
+        {
+            return action switch
+            {
+                ModeratorAction.TogglePublicPrivate => "Toggle Public/Private",
+                ModeratorAction.StartGame => "Start Game",
+                ModeratorAction.InstantStart => "Instant Start",
+                ModeratorAction.CallMeeting => "Call Meeting",
+                ModeratorAction.EndMeeting => "End Meeting",
+                ModeratorAction.EndGame => "End Game",
+                ModeratorAction.Kick => "Kick",
+                ModeratorAction.Ban => "Ban",
+                ModeratorAction.DestroyLobby => "Destroy Lobby",
+                ModeratorAction.SpawnLobby => "Spawn Lobby",
+                ModeratorAction.ChangeBody => "Change Body",
+                ModeratorAction.RandomFreeColor => "Random Free Color",
+                ModeratorAction.ToggleLobbyObject => "Toggle Lobby Object",
+                _ => action.ToString()
+            };
+        }
+
+        public static void ReportModeratorUsage(
+            PlayerControl moderator,
+            string actionName,
+            byte targetPlayerId = byte.MaxValue,
+            string source = "UNKNOWN")
+        {
+            try
+            {
+                // Notifications must only be shown on the host.
+                if (AmongUsClient.Instance == null ||
+                    !AmongUsClient.Instance.AmHost)
+                    return;
+
+                if (moderator?.Data == null)
+                    return;
+
+                // Never notify actions performed by the host itself.
+                if (moderator == PlayerControl.LocalPlayer ||
+                    moderator.AmOwner)
+                    return;
+
+                // The sender must be an actually authorized moderator.
+                if (!IsActualModerator(moderator))
+                    return;
+
+                string moderatorName =
+                    moderator.Data.PlayerName ?? "Unknown";
+
+                PlayerControl target = GetTarget(targetPlayerId);
+
+                string targetLog = "";
+                string targetHud = "";
+
+                if (target?.Data != null)
+                {
+                    targetLog =
+                        $" | Target={target.Data.PlayerName}" +
+                        $" | TargetPlayerId={target.PlayerId}";
+
+                    targetHud =
+                        $" -> <color=#FFFFFF>{target.Data.PlayerName}</color>";
+                }
+
+                // LOG
+                BMLogger.Info(
+                    $"MODERATOR ACTION | " +
+                    $"Source={source} | " +
+                    $"Moderator={moderatorName} | " +
+                    $"ModeratorPlayerId={moderator.PlayerId} | " +
+                    $"Action={actionName}" +
+                    targetLog,
+                    LogTag
+                );
+
+                // HOST HUD
+                if (HudManager.Instance?.Notifier != null)
+                {
+                    NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
+                        HudManager.Instance.Notifier,
+                        $"<color=#00FFFF>[MOD]</color> " +
+                        $"<color=#FFD700>{moderatorName}</color> " +
+                        $"used <color=#FFAA00>{actionName}</color>" +
+                        targetHud
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                BMLogger.Warn(
+                    $"ReportModeratorUsage error: {ex}",
+                    LogTag
+                );
+            }
+        }
+
+        private static void LogModeratorAction(
+            PlayerControl moderator,
+            ModeratorAction action,
+            byte targetPlayerId,
+            bool fromModeratorCommand)
+        {
+            // false = action executed locally by the host.
+            // It must not be reported or shown.
+            if (!fromModeratorCommand)
+                return;
+
+            ReportModeratorUsage(
+                moderator,
+                GetModeratorActionName(action),
+                targetPlayerId,
+                "MENU"
+            );
+        }
+
         private static void ExecuteHost(
             PlayerControl moderator,
             ModeratorAction action,
@@ -225,6 +362,12 @@ namespace BanMod
                         if (manager == null)
                             return;
 
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
                         manager.MakePublic();
                         break;
                     }
@@ -235,7 +378,16 @@ namespace BanMod
                             return;
 
                         var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
-                        manager?.BeginGame();
+                        if (manager == null)
+                            return;
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
+                        manager.BeginGame();
                         break;
                     }
 
@@ -245,7 +397,16 @@ namespace BanMod
                             return;
 
                         var manager = UnityEngine.Object.FindObjectOfType<GameStartManager>();
-                        manager?.BeginGame();
+                        if (manager == null)
+                            return;
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
+                        manager.BeginGame();
                         break;
                     }
 
@@ -253,6 +414,12 @@ namespace BanMod
                     {
                         if (GameStates.isLobby || moderator?.Data == null || moderator.Data.IsDead)
                             return;
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
 
                         moderator.CmdReportDeadBody(null);
                         break;
@@ -263,6 +430,12 @@ namespace BanMod
                         if (MeetingHud.Instance == null)
                             return;
 
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
                         PlayerControl.LocalPlayer.StartCoroutine(Utils.DelayedCloseMeeting());
                         break;
                     }
@@ -271,6 +444,12 @@ namespace BanMod
                     {
                         if (!GameStates.IsInGameplay || GameManager.Instance == null)
                             return;
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
 
                         GameManager.Instance.RpcEndGame(
                             GameOverReason.CrewmatesByTask,
@@ -286,6 +465,12 @@ namespace BanMod
                         if (target.AmOwner || IsProtectedTarget(client))
                             return;
 
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
                         AmongUsClient.Instance.KickPlayer(client.Id, false);
                         break;
                     }
@@ -297,6 +482,12 @@ namespace BanMod
 
                         if (target.AmOwner || IsProtectedTarget(client))
                             return;
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
 
                         BanManager.AddBanPlayer(
                             client,
@@ -311,6 +502,12 @@ namespace BanMod
                         if (!GameStates.isLobby)
                             return;
 
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
                         Utils.DestroyMap();
                         break;
                     }
@@ -320,6 +517,12 @@ namespace BanMod
                         if (!GameStates.isLobby)
                             return;
 
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
                         Utils.SpawnLobby();
                         break;
                     }
@@ -328,6 +531,12 @@ namespace BanMod
                     {
                         if (!GameStates.isLobby)
                             return;
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
 
                         if (LobbyBehaviour.Instance == null)
                             Utils.SpawnLobby();
@@ -345,6 +554,12 @@ namespace BanMod
 
                         PlayerBodyTypes nextBody = Utils.GetNextBodyType(target);
                         float scale = Mathf.Clamp(target.transform.localScale.x, 0.25f, 2.0f);
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
 
                         target.transform.localScale = new Vector3(scale, scale, 1f);
                         Utils.SetPlayerBodyType(target, nextBody);
@@ -388,6 +603,13 @@ namespace BanMod
                             freeColors.Add(0);
 
                         byte color = freeColors[new System.Random().Next(freeColors.Count)];
+
+                        LogModeratorAction(
+                            moderator,
+                            action,
+                            targetPlayerId,
+                            fromModeratorCommand);
+
                         target.RpcSetColor(color);
                         break;
                     }

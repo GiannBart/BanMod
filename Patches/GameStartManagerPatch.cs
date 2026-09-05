@@ -387,6 +387,10 @@ public class GameStartManagerBeginPatch
         {
             __instance.countDownTimer = 0f;
         }
+        else if (BanMod.instantstart)
+        {
+            __instance.countDownTimer = 0f;
+        }
         else
         {
             __instance.countDownTimer = 5f;

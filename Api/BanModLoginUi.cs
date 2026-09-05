@@ -52,14 +52,22 @@ namespace BanMod
 
         public static void EnsureCreated()
         {
-            if (Instance != null || BanMod.Instance == null)
+            if (Instance != null)
+                return;
+
+            if (BanMod.Instance == null)
                 return;
 
             try
             {
                 Instance = BanMod.Instance.AddComponent<BanModLoginUi>();
+                if (Instance != null)
+                    Debug.Log("[BANMOD][LOGIN] BanModLoginUi component created.");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                try { Debug.LogError("[BANMOD][LOGIN] Failed to create BanModLoginUi: " + ex); } catch { }
+            }
         }
 
         private void Awake()
@@ -121,6 +129,7 @@ namespace BanMod
             _busy = false;
             _visible = true;
             _scrollPosition = Vector2.zero;
+            try { Debug.Log("[BANMOD][LOGIN] BanModLoginUi visible; services=" + _model.services.Count); } catch { }
 
             float height = CalculateWindowHeight(_model.services.Count);
             CenterWindow(height);
@@ -183,44 +192,54 @@ namespace BanMod
                 return;
             }
 
-            GUILayout.Label("BANMOD LOGIN", _titleStyle, GUILayout.Height(42f));
+            bool showUsername = _model.username_required || _model.show_username;
+            GUILayout.Label(
+                _model.username_required ? "BANMOD LOGIN" : "BANMOD SERVICES",
+                _titleStyle,
+                GUILayout.Height(42f));
             GUILayout.Space(6f);
 
             string description = _model.username_required
-                ? "Choose a permanent username. It will be linked to your Friend Code and cannot be changed."
-                : "Your username is locked. Select the optional modules you want to use.";
+                ? "Choose a permanent username and select the optional modules you want to use."
+                : (showUsername
+                    ? "FriendCode accepted. Your username is locked; select the optional modules you want to use."
+                    : "FriendCode accepted. Select the optional premium modules you want to use.");
 
             GUILayout.Label(description, _descriptionStyle, GUILayout.Height(48f));
             GUILayout.Space(12f);
 
-            GUILayout.Label("USERNAME", _sectionStyle, GUILayout.Height(28f));
-
-            if (_model.username_required)
+            if (showUsername)
             {
-                bool showCaret = ((int)(Time.realtimeSinceStartup * 2f) & 1) == 0;
-                string shownUsername = string.IsNullOrEmpty(_username)
-                    ? "Type your username..."
-                    : _username + (showCaret ? "|" : "");
+                GUILayout.Label("USERNAME", _sectionStyle, GUILayout.Height(28f));
 
-                GUILayout.Label(
-                    shownUsername,
-                    _usernameInputStyle,
-                    GUILayout.Height(44f));
+                if (_model.username_required)
+                {
+                    bool showCaret = ((int)(Time.realtimeSinceStartup * 2f) & 1) == 0;
+                    string shownUsername = string.IsNullOrEmpty(_username)
+                        ? "Type your username..."
+                        : _username + (showCaret ? "|" : "");
 
-                GUILayout.Label(
-                    "Type directly on the keyboard. Backspace deletes. Allowed: letters, numbers, dot, dash and underscore.",
-                    _hintStyle,
-                    GUILayout.Height(38f));
+                    GUILayout.Label(
+                        shownUsername,
+                        _usernameInputStyle,
+                        GUILayout.Height(44f));
+
+                    GUILayout.Label(
+                        "Type directly on the keyboard. Backspace deletes. Allowed: letters, numbers, dot, dash and underscore.",
+                        _hintStyle,
+                        GUILayout.Height(38f));
+                }
+                else
+                {
+                    GUILayout.Label(
+                        string.IsNullOrWhiteSpace(_username) ? "(not available)" : _username,
+                        _lockedUsernameStyle,
+                        GUILayout.Height(44f));
+                }
+
+                GUILayout.Space(14f);
             }
-            else
-            {
-                GUILayout.Label(
-                    string.IsNullOrWhiteSpace(_username) ? "(not available)" : _username,
-                    _lockedUsernameStyle,
-                    GUILayout.Height(44f));
-            }
 
-            GUILayout.Space(14f);
             GUILayout.Label("OPTIONAL MODULES", _sectionStyle, GUILayout.Height(28f));
             GUILayout.Space(4f);
 
@@ -591,6 +610,7 @@ namespace BanMod
         private sealed class LoginMenuModel
         {
             public bool username_required { get; set; }
+            public bool show_username { get; set; }
             public string username { get; set; }
             public List<LoginServiceModel> services { get; set; }
         }

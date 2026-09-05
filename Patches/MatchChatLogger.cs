@@ -389,12 +389,9 @@ public static class MatchChatLogger
 
     private static string GetLogDirectory()
     {
-        string desktop =
-            Environment.GetFolderPath(
-                Environment.SpecialFolder.DesktopDirectory);
-
+        const string ChatPath = "./BAN_DATA/LOG/";
         return Path.Combine(
-            desktop,
+            ChatPath,
             "BanMod Chat Logs");
     }
 

@@ -263,6 +263,10 @@ namespace BanMod
             {
                 case "limit_reached":
                     return "Limite SetRole raggiunto. Riprova più tardi.";
+                case "friend_code_missing":
+                case "missing_friend_code":
+                case "friend_code_invalid":
+                    return "FriendCode non disponibile. SetRole non autorizzato.";
                 case "activation_token_missing":
                 case "missing_activation_token":
                 case "activation_token_invalid":
@@ -586,28 +590,9 @@ namespace BanMod
                 yield break;
             }
 
-            bool tokenOk = false;
-            string activationToken = "";
-
-            // Viene invocato per ogni richiesta: BanModCore può così rinnovare un
-            // token scaduto invece di riutilizzarlo soltanto perché non è vuoto.
-            //yield return BanModCore.EnsureActivationTokenForApi((ok, token) =>
-            //{
-            //    tokenOk = ok;
-            //    activationToken = token ?? "";
-            //});
-            yield return BanModCore.EnsureActivationTokenForApi((ok, token) =>
-            {
-                tokenOk = ok;
-                activationToken = token ?? "";
-
-                if (tokenOk && !string.IsNullOrWhiteSpace(activationToken))
-                    BanModApiTokenManager.Token = activationToken;
-            });
-            bool identityOk = tokenOk &&
-                              !string.IsNullOrWhiteSpace(friendCode) &&
-                              !string.IsNullOrWhiteSpace(activationToken);
-            callback?.Invoke(identityOk, friendCode, playerName, activationToken);
+            bool identityOk = !string.IsNullOrWhiteSpace(friendCode);
+            callback?.Invoke(identityOk, friendCode, playerName, "");
+            yield break;
         }
 
         private static IEnumerator SendForceRoleRequest(
@@ -637,7 +622,6 @@ namespace BanMod
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
             req.SetRequestHeader("X-BANMOD-FriendCode", friendCode ?? "");
-            BanModApiTokenManager.ApplyAuthHeader(req);
 
             yield return req.SendWebRequest();
 
@@ -726,16 +710,14 @@ namespace BanMod
                     success = false,
                     allowed = false,
                     self_allowed = false,
-                    reason = "activation_token_missing",
+                    reason = "friend_code_missing",
                     no_response = false
                 });
                 yield break;
             }
 
             string body = "{"
-                + "\"FriendCode\":" + JsonString(friendCode) + ","
-                + "\"PlayerName\":" + JsonString(playerName) + ","
-                + "\"ActivationToken\":" + JsonString(activationToken)
+                + "\"FriendCode\":" + JsonString(friendCode)
                 + "}";
 
             yield return SendForceRoleRequest(
@@ -772,7 +754,7 @@ namespace BanMod
                     success = false,
                     allowed = false,
                     self_allowed = false,
-                    reason = "activation_token_missing",
+                    reason = "friend_code_missing",
                     no_response = false
                 });
                 yield break;
@@ -783,8 +765,6 @@ namespace BanMod
 
             string body = "{"
                 + "\"FriendCode\":" + JsonString(friendCode) + ","
-                + "\"PlayerName\":" + JsonString(playerName) + ","
-                + "\"ActivationToken\":" + JsonString(activationToken) + ","
                 + "\"AttemptId\":" + JsonString(attemptId) + ","
                 + "\"TargetIsSelf\":true,"
                 + "\"PlayerId\":" + playerId + ","
@@ -829,7 +809,7 @@ namespace BanMod
                     {
                         success = false,
                         allowed = false,
-                        reason = "activation_token_missing",
+                        reason = "friend_code_missing",
                         no_response = false
                     };
                     break;
@@ -837,8 +817,6 @@ namespace BanMod
 
                 string body = "{"
                     + "\"FriendCode\":" + JsonString(friendCode) + ","
-                    + "\"PlayerName\":" + JsonString(playerName) + ","
-                    + "\"ActivationToken\":" + JsonString(activationToken) + ","
                     + "\"AuthorizationId\":" + JsonString(authorizationId) + ","
                     + "\"AttemptId\":" + JsonString(attemptId) + ","
                     + "\"PlayerId\":" + playerId + ","
@@ -1097,7 +1075,6 @@ namespace BanMod
                 DisableForFfa();
                 return;
             }
-
             if (AmongUsClient.Instance == null)
             {
                 ShowSetRoleResult("SetRole", "Client non pronto. Riprova tra pochi secondi.");
@@ -1704,7 +1681,6 @@ namespace BanMod
                 ForcedRoleSystem.DisableForFfa();
                 return true;
             }
-
             GameModeType gameMode = Options.GameMode.Selected;
 
             if (Options.Jester.GetBool() && !Jester.JesterSelected)

@@ -746,6 +746,22 @@ public static class DetectorRuntimeOnGameStartPatch
             return;
         }
 
+        if (AmongUsClient.Instance.AmHost && BanMod.EnableAllChat.Value)
+        {
+            try
+            {
+                BanMod.UnlockingAllChat = true;
+
+                PlayerControl.LocalPlayer.CmdReportDeadBody(null);
+
+                if (MeetingHud.Instance != null)
+                    MeetingHud.Instance.RpcClose();
+            }
+            finally
+            {
+                BanMod.UnlockingAllChat = false;
+            }
+        }
         PlayerWarningMessenger.ResetAll();
 
         if (Options.EnableDetector != null && Options.EnableDetector.GetBool())

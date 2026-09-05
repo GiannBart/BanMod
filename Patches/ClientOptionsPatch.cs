@@ -20,7 +20,7 @@ public static class OptionsMenuBehaviourStartPatch
     private static ClientOptionItem AktiveChat;
     private static ClientOptionItem ChatOffIfImpostor;
     private static ClientOptionItem Resize_Player;
-    //private static ClientOptionItem Teleport;
+    private static ClientOptionItem EnableAllChat;
     private static ClientOptionItem NoGameEnd;
     private static ClientOptionItem AddBanToList;
     private static ClientOptionItem ExcludeFriends;
@@ -71,6 +71,10 @@ public static class OptionsMenuBehaviourStartPatch
         {
             AktiveChat = ClientOptionItem.Create("Vis_EnableChat", BanMod.AktiveChat, __instance);
         }
+        if (EnableAllChat == null || EnableAllChat.ToggleButton == null)
+        {
+            EnableAllChat = ClientOptionItem.Create("EnableAllChat", BanMod.EnableAllChat, __instance);
+        }
         if (ChatOffIfImpostor == null || ChatOffIfImpostor.ToggleButton == null)
         {
             ChatOffIfImpostor = ClientOptionItem.Create("ChatOffIfImpostor", BanMod.ChatOffIfImpostor, __instance);
@@ -79,10 +83,6 @@ public static class OptionsMenuBehaviourStartPatch
         {
             Resize_Player = ClientOptionItem.Create("Resize_Player", BanMod.Resize_Player, __instance);
         }
-        //if (Teleport == null || Teleport.ToggleButton == null)
-        //{
-        //    Teleport = ClientOptionItem.Create("Teleport", BanMod.Teleport, __instance);
-        //}
         if (NoGameEnd == null || NoGameEnd.ToggleButton == null)
         {
             NoGameEnd = ClientOptionItem.Create("NoGameEnd", BanMod.NoGameEnd, __instance);

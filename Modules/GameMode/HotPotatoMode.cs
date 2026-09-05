@@ -1,3 +1,4 @@
+//https://github.com/GiannBart/BanMod
 using AmongUs.GameOptions;
 using System;
 using System.Collections.Generic;
@@ -11,11 +12,14 @@ namespace BanMod
 {
     public static class HotPotatoModeController
     {
+        private const byte BlackColorId = 6;
+        private const byte WhiteColorId = 7;
         private const byte RedColorId = 0;
         private const byte YellowColorId = 5;
         private const byte NoPlayerId = byte.MaxValue;
 
-        private const float RoundDuration = 20f;
+        private const float DefaultExplosionSeconds = 20f;
+        private const float DefaultFirstPotatoDelaySeconds = 3f;
         private const float TouchRadius = 0.50f;
         private const float NextRoundDelay = 3f;
         private const float HolderVisionFactor = 0.75f;
@@ -30,9 +34,10 @@ namespace BanMod
         private static PlayerControl _holder;
         private static byte _blockedReturnPlayerId = NoPlayerId;
         private static float _roundElapsed;
+        private static float _roundDuration = DefaultExplosionSeconds;
         private static float _nextRoundDelay;
         private static float _blinkAccumulator;
-        private static bool _blinkShowsYellow;
+        private static bool _blinkShowsWhite;
         private static bool _baseVisionCaptured;
         private static float _baseCrewVision;
         private static float _baseImpostorVision;
@@ -55,10 +60,7 @@ namespace BanMod
             try
             {
                 return Options.GameMode != null &&
-                       string.Equals(
-                           Options.GameMode.Selected.ToString(),
-                           "HotPotato",
-                           StringComparison.OrdinalIgnoreCase);
+                       Options.GameMode.Selected == GameModeType.HotPotato;
             }
             catch
             {
@@ -80,6 +82,10 @@ namespace BanMod
                 ShipStatus.Instance == null)
                 return;
 
+            CaptureBaseVision();
+
+            _active = true;
+
             foreach (PlayerControl player in PlayerControl.AllPlayerControls)
             {
                 if (!IsConnectedPlayer(player))
@@ -87,14 +93,19 @@ namespace BanMod
 
                 OriginalColors[player.PlayerId] =
                     (byte)player.Data.DefaultOutfit.ColorId;
+
+                player.RpcSetColor(WhiteColorId);
+
+                Utils.ClearTasks(player);
             }
 
-            CaptureBaseVision();
-            _active = true;
-            StartNewRound();
+            _nextRoundDelay = GetFirstPotatoDelaySeconds();
+
+            if (_nextRoundDelay <= 0f)
+                StartNewRound();
 
             BMLogger.Info(
-                "Hot Potato avviata.",
+                $"Hot Potato avviata. Prima patata tra {_nextRoundDelay:0.0}s.",
                 "HotPotato");
         }
 
@@ -115,9 +126,10 @@ namespace BanMod
             _holder = null;
             _blockedReturnPlayerId = NoPlayerId;
             _roundElapsed = 0f;
+            _roundDuration = DefaultExplosionSeconds;
             _nextRoundDelay = 0f;
             _blinkAccumulator = 0f;
-            _blinkShowsYellow = false;
+            _blinkShowsWhite = false;
             _baseVisionCaptured = false;
             _baseCrewVision = 0f;
             _baseImpostorVision = 0f;
@@ -153,7 +165,7 @@ namespace BanMod
             if (!IsAliveParticipant(_holder))
             {
                 RestoreHolderVision(_holder);
-                RestoreOriginalColor(_holder);
+                SetHotPotatoBaseColor(_holder);
                 _holder = null;
                 StartNewRound();
                 return;
@@ -169,7 +181,7 @@ namespace BanMod
             _roundElapsed += safeDelta;
             TickHolderBlink(safeDelta);
 
-            if (_roundElapsed >= RoundDuration)
+            if (_roundElapsed >= _roundDuration)
             {
                 ExplodeHolder();
                 return;
@@ -198,16 +210,17 @@ namespace BanMod
                 UnityEngine.Random.Range(0, alivePlayers.Count)];
             _blockedReturnPlayerId = NoPlayerId;
             _roundElapsed = 0f;
+            _roundDuration = GetExplosionSeconds();
             _nextRoundDelay = 0f;
             _blinkAccumulator = 0f;
-            _blinkShowsYellow = false;
+            _blinkShowsWhite = false;
             _visionResyncAccumulator = 0f;
 
-            _holder.RpcSetColor(RedColorId);
+            _holder.RpcSetColor(BlackColorId);
             ApplyHolderVision(_holder);
 
             BMLogger.Info(
-                $"Nuovo possessore: PlayerId={_holder.PlayerId}, nome={_holder.Data.PlayerName}.",
+                $"Nuovo possessore: PlayerId={_holder.PlayerId}, nome={_holder.Data.PlayerName}. Esplosione tra {_roundDuration:0.0}s.",
                 "HotPotato");
         }
 
@@ -268,19 +281,19 @@ namespace BanMod
 
             PlayerControl previousHolder = _holder;
             RestoreHolderVision(previousHolder);
-            RestoreOriginalColor(previousHolder);
+            SetHotPotatoBaseColor(previousHolder);
 
             _holder = newHolder;
             _blockedReturnPlayerId = previousHolder.PlayerId;
             _blinkAccumulator = 0f;
-            _blinkShowsYellow = false;
+            _blinkShowsWhite = false;
             _visionResyncAccumulator = 0f;
 
-            _holder.RpcSetColor(RedColorId);
+            _holder.RpcSetColor(BlackColorId);
             ApplyHolderVision(_holder);
 
             BMLogger.Info(
-                $"Patata passata da PlayerId={previousHolder.PlayerId} a PlayerId={_holder.PlayerId}. Tempo rimanente={Mathf.Max(0f, RoundDuration - _roundElapsed):0.0}s.",
+                $"Patata passata da PlayerId={previousHolder.PlayerId} a PlayerId={_holder.PlayerId}. Tempo rimanente={Mathf.Max(0f, _roundDuration - _roundElapsed):0.0}s.",
                 "HotPotato");
         }
 
@@ -291,34 +304,48 @@ namespace BanMod
 
             float remaining = Mathf.Max(
                 0f,
-                RoundDuration - _roundElapsed);
-            float interval = GetBlinkInterval(remaining);
+                _roundDuration - _roundElapsed);
+
+            // Più di 10 secondi: possessore nero fisso.
+            if (remaining > 10f)
+            {
+                _blinkAccumulator = 0f;
+                _blinkShowsWhite = false;
+
+                _holder.RpcSetColor(BlackColorId);
+                return;
+            }
+
+            float blinkInterval;
+
+            // Da 10 a 5 secondi: cambio ogni 1 secondo.
+            if (remaining > 5f)
+            {
+                blinkInterval = 1f;
+            }
+            // Da 5 a 3 secondi: cambio ogni 0.5 secondi.
+            else if (remaining > 3f)
+            {
+                blinkInterval = 0.5f;
+            }
+            // Da 3 secondi allo scoppio: cambio rapidissimo.
+            else
+            {
+                blinkInterval = 0.12f;
+            }
 
             _blinkAccumulator += deltaTime;
 
-            while (_blinkAccumulator >= interval)
+            while (_blinkAccumulator >= blinkInterval)
             {
-                _blinkAccumulator -= interval;
-                _blinkShowsYellow = !_blinkShowsYellow;
+                _blinkAccumulator -= blinkInterval;
+                _blinkShowsWhite = !_blinkShowsWhite;
+
                 _holder.RpcSetColor(
-                    _blinkShowsYellow
+                    _blinkShowsWhite
                         ? YellowColorId
                         : RedColorId);
             }
-        }
-
-        private static float GetBlinkInterval(float remaining)
-        {
-            if (remaining <= 4f)
-                return 0.10f;
-
-            if (remaining <= 8f)
-                return 0.20f;
-
-            if (remaining <= 15f)
-                return 0.40f;
-
-            return 0.50f;
         }
 
         private static void ExplodeHolder()
@@ -329,7 +356,7 @@ namespace BanMod
             _blockedReturnPlayerId = NoPlayerId;
             _roundElapsed = 0f;
             _blinkAccumulator = 0f;
-            _blinkShowsYellow = false;
+            _blinkShowsWhite = false;
             _visionResyncAccumulator = 0f;
 
             if (!IsAliveParticipant(explodedPlayer))
@@ -339,7 +366,7 @@ namespace BanMod
             }
 
             Eliminated.Add(explodedPlayer.PlayerId);
-            RestoreOriginalColor(explodedPlayer);
+            SetHotPotatoBaseColor(explodedPlayer);
             explodedPlayer.RpcSetRole(
                 RoleTypes.CrewmateGhost,
                 true);
@@ -368,7 +395,7 @@ namespace BanMod
                 return;
 
             RestoreHolderVision(_holder);
-            RestoreOriginalColor(_holder);
+            SetHotPotatoBaseColor(_holder);
 
             MatchSummary1.HotPotatoWin = winner != null;
             MatchSummary1.HotPotatoWinnerName =
@@ -376,17 +403,9 @@ namespace BanMod
 
             _ending = true;
 
-            // Ripristina il numero di impostori vanilla a 1
-            // prima di terminare la partita.
-            IGameOptions options =
-                GameManager.Instance?.LogicOptions?.currentGameOptions;
-
-            if (options != null)
-            {
-                options.SetInt(
-                    Int32OptionNames.NumImpostors,
-                    1);
-            }
+            // Ripristina gli impostori a 1 mentre siamo ancora in game,
+            // prima dell'RpcEndGame e quindi prima del rientro in lobby.
+            ForceSingleImpostorBeforeEnd();
 
             BMLogger.Info(
                 winner != null
@@ -397,6 +416,88 @@ namespace BanMod
             GameManager.Instance.RpcEndGame(
                 GameOverReason.CrewmatesByTask,
                 false);
+        }
+
+        private static float GetExplosionSeconds()
+        {
+            float value = DefaultExplosionSeconds;
+
+            try
+            {
+                if (Options.HotPotatoExplosionSeconds != null)
+                {
+                    value =
+                        Options.HotPotatoExplosionSeconds.GetInt();
+                }
+            }
+            catch (Exception exception)
+            {
+                BMLogger.Info(
+                    $"Lettura opzione HotPotatoExplosionSeconds fallita: {exception}",
+                    "HotPotato");
+            }
+
+            return Mathf.Clamp(value, 1f, 300f);
+        }
+
+        private static float GetFirstPotatoDelaySeconds()
+        {
+            float value = DefaultFirstPotatoDelaySeconds;
+
+            try
+            {
+                if (Options.HotPotatoFirstDelaySeconds != null)
+                {
+                    value =
+                        Options.HotPotatoFirstDelaySeconds.GetInt();
+                }
+            }
+            catch (Exception exception)
+            {
+                BMLogger.Info(
+                    $"Lettura opzione HotPotatoFirstDelaySeconds fallita: {exception}",
+                    "HotPotato");
+            }
+
+            return Mathf.Clamp(value, 0f, 120f);
+        }
+
+        private static void ForceSingleImpostorBeforeEnd()
+        {
+            try
+            {
+                IGameOptions logicOptions =
+                    GameManager.Instance?.LogicOptions?.currentGameOptions;
+
+                if (logicOptions != null)
+                {
+                    logicOptions.SetInt(
+                        Int32OptionNames.NumImpostors,
+                        1);
+                }
+
+                // Aggiorna anche le opzioni host/globali: questo evita
+                // di rientrare in lobby con un numero impostori alterato.
+                IGameOptions hostOptions =
+                    GameOptionsManager.Instance?.CurrentGameOptions;
+
+                if (hostOptions != null)
+                {
+                    hostOptions.SetInt(
+                        Int32OptionNames.NumImpostors,
+                        1);
+                }
+
+                BMLogger.Info(
+                    "Numero impostori ripristinato e sincronizzato a 1 prima della fine partita.",
+                    "HotPotato");
+            }
+            catch (Exception exception)
+            {
+                BMLogger.Info(
+                    $"Ripristino impostori fallito: {exception}",
+                    "HotPotato");
+            }
         }
 
         private static void CaptureBaseVision()
@@ -491,6 +592,14 @@ namespace BanMod
             options.SetFloat(
                 FloatOptionNames.ImpostorLightMod,
                 Mathf.Clamp(impostorVision, 0.05f, 5f));
+        }
+
+        private static void SetHotPotatoBaseColor(PlayerControl player)
+        {
+            if (!IsConnectedPlayer(player))
+                return;
+
+            player.RpcSetColor(WhiteColorId);
         }
 
         private static void RestoreOriginalColor(PlayerControl player)
@@ -666,27 +775,6 @@ namespace BanMod
         }
     }
 
-    [HarmonyPatch(typeof(LogicGameFlowNormal), "CheckEndCriteria")]
-    internal static class HotPotatoNormalEndCriteriaPatch
-    {
-        private static bool Prefix()
-        {
-            return !HotPotatoModeController.IsRunning;
-        }
-    }
-
-    [HarmonyPatch(typeof(GameManager), "CheckEndGameViaTasks")]
-    internal static class HotPotatoVanillaTaskWinPatch
-    {
-        private static bool Prefix(ref bool __result)
-        {
-            if (!HotPotatoModeController.IsRunning)
-                return true;
-
-            __result = false;
-            return false;
-        }
-    }
 
     [HarmonyPatch(typeof(GameManager), "EndGame")]
     internal static class HotPotatoGameManagerEndGamePatch
