@@ -2,6 +2,7 @@
   "LanguageID": "5",
   "Action": "Действие",
   "ActionCheaterlist": "Действие для читеров",
+      "ImpostorWinsTimer": "Самозванцы победили, потому что время игры истекло",
   "AddBanToList": "Добавлять заблокированных игроков в список банов",
   "AddedtoDenynamelist": " добавлен в список Denyname.txt",
   "AddedtoDenystartlist": " добавлен в список SpamStart.txt",

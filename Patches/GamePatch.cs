@@ -364,7 +364,13 @@ public static class CheckEndCriteriaPatch
             }
 
         }
+        if (gameMode == GameModeType.ZombieMode)
+        {
+            {
+                return false;
+            }
 
+        }
         if (gameMode == GameModeType.HotPotato)
         {
             {
@@ -496,6 +502,7 @@ public static class EndGameSavePatch
         MatchSummary1.StopMatchTimer();
         MatchSummary1.SaveToHistory();
         UnifiedRPCHandlerPatch.AlreadyHandledCheaters.Clear();
+        GameTimeLimit.Stop();
     }
 }
 
@@ -534,7 +541,7 @@ public static class RoleSelectionPatch
         RoleTeamTypes team,
         ref int teamMax)
     {
-        if (!Options.MoreSeek.GetBool())
+        if (!Options.MoreSeek)
             return true;
 
         if (team != RoleTeamTypes.Impostor)
@@ -557,7 +564,7 @@ public static class RoleSelectionPatch
         if (totalSeekersNeeded > 14)
             totalSeekersNeeded = 14;
 
-        var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV10>();
+        var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV11>();
 
         if (hnsOptions != null)
         {
@@ -656,7 +663,7 @@ public static class VictoryLogicPatch
 {
     public static bool Prefix(LogicGameFlowHnS __instance, ref bool __result)
     {
-        if (!Options.MoreSeek.GetBool())
+        if (!Options.MoreSeek)
             return true;
 
 
@@ -686,7 +693,7 @@ public static class EndCriteriaPatch
         if (__instance == null || __instance.Manager == null || AmongUsClient.Instance.IsGameOver)
             return false;
 
-        if (!Options.MoreSeek.GetBool())
+        if (!Options.MoreSeek)
             return true;
 
         bool showAd = false;

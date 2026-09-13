@@ -1410,17 +1410,39 @@ namespace BanMod
         }
         public static Dictionary<RoleTypes, RoleRateBackup> ForceFourImpSpecialRoleRates()
         {
-            Dictionary<RoleTypes, RoleRateBackup> backup = new Dictionary<RoleTypes, RoleRateBackup>();
+            Dictionary<RoleTypes, RoleRateBackup> backup =
+                new Dictionary<RoleTypes, RoleRateBackup>();
 
             try
             {
                 var options = GameOptionsManager.Instance.CurrentGameOptions;
+
                 if (options == null || options.RoleOptions == null)
                     return backup;
 
-                BackupAndSetRoleRate(options, backup, RoleTypes.Viper, 2, 100);
-                BackupAndSetRoleRate(options, backup, RoleTypes.Phantom, 2, 100);
-                BackupAndSetRoleRate(options, backup, RoleTypes.Shapeshifter, 2, 100);
+                BackupAndSetRoleRate(
+                    options,
+                    backup,
+                    RoleTypes.Viper,
+                    0,
+                    0
+                );
+
+                BackupAndSetRoleRate(
+                    options,
+                    backup,
+                    RoleTypes.Phantom,
+                    0,
+                    0
+                );
+
+                BackupAndSetRoleRate(
+                    options,
+                    backup,
+                    RoleTypes.Shapeshifter,
+                    0,
+                    0
+                );
             }
             catch
             {
@@ -1477,70 +1499,39 @@ namespace BanMod
             }
         }
 
-        public static List<RoleTypes> BuildConfiguredSpecialImpostorPool(System.Random rng)
+        public static List<RoleTypes> BuildConfiguredSpecialImpostorPool(
+    System.Random rng)
         {
             List<RoleTypes> pool = new List<RoleTypes>();
-            List<RoleTypes> enabledRoles = new List<RoleTypes>();
 
             foreach (RoleTypes role in SpecialImpostorRoles)
             {
                 int count = GetConfiguredRoleCount(role);
                 int chance = GetConfiguredRoleChance(role);
 
+                // Non configurato -> non entra nel pool
                 if (count <= 0 || chance <= 0)
                     continue;
-
-                enabledRoles.Add(role);
 
                 for (int i = 0; i < count; i++)
                     pool.Add(role);
             }
 
-            if (enabledRoles.Count == 0)
+            // Mischia il pool, ma NON aggiunge ruoli mancanti.
+            for (int i = pool.Count - 1; i > 0; i--)
             {
-                enabledRoles.AddRange(SpecialImpostorRoles);
+                int j = rng.Next(i + 1);
+
+                RoleTypes temp = pool[i];
+                pool[i] = pool[j];
+                pool[j] = temp;
             }
 
-            if (enabledRoles.Count == 1)
-            {
-                while (pool.Count < 4)
-                    pool.Add(enabledRoles[0]);
+            // Abbiamo massimo 4 impostori.
+            if (pool.Count > 4)
+                pool = pool.Take(4).ToList();
 
-                return pool.Take(4).ToList();
-            }
-
-            if (enabledRoles.Count == 2)
-            {
-                List<RoleTypes> balancedPool = new List<RoleTypes>();
-
-                foreach (RoleTypes role in enabledRoles)
-                {
-                    int existingCount = pool.Count(r => r == role);
-                    int targetCount = Math.Min(2, Math.Max(1, existingCount));
-
-                    for (int i = 0; i < targetCount; i++)
-                        balancedPool.Add(role);
-                }
-
-                int fillIndex = 0;
-
-                while (balancedPool.Count < 4)
-                {
-                    RoleTypes role = enabledRoles[fillIndex % enabledRoles.Count];
-                    balancedPool.Add(role);
-                    fillIndex++;
-                }
-
-                return balancedPool.Take(4).ToList();
-            }
-
-            while (pool.Count < 4)
-            {
-                RoleTypes randomRole = enabledRoles[rng.Next(enabledRoles.Count)];
-                pool.Add(randomRole);
-            }
-
-            return pool.Take(4).ToList();
+            return pool;
         }
 
         public static void RemoveAlreadyUsedSpecialImpostorRolesFromPool(
@@ -1568,9 +1559,10 @@ namespace BanMod
         }
 
         public static void ApplyFourImpSpecialFill(
-            List<PlayerControl> allPlayers,
-            HashSet<byte> exactAssignedPlayers,
-            System.Random rng)
+    List<PlayerControl> allPlayers,
+    HashSet<byte> exactAssignedPlayers,
+    List<RoleTypes> configuredPool,
+    System.Random rng)
         {
             if (allPlayers == null || rng == null)
                 return;
@@ -1578,9 +1570,24 @@ namespace BanMod
             if (!ShouldForceFourImpostors(allPlayers.Count))
                 return;
 
-            List<RoleTypes> configuredPool = BuildConfiguredSpecialImpostorPool(rng);
+            if (configuredPool == null)
+                return;
 
-            RemoveAlreadyUsedSpecialImpostorRolesFromPool(configuredPool, allPlayers);
+            // Copia locale perché sotto rimuoviamo gli elementi.
+            configuredPool = new List<RoleTypes>(configuredPool);
+
+            // Se qualche special è già stato assegnato esattamente,
+            // rimuove una copia corrispondente dal pool.
+            RemoveAlreadyUsedSpecialImpostorRolesFromPool(
+                configuredPool,
+                allPlayers
+            );
+
+            // IMPORTANTE:
+            // pool vuoto = nessun ruolo speciale configurato.
+            // Quindi non facciamo nulla e gli impostori restano normali.
+            if (configuredPool.Count == 0)
+                return;
 
             var baseImpostors = allPlayers
                 .Where(p => p != null && p.Data != null)
@@ -1591,9 +1598,12 @@ namespace BanMod
                         return true;
 
                     if (exactAssignedPlayers.Contains(p.PlayerId) &&
-                        ForcedRoleSystem.TryGetForcedRole(p.PlayerId, out RoleTypes forcedRole) &&
+                        ForcedRoleSystem.TryGetForcedRole(
+                            p.PlayerId,
+                            out RoleTypes forcedRole) &&
                         forcedRole == RoleTypes.Impostor)
                     {
+                        // Forced Impostor deve restare Impostor normale.
                         return false;
                     }
 
@@ -1603,15 +1613,17 @@ namespace BanMod
 
             foreach (var player in baseImpostors)
             {
+                // Finito il pool?
+                // Gli altri restano semplicemente Impostor.
                 if (configuredPool.Count == 0)
                     break;
 
                 int index = rng.Next(configuredPool.Count);
+
                 RoleTypes selectedRole = configuredPool[index];
                 configuredPool.RemoveAt(index);
 
                 ApplyExactRole(player, selectedRole);
-
             }
         }
 
@@ -1663,6 +1675,7 @@ namespace BanMod
         public static bool Prefix()
         {
             ForcedRoleSystem.ForcedRoleLog("RoleManager.SelectRoles Prefix chiamato");
+            GameModeType gameMode = Options.GameMode.Selected;
 
             if (AmongUsClient.Instance == null)
             {
@@ -1681,7 +1694,13 @@ namespace BanMod
                 ForcedRoleSystem.DisableForFfa();
                 return true;
             }
-            GameModeType gameMode = Options.GameMode.Selected;
+
+            if (gameMode == GameModeType.TaskRun ||
+                gameMode == GameModeType.ZombieMode ||
+                gameMode == GameModeType.HotPotato)
+            {
+                return true;
+            }
 
             if (Options.Jester.GetBool() && !Jester.JesterSelected)
             {
@@ -1722,7 +1741,7 @@ namespace BanMod
             {
                 int impostorsRequired = Options.NumSeekers != null ? Options.NumSeekers.GetInt() : 1;
 
-                var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV10>();
+                var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV11>();
                 if (hnsOptions != null)
                     hnsOptions.NumImpostors = impostorsRequired;
 
@@ -1864,6 +1883,14 @@ namespace BanMod
                 int crewSlotsTotal = Math.Max(0, allPlayersList.Count - adjustedNumImpostors);
 
                 var rng = new System.Random();
+
+                List<RoleTypes> fourImpSpecialPool = null;
+
+                if (fourImpActive)
+                {
+                    fourImpSpecialPool =
+                        ForcedRoleHelpers.BuildConfiguredSpecialImpostorPool(rng);
+                }
 
                 var exactAssignedPlayers = new HashSet<byte>();
                 var appliedForcedCountByRole = new Dictionary<RoleTypes, int>();
@@ -2038,6 +2065,7 @@ namespace BanMod
                 ForcedRoleHelpers.ApplyFourImpSpecialFill(
                     allPlayersList,
                     exactAssignedPlayers,
+                    fourImpSpecialPool,
                     rng
                 );
 

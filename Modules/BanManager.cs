@@ -18,6 +18,7 @@ namespace BanMod;
 
 public static class BanManager
 {
+    public static List<string> DenyNames = new();
     private const string DenyNameListPath = "./BAN_DATA/DENIED/DenyName.txt";
     private const string BanListPath = "./BAN_DATA/DENIED/BanList.txt";
     private const string BanModeratorListPath = "./BAN_DATA/DENIED/BanModeratorList.txt";
@@ -44,12 +45,72 @@ public static class BanManager
             if (!File.Exists(DenyNameListPath))
                 File.Create(DenyNameListPath).Close();
 
-            Directory.CreateDirectory("BAN_DATA/ALLOWED");
+            // Carica i DenyName in memoria
+            DenyNames = File.ReadAllLines(DenyNameListPath, Encoding.UTF8)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
 
+            Directory.CreateDirectory("BAN_DATA/ALLOWED");
         }
-        catch (Exception) { }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[BanMod] BanManager Initialize error: {ex}");
+        }
+    }
+    public static bool AddDenyName(string name)
+    {
+        name = name?.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+
+        if (DenyNames.Any(x =>
+            x.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        File.AppendAllText(
+            DenyNameListPath,
+            name + Environment.NewLine,
+            Encoding.UTF8
+        );
+
+        // subito in memoria
+        DenyNames.Add(name);
+
+        return true;
     }
 
+    public static bool RemoveDenyName(string name)
+    {
+        name = name?.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+
+        int removed = DenyNames.RemoveAll(x =>
+            x.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        if (File.Exists(DenyNameListPath))
+        {
+            var lines = File.ReadAllLines(DenyNameListPath, Encoding.UTF8)
+                .Where(x =>
+                    !x.Trim().Equals(
+                        name,
+                        StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            File.WriteAllLines(
+                DenyNameListPath,
+                lines,
+                Encoding.UTF8
+            );
+        }
+
+        return removed > 0;
+    }
     public static IEnumerator WaitAndCheckAll(ClientData client)
     {
         if (client == null)

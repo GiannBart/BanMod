@@ -497,8 +497,8 @@ namespace BanMod
 
         private void CreateMainPanel()
         {
-            mainPanel = CreatePanel(uiRoot.transform, "MainPanel", new Vector2(900f, 820f), Vector2.zero, new Color(0f, 0f, 0f, 0.90f));
-            mainTitleText = CreateLabel(mainPanel.transform, "MainTitle", "", 30, TextAlignmentOptions.Center, Color.cyan, new Vector2(820f, 50f), new Vector2(0f, 360f));
+            mainPanel = CreatePanel(uiRoot.transform, "MainPanel", new Vector2(900f, 820f), Vector2.zero, BanModUiStyles.WindowColor);
+            mainTitleText = CreateLabel(mainPanel.transform, "MainTitle", "", 30, TextAlignmentOptions.Center, BanModUiStyles.AccentHoverColor, new Vector2(820f, 50f), new Vector2(0f, 360f));
             communicationsUnreadBadgeText = CreateLabel(
                 mainPanel.transform,
                 "CommunicationsUnreadBadge",
@@ -551,7 +551,7 @@ namespace BanMod
 
         private void CreateBugPanel()
         {
-            CreateLabel(bugPanel.transform, "BugTitleHeader", T("Comm_BugReport", "Bug Report"), 25, TextAlignmentOptions.Center, Color.cyan, new Vector2(780f, 36f), new Vector2(0f, 300f));
+            CreateLabel(bugPanel.transform, "BugTitleHeader", T("Comm_BugReport", "Bug Report"), 25, TextAlignmentOptions.Center, BanModUiStyles.AccentHoverColor, new Vector2(780f, 36f), new Vector2(0f, 300f));
             CreateLabel(bugPanel.transform, "BugInfo", T("Comm_LogsAutoInfo", "Full BepInEx logs will be sent automatically with every report: LogOutput.log and ErrorLog.log."), 15, TextAlignmentOptions.Center, new Color(0.9f, 0.9f, 0.9f, 1f), new Vector2(780f, 34f), new Vector2(0f, 268f));
 
             CreateLabel(bugPanel.transform, "TitleLabel", T("Comm_FieldTitleRequired", "TITLE: (required)"), 16, TextAlignmentOptions.Left, Color.white, new Vector2(780f, 24f), new Vector2(0f, 228f));
@@ -583,35 +583,35 @@ namespace BanMod
 
         private void CreatePlayerReportPanel()
         {
-            CreateLabel(playerReportPanel.transform, "PlayerHeader", T("Comm_ReportPlayer", "Report Player"), 25, TextAlignmentOptions.Center, Color.cyan, new Vector2(780f, 36f), new Vector2(0f, 300f));
+            CreateLabel(playerReportPanel.transform, "PlayerHeader", T("Comm_ReportPlayer", "Report Player"), 25, TextAlignmentOptions.Center, BanModUiStyles.AccentHoverColor, new Vector2(780f, 36f), new Vector2(0f, 300f));
             CreateLabel(playerReportPanel.transform, "PlayerInfo", T("Comm_LogsAutoInfo", "Full BepInEx logs will be sent automatically with every report: LogOutput.log and ErrorLog.log."), 15, TextAlignmentOptions.Center, new Color(0.9f, 0.9f, 0.9f, 1f), new Vector2(780f, 34f), new Vector2(0f, 268f));
             selectedPlayerText = CreateLabel(playerReportPanel.transform, "SelectedPlayer", T("Comm_SelectedPlayerNone", "Selected player: none"), 16, TextAlignmentOptions.Center, Color.white, new Vector2(780f, 30f), new Vector2(0f, 228f));
             playerListPanel = CreateEmpty(playerReportPanel.transform, "PlayerListPanel", new Vector2(780f, 160f), new Vector2(0f, 130f));
             CreateLabel(playerReportPanel.transform, "ReasonLabel", T("Comm_FieldReasonRequired", "Reason: (required)"), 16, TextAlignmentOptions.Left, Color.white, new Vector2(780f, 24f), new Vector2(0f, 20f));
             playerReasonInput = CreateInput(playerReportPanel.transform, "PlayerReasonInput", T("Comm_ReasonPlaceholder", "Write the reason for the report..."), true, new Vector2(780f, 180f), new Vector2(0f, -90f));
             sendPlayerButton = CreateButton(playerReportPanel.transform, "SendPlayerButton", T("Comm_SendPlayerReport", "Send Player Report"), new Vector2(280f, 44f), new Vector2(165f, -240f), new Color(0.1f, 0.45f, 0.1f, 1f), SendPlayerReport);
-            CreateButton(playerReportPanel.transform, "BackPlayerButton", T("Comm_Back", "Back"), new Vector2(180f, 42f), new Vector2(-165f, -240f), new Color(0.25f, 0.25f, 0.25f, 1f), OpenHomePanel);
+            CreateButton(playerReportPanel.transform, "BackPlayerButton", T("Back", "Back"), new Vector2(180f, 42f), new Vector2(-165f, -240f), new Color(0.25f, 0.25f, 0.25f, 1f), OpenHomePanel);
         }
 
         private void CreateSupportPanel()
         {
-            CreateLabel(supportPanel.transform, "SupportHeader", T("Comm_SupportRequest", "Support Request"), 25, TextAlignmentOptions.Center, Color.cyan, new Vector2(780f, 36f), new Vector2(0f, 300f));
+            CreateLabel(supportPanel.transform, "SupportHeader", T("Comm_SupportRequest", "Support Request"), 25, TextAlignmentOptions.Center, BanModUiStyles.AccentHoverColor, new Vector2(780f, 36f), new Vector2(0f, 300f));
             CreateLabel(supportPanel.transform, "SupportInfo", T("Comm_LogsAutoInfo", "Full BepInEx logs will be sent automatically with every report: LogOutput.log and ErrorLog.log."), 15, TextAlignmentOptions.Center, new Color(0.9f, 0.9f, 0.9f, 1f), new Vector2(780f, 34f), new Vector2(0f, 260f));
             CreateLabel(supportPanel.transform, "SupportTitleLabel", T("Comm_FieldTitleRequired", "TITLE: (required)"), 16, TextAlignmentOptions.Left, Color.white, new Vector2(780f, 24f), new Vector2(0f, 200f));
             supportTitleInput = CreateInput(supportPanel.transform, "SupportTitleInput", T("Comm_TitlePlaceholder", "Write a short title..."), false, new Vector2(780f, 42f), new Vector2(0f, 168f));
             CreateLabel(supportPanel.transform, "SupportMessageLabel", T("Comm_FieldDescriptionRequired", "Description: (required)"), 16, TextAlignmentOptions.Left, Color.white, new Vector2(780f, 24f), new Vector2(0f, 112f));
             supportMessageInput = CreateInput(supportPanel.transform, "SupportMessageInput", T("Comm_DescriptionPlaceholder", "Write your message here..."), true, new Vector2(780f, 240f), new Vector2(0f, -25f));
             sendSupportButton = CreateButton(supportPanel.transform, "SendSupportButton", T("Comm_SendSupportRequest", "Send Support Request"), new Vector2(300f, 44f), new Vector2(170f, -220f), new Color(0.1f, 0.45f, 0.1f, 1f), SendSupportRequest);
-            CreateButton(supportPanel.transform, "BackSupportButton", T("Comm_Back", "Back"), new Vector2(180f, 42f), new Vector2(-170f, -220f), new Color(0.25f, 0.25f, 0.25f, 1f), OpenHomePanel);
+            CreateButton(supportPanel.transform, "BackSupportButton", T("Back", "Back"), new Vector2(180f, 42f), new Vector2(-170f, -220f), new Color(0.25f, 0.25f, 0.25f, 1f), OpenHomePanel);
         }
 
 
         private void CreateSentReportsPanel()
         {
-            CreateLabel(sentReportsPanel.transform, "SentHeader", T("Comm_SentReports", "Sent Reports"), 25, TextAlignmentOptions.Center, Color.cyan, new Vector2(780f, 36f), new Vector2(0f, 300f));
+            CreateLabel(sentReportsPanel.transform, "SentHeader", T("Comm_SentReports", "Sent Reports"), 25, TextAlignmentOptions.Center, BanModUiStyles.AccentHoverColor, new Vector2(780f, 36f), new Vector2(0f, 300f));
             sentReportsInfoText = CreateLabel(sentReportsPanel.transform, "SentInfo", T("Comm_SentReportsInfo", "Select one of your reports to chat with admin, close it as resolved, or delete it from your list."), 15, TextAlignmentOptions.Center, new Color(0.9f, 0.9f, 0.9f, 1f), new Vector2(780f, 34f), new Vector2(0f, 264f));
             sentReportRefreshButton = CreateButton(sentReportsPanel.transform, "RefreshSentReports", T("Comm_Refresh", "Refresh"), new Vector2(170f, 40f), new Vector2(225f, 220f), new Color(0.18f, 0.36f, 0.55f, 1f), LoadSentReports);
-            CreateButton(sentReportsPanel.transform, "BackSentReports", T("Comm_Back", "Back"), new Vector2(170f, 40f), new Vector2(-225f, 220f), new Color(0.25f, 0.25f, 0.25f, 1f), OpenHomePanel);
+            CreateButton(sentReportsPanel.transform, "BackSentReports", T("Back", "Back"), new Vector2(170f, 40f), new Vector2(-225f, 220f), new Color(0.25f, 0.25f, 0.25f, 1f), OpenHomePanel);
 
             sentReportsListPanel = CreateEmpty(sentReportsPanel.transform, "SentReportsList", new Vector2(780f, 170f), new Vector2(0f, 70f));
             sentReportDetailsText = CreateLabel(sentReportsPanel.transform, "SentReportDetails", T("Comm_SelectReport", "Select a report to view details."), 14, TextAlignmentOptions.TopLeft, Color.white, new Vector2(780f, 85f), new Vector2(0f, 10f));
@@ -627,7 +627,7 @@ namespace BanMod
 
         private void CreatePopupPanel()
         {
-            popupPanel = CreatePanel(uiRoot.transform, "MessagePopup", new Vector2(1180f, 760f), Vector2.zero, new Color(0f, 0f, 0f, 0.94f));
+            popupPanel = CreatePanel(uiRoot.transform, "MessagePopup", new Vector2(1180f, 760f), Vector2.zero, new Color(BanModUiStyles.WindowColor.r, BanModUiStyles.WindowColor.g, BanModUiStyles.WindowColor.b, 0.985f));
 
             CanvasGroup popupGroup = popupPanel.GetComponent<CanvasGroup>();
             if (popupGroup == null)
@@ -643,7 +643,7 @@ namespace BanMod
                 T("Comm_ServerMessageTitle", "BANMOD Message"),
                 27,
                 TextAlignmentOptions.Center,
-                Color.cyan,
+                BanModUiStyles.AccentHoverColor,
                 new Vector2(1120f, 62f),
                 new Vector2(0f, 334f)
             );
@@ -665,7 +665,7 @@ namespace BanMod
                 "PopupReportDetailsPanel",
                 new Vector2(330f, 430f),
                 new Vector2(-395f, 82f),
-                new Color(0.045f, 0.055f, 0.065f, 0.98f)
+                BanModUiStyles.PanelColor
             );
 
             popupReportDetailsText = CreateLabel(
@@ -2212,11 +2212,36 @@ namespace BanMod
             catch { }
         }
 
+        private static void ApplyModernImage(Image image, Color color, bool addOutline)
+        {
+            if (image == null)
+                return;
+
+            image.sprite = BanModUiStyles.RoundedSprite;
+            image.type = Image.Type.Sliced;
+            image.color = color;
+
+            if (addOutline)
+            {
+                Outline outline = image.GetComponent<Outline>();
+                if (outline == null)
+                    outline = image.gameObject.AddComponent<Outline>();
+
+                outline.effectColor = new Color(
+                    BanModUiStyles.AccentColor.r,
+                    BanModUiStyles.AccentColor.g,
+                    BanModUiStyles.AccentColor.b,
+                    0.20f);
+                outline.effectDistance = new Vector2(1f, -1f);
+                outline.useGraphicAlpha = true;
+            }
+        }
+
         private static GameObject CreatePanel(Transform parent, string name, Vector2 size, Vector2 pos, Color color)
         {
             GameObject go = CreateEmpty(parent, name, size, pos);
             Image image = go.AddComponent<Image>();
-            image.color = color;
+            ApplyModernImage(image, color, true);
             image.raycastTarget = true;
             return go;
         }
@@ -2260,7 +2285,7 @@ namespace BanMod
             GameObject root = CreateEmpty(parent, name + "Scroll", size, pos);
 
             Image background = root.AddComponent<Image>();
-            background.color = new Color(1f, 1f, 1f, 0.045f);
+            ApplyModernImage(background, new Color(0.09f, 0.10f, 0.13f, 0.96f), true);
             background.raycastTarget = true;
 
             scrollRect = root.AddComponent<ScrollRect>();
@@ -2325,7 +2350,11 @@ namespace BanMod
             hintRect.anchoredPosition = new Vector2(-8f, 0f);
 
             Image hintImage = scrollHint.AddComponent<Image>();
-            hintImage.color = new Color(1f, 1f, 1f, 0.25f);
+            hintImage.color = new Color(
+                BanModUiStyles.AccentColor.r,
+                BanModUiStyles.AccentColor.g,
+                BanModUiStyles.AccentColor.b,
+                0.45f);
             hintImage.raycastTarget = false;
 
             return label;
@@ -2335,11 +2364,22 @@ namespace BanMod
         {
             GameObject go = CreateEmpty(parent, name, size, pos);
             Image image = go.AddComponent<Image>();
-            image.color = color;
+            ApplyModernImage(image, color, false);
             image.raycastTarget = true;
 
             Button button = go.AddComponent<Button>();
             button.targetGraphic = image;
+            button.transition = Selectable.Transition.ColorTint;
+
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.12f, 1.12f, 1.12f, 1f);
+            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
+            colors.selectedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
+            colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.65f);
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
 
             if (onClick != null)
                 button.onClick.AddListener(onClick);
@@ -2359,7 +2399,7 @@ namespace BanMod
             GameObject go = CreateEmpty(parent, name, size, pos);
 
             Image image = go.AddComponent<Image>();
-            image.color = new Color(1f, 1f, 1f, 0.13f);
+            ApplyModernImage(image, new Color(0.10f, 0.11f, 0.14f, 0.98f), true);
             image.raycastTarget = true;
 
             TMP_InputField input = go.AddComponent<TMP_InputField>();

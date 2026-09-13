@@ -170,13 +170,18 @@ namespace BanMod
             try
             {
                 EnsureStyles();
-                GUI.backgroundColor = Color.black;
+
+                Color oldBackground = GUI.backgroundColor;
+                GUI.backgroundColor = Color.white;
+
                 _windowRect = GUI.Window(
                     WindowId,
                     _windowRect,
                     (GUI.WindowFunction)DrawWindow,
                     "",
                     BanModUiStyles.BlackWindow);
+
+                GUI.backgroundColor = oldBackground;
             }
             catch { }
         }
@@ -308,11 +313,7 @@ namespace BanMod
             }
 
             bool wasEnabled = GUI.enabled;
-            Color oldBackground = GUI.backgroundColor;
             GUI.enabled = !_busy;
-            GUI.backgroundColor = _busy
-                ? new Color(0.25f, 0.28f, 0.32f, 1f)
-                : new Color(0.06f, 0.55f, 0.75f, 1f);
 
             if (GUILayout.Button(
                 _busy ? "PLEASE WAIT..." : "SAVE",
@@ -323,7 +324,6 @@ namespace BanMod
                 Submit();
             }
 
-            GUI.backgroundColor = oldBackground;
             GUI.enabled = wasEnabled;
 
             Event current = Event.current;
@@ -465,73 +465,72 @@ namespace BanMod
             if (_titleStyle != null)
                 return;
 
-            _titleStyle = new GUIStyle(GUI.skin.label)
+            _titleStyle = new GUIStyle(BanModUiStyles.TitleLabel)
             {
                 fontSize = 28,
                 fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(0.22f, 0.90f, 1f, 1f) }
+                alignment = TextAnchor.MiddleCenter
             };
+            _titleStyle.normal.textColor = BanModUiStyles.AccentHoverColor;
 
-            _descriptionStyle = new GUIStyle(GUI.skin.label)
+            _descriptionStyle = new GUIStyle(BanModUiStyles.BodyLabel)
             {
                 fontSize = 16,
                 alignment = TextAnchor.MiddleCenter,
-                wordWrap = true,
-                normal = { textColor = Color.white }
+                wordWrap = true
             };
 
-            _sectionStyle = new GUIStyle(GUI.skin.label)
+            _sectionStyle = new GUIStyle(BanModUiStyles.HeaderLabel)
             {
                 fontSize = 17,
                 fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleLeft,
-                normal = { textColor = Color.white }
+                alignment = TextAnchor.MiddleLeft
             };
 
-            _buttonStyle = new GUIStyle(GUI.skin.button)
+            // White rounded base because this screen already uses GUI.backgroundColor
+            // to visually distinguish selected/unselected modules.
+            _buttonStyle = new GUIStyle(BanModUiStyles.TintableButton)
             {
                 fontSize = 17,
                 alignment = TextAnchor.MiddleLeft
             };
             SetPadding(_buttonStyle, 18, 12, 8, 8);
 
-            _saveButtonStyle = new GUIStyle(GUI.skin.button)
+            _saveButtonStyle = new GUIStyle(BanModUiStyles.AccentButton)
             {
                 fontSize = 19,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
 
-            _statusStyle = new GUIStyle(GUI.skin.label)
+            _statusStyle = new GUIStyle(BanModUiStyles.BodyLabel)
             {
                 fontSize = 15,
                 alignment = TextAnchor.MiddleCenter,
                 wordWrap = true
             };
 
-            _lockedUsernameStyle = new GUIStyle(GUI.skin.box)
+            _lockedUsernameStyle = new GUIStyle(BanModUiStyles.DarkBox)
             {
                 fontSize = 18,
-                alignment = TextAnchor.MiddleLeft,
-                normal = { textColor = new Color(0.72f, 0.92f, 1f, 1f) }
+                alignment = TextAnchor.MiddleLeft
             };
+            _lockedUsernameStyle.normal.textColor = new Color(0.72f, 0.92f, 1f, 1f);
             SetPadding(_lockedUsernameStyle, 14, 10, 8, 8);
 
-            _usernameInputStyle = new GUIStyle(GUI.skin.box)
+            _usernameInputStyle = new GUIStyle(BanModUiStyles.DarkBox)
             {
                 fontSize = 18,
-                alignment = TextAnchor.MiddleLeft,
-                normal = { textColor = Color.white }
+                alignment = TextAnchor.MiddleLeft
             };
+            _usernameInputStyle.normal.textColor = Color.white;
             SetPadding(_usernameInputStyle, 14, 10, 8, 8);
 
-            _hintStyle = new GUIStyle(GUI.skin.label)
+            _hintStyle = new GUIStyle(BanModUiStyles.MutedLabel)
             {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleLeft,
-                wordWrap = true,
-                normal = { textColor = new Color(0.72f, 0.76f, 0.82f, 1f) }
+                wordWrap = true
             };
         }
 

@@ -3,6 +3,7 @@
   "Action": "Gníomh",
   "ActionCheaterlist": "Gníomh do chaimiléirí",
   "AddBanToList": "Cuir imreoirí toirmiscthe/bacáilte leis an liosta banála",
+      "ImpostorWinsTimer": "Bhuaigh na hImpostóirí mar chuaigh amadóir an chluiche in éag",
   "AddedtoDenynamelist": " Curtha leis an liosta Denyname.txt",
   "AddedtoDenystartlist": " Curtha leis an liosta SpamStart.txt",
   "AddedtoDenyWordlist": " Curtha leis an liosta BanWord.txt",

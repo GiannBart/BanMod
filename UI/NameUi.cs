@@ -30,14 +30,14 @@ namespace BanMod
 
         private bool created = false;
 
-        private static readonly Color32 MainNormalColor = new Color32(70, 130, 180, 255);
-        private static readonly Color32 MainHoverColor = new Color32(65, 105, 225, 255);
+        private static readonly Color32 MainNormalColor = new Color32(35, 38, 46, 255);
+        private static readonly Color32 MainHoverColor = new Color32(26, 115, 217, 255);
 
-        private static readonly Color32 MiniNormalColor = new Color32(70, 130, 180, 255);
-        private static readonly Color32 MiniHoverColor = new Color32(65, 105, 225, 255);
+        private static readonly Color32 MiniNormalColor = new Color32(35, 38, 46, 255);
+        private static readonly Color32 MiniHoverColor = new Color32(26, 115, 217, 255);
 
-        private static readonly Color32 ApplyNormalColor = new Color32(70, 130, 180, 255);
-        private static readonly Color32 ApplyHoverColor = new Color32(65, 105, 225, 255);
+        private static readonly Color32 ApplyNormalColor = new Color32(26, 115, 217, 255);
+        private static readonly Color32 ApplyHoverColor = new Color32(31, 140, 245, 255);
 
         private void Awake()
         {
@@ -271,7 +271,7 @@ namespace BanMod
             if (nameToShow == "\uFFA0")
             {
                 valueText.text = "INVISIBLE NAME";
-                valueText.color = Color.gray; 
+                valueText.color = new Color(0.62f, 0.66f, 0.74f, 1f); 
             }
             else
             {
@@ -385,6 +385,7 @@ namespace BanMod
             if (buttonText != null)
             {
                 buttonText.DestroyTranslator();
+                buttonText.color = Color.white;
                 buttonText.fontSize = fontSize;
                 buttonText.enableWordWrapping = false;
                 buttonText.text = label;

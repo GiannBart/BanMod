@@ -22,7 +22,6 @@ public static class GameStartManagerUpdatePatch
 {
     public static void Prefix(GameStartManager __instance)
     {
-        if (!GameStates.isHideNSeek)
         {
             __instance.MinPlayers = 1;
         }

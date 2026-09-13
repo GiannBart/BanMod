@@ -2861,7 +2861,11 @@
 //    }
 //}
 //credits and licenses in the resources folder/
+using BepInEx;
+using BepInEx.Logging;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
+using Il2CppSystem.Runtime.Remoting.Messaging;
 using InnerNet;
 using System;
 using System.Collections;
@@ -2873,11 +2877,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BepInEx;
-using BepInEx.Logging;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
+using static BanMod.Utils.CheatUtils;
 
 namespace BanMod
 {
@@ -2887,7 +2889,6 @@ namespace BanMod
         public const string PublicApiBaseUrl = ApiBaseUrl;
         private const string ActivationChallengeUrl = ApiBaseUrl + "/api/activation/challenge";
         private const string ActivationVerifyUrl = ApiBaseUrl + "/api/activation/verify";
-        private const string ExtraModsReportUrl = ApiBaseUrl + "/api/mod/extra-mods/report";
         private const string AccessUrl = ApiBaseUrl + "/api/access";
         private const string LobbyStatusUrl = ApiBaseUrl + "/api/lobby/status";
         private const string ActiveLobbiesUrl = ApiBaseUrl + "/api/lobbies/active";
@@ -2914,12 +2915,8 @@ namespace BanMod
         private static bool _premiumRefreshLoopStarted;
         private static bool _premiumRefreshRunning;
         private static bool _premiumRefreshRequested;
-        private static bool _activationRefreshRunning;
-        private static float _activationRefreshStartedRealtime;
-        private static long _extraReportGeneration;
         private static float _statusStartedRealtime;
         private static int _lastLobbySceneHandle = int.MinValue;
-        private static string _extraReportConfirmedToken = "";
 
         private static string _friendCode = "";
         private static string _playerName = "";
@@ -3260,43 +3257,10 @@ namespace BanMod
                 _activationToken = "";
                 _activationTokenExpiresAtUnix = 0;
                 _activationTokenRecoveryOnly = false;
-                _extraReportConfirmedToken = "";
             }
             catch { }
         }
 
-        private static bool HasUsableActivationToken()
-        {
-            try
-            {
-                long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                return !_activationTokenRecoveryOnly
-                    && !string.IsNullOrWhiteSpace(_activationToken)
-                    && _activationTokenExpiresAtUnix > now + 20;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static bool HasConfirmedExtraReportForCurrentToken()
-        {
-            try
-            {
-                return HasUsableActivationToken()
-                    && !string.IsNullOrWhiteSpace(_extraReportConfirmedToken)
-                    && string.Equals(
-                        _extraReportConfirmedToken,
-                        _activationToken,
-                        StringComparison.Ordinal
-                    );
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
         public static IEnumerator EnsureActivationTokenForApi(Action<bool, string> callback)
         {
@@ -3535,11 +3499,8 @@ namespace BanMod
             _activationToken = _friendCode;
             BanModApiTokenManager.Token = _friendCode;
 
-            bool reportReady = false;
-            yield return SendExtraModsReport("startup", ok => reportReady = ok);
-            if (!reportReady)
-                Debug.LogWarning("[BANMOD][EXTRA] Report non confermato; i servizi privati resteranno chiusi.");
-
+            // Extra-mod detection is owned exclusively by login.bin.
+            // login.bin reports the authoritative scan through /api/login/state.
             bool loginLoaded = false;
             yield return EnsureLoginBinLoaded(ok => loginLoaded = ok);
 
@@ -3827,7 +3788,6 @@ namespace BanMod
 
             _activationToken = response.activation_token;
             _activationTokenRecoveryOnly = response.recovery_only;
-            _extraReportConfirmedToken = "";
 
             if (string.Equals(response.device_status, "pending", StringComparison.OrdinalIgnoreCase))
             {
@@ -3870,129 +3830,6 @@ namespace BanMod
             return "3.6.9";
         }
 
-        private static IEnumerator SendExtraModsReport(string reason, Action<bool> callback)
-        {
-            yield return SendExtraModsReport(reason, _activationToken, callback);
-        }
-
-        private static IEnumerator SendExtraModsReport(
-            string reason,
-            string activationToken,
-            Action<bool> callback)
-        {
-            if (string.IsNullOrWhiteSpace(_friendCode))
-            {
-                callback?.Invoke(false);
-                yield break;
-            }
-            List<DetectedModInfo> mods = new List<DetectedModInfo>();
-            bool scanSuccess = false;
-            string scanError = "";
-
-            try
-            {
-                mods = DetectExtraMods();
-                scanSuccess = true;
-            }
-            catch (Exception ex)
-            {
-                scanSuccess = false;
-                scanError = ex.GetType().Name + ": " + ex.Message;
-                mods = new List<DetectedModInfo>();
-            }
-
-            string body = BuildExtraModsJson(reason, scanSuccess, scanError, mods);
-
-            UnityWebRequest req = new UnityWebRequest(ExtraModsReportUrl, "POST");
-            req.timeout = RequestTimeoutSeconds;
-            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            req.SetRequestHeader("X-BANMOD-FriendCode", _friendCode);
-
-            yield return req.SendWebRequest();
-
-            string text = req.downloadHandler != null ? req.downloadHandler.text : "";
-            UnityWebRequest.Result requestResult = req.result;
-            long responseCode = req.responseCode;
-            try { req.Dispose(); } catch { }
-
-            if (requestResult != UnityWebRequest.Result.Success || responseCode < 200 || responseCode >= 300)
-            {
-                callback(false);
-                yield break;
-            }
-
-            if (TryApplyServerForceDisable(text))
-            {
-                callback(false);
-                yield break;
-            }
-
-            ExtraReportResponse response = null;
-            try { response = JsonSerializer.Deserialize<ExtraReportResponse>(text, JsonOptions); } catch { }
-
-            bool ok = response != null
-                && response.success
-                && response.valid
-                && response.accepted
-                && response.report_authenticated;
-            callback(ok);
-        }
-
-        private static List<DetectedModInfo> DetectExtraMods()
-        {
-            List<DetectedModInfo> result = new List<DetectedModInfo>();
-            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            string pluginPath = "";
-            try { pluginPath = Paths.PluginPath; } catch { }
-
-            if (string.IsNullOrWhiteSpace(pluginPath) || !Directory.Exists(pluginPath))
-                return result;
-
-            foreach (string dll in Directory.GetFiles(pluginPath, "*.dll", SearchOption.AllDirectories))
-            {
-                string file = Path.GetFileName(dll);
-
-                if (string.IsNullOrWhiteSpace(file))
-                    continue;
-
-                if (file.Equals("BanMod.dll", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (!seen.Add(Path.GetFullPath(dll)))
-                    continue;
-
-                result.Add(new DetectedModInfo
-                {
-                    Name = Path.GetFileNameWithoutExtension(file),
-                    FileName = file,
-                    AssemblyName = SafeReadAssemblyName(dll),
-                    Version = SafeReadAssemblyVersion(dll),
-                    Sha256 = SafeSha256File(dll)
-                });
-            }
-
-            return result;
-        }
-
-        private static string SafeReadAssemblyName(string path)
-        {
-            try { return AssemblyName.GetAssemblyName(path).FullName; }
-            catch { return ""; }
-        }
-
-        private static string SafeReadAssemblyVersion(string path)
-        {
-            try
-            {
-                Version v = AssemblyName.GetAssemblyName(path).Version;
-                return v != null ? v.ToString() : "";
-            }
-            catch { return ""; }
-        }
-
         private static IEnumerator RequestPremiumAndLoadBins()
         {
             bool identityReady = false;
@@ -4012,6 +3849,8 @@ namespace BanMod
             string body = "{"
                 + "\"FriendCode\":" + JsonString(_friendCode) + ","
                 + "\"PlayerName\":" + JsonString(_playerName) + ","
+                + "\"BanModSha256\":" + JsonString(SafeGetOwnBanModSha256()) + ","
+                + "\"BuildId\":" + JsonString(BanModBuildSecret.BuildId ?? "") + ","
                 + "\"LoginBinSha256\":" + JsonString(BanModLoginRuntime.LoginBinSha256) + ","
                 + "\"LoginBinVersion\":" + JsonString(BanModLoginRuntime.LoginBinVersion)
                 + "}";
@@ -4149,12 +3988,23 @@ namespace BanMod
 
                 bool loaded = false;
                 yield return LoadPremiumBin(serviceKey, ok => loaded = ok);
+
                 try
                 {
                     if (loaded)
+                    {
                         Debug.Log("[BANMOD][PREMIUM] Loaded: " + serviceKey);
+                        MainMenuInfo.Show(
+                            $"\n<color=#ff5555>[PREMIUM]</color> Loaded: {serviceKey}"
+                        );
+                    }
                     else
+                    {
                         Debug.LogError("[BANMOD][PREMIUM] Failed to load: " + serviceKey);
+                        MainMenuInfo.Show(
+                            $"\n<color=#ff5555>[PREMIUM]</color> Failed to load: {serviceKey}"
+                        );
+                    }
                 }
                 catch { }
             }
@@ -5337,63 +5187,6 @@ namespace BanMod
                 || name.StartsWith("Assembly-CSharp", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string BuildExtraModsJson(string reason, bool scanSuccess, string scanError, List<DetectedModInfo> mods)
-        {
-            if (mods == null)
-                mods = new List<DetectedModInfo>();
-
-            StringBuilder sb = new StringBuilder();
-            sb.Append("{");
-
-            sb.Append("\"FriendCode\":").Append(JsonString(_friendCode)).Append(",");
-            sb.Append("\"PlayerName\":").Append(JsonString(_playerName)).Append(",");
-            sb.Append("\"Reason\":").Append(JsonString(reason)).Append(",");
-            sb.Append("\"ScanSuccess\":").Append(BoolJson(scanSuccess)).Append(",");
-            sb.Append("\"ScanError\":").Append(JsonString(scanError)).Append(",");
-
-            sb.Append("\"mod_name\":").Append(JsonString("BanMod")).Append(",");
-            sb.Append("\"player_name\":").Append(JsonString(_playerName)).Append(",");
-            sb.Append("\"friend_code\":").Append(JsonString(_friendCode)).Append(",");
-            sb.Append("\"platform\":").Append(JsonString(Application.platform.ToString())).Append(",");
-            sb.Append("\"game_code\":").Append(JsonString(SafeGetLobbyCode())).Append(",");
-            sb.Append("\"scan_success\":").Append(BoolJson(scanSuccess)).Append(",");
-
-            sb.Append("\"extra_mods\":[");
-            for (int i = 0; i < mods.Count; i++)
-            {
-                if (i > 0) sb.Append(",");
-
-                DetectedModInfo m = mods[i];
-                string name = m != null ? Norm(m.Name) : "";
-
-                if (string.IsNullOrWhiteSpace(name) && m != null)
-                    name = Norm(m.AssemblyName);
-
-                if (string.IsNullOrWhiteSpace(name) && m != null)
-                    name = Norm(m.FileName);
-
-                sb.Append(JsonString(name));
-            }
-            sb.Append("],");
-
-            sb.Append("\"Mods\":[");
-            for (int i = 0; i < mods.Count; i++)
-            {
-                if (i > 0) sb.Append(",");
-                DetectedModInfo m = mods[i];
-                sb.Append("{");
-                sb.Append("\"Name\":").Append(JsonString(m.Name)).Append(",");
-                sb.Append("\"FileName\":").Append(JsonString(m.FileName)).Append(",");
-                sb.Append("\"AssemblyName\":").Append(JsonString(m.AssemblyName)).Append(",");
-                sb.Append("\"Version\":").Append(JsonString(m.Version)).Append(",");
-                sb.Append("\"Sha256\":").Append(JsonString(m.Sha256));
-                sb.Append("}");
-            }
-
-            sb.Append("]}");
-            return sb.ToString();
-        }
-
         private static object ReadStaticObject(Type t, string name)
         {
             try
@@ -5599,7 +5392,6 @@ namespace BanMod
 
 
         private sealed class GameIdentity { public string FriendCode; public string PlayerName; }
-        public sealed class DetectedModInfo { public string Name; public string FileName; public string AssemblyName; public string Version; public string Sha256; }
         public sealed class ChallengeResponse { public bool success { get; set; } public string nonce { get; set; } public int expires_in_seconds { get; set; } }
         public sealed class ActivationResponse
         {

@@ -160,12 +160,58 @@ namespace BanMod
 
         private Texture2D MakeTex(Color color)
         {
-            var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-            tex.SetPixel(0, 0, color);
-            tex.Apply();
+            const int size = 48;
+            const int radius = 12;
 
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color32[] pixels = new Color32[size * size];
+            Color32 fill = color;
+
+            float r = radius;
+            float leftCenter = r - 0.5f;
+            float rightCenter = size - r - 0.5f;
+            float bottomCenter = r - 0.5f;
+            float topCenter = size - r - 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float cx = x;
+                    float cy = y;
+
+                    if (x < radius)
+                        cx = leftCenter;
+                    else if (x >= size - radius)
+                        cx = rightCenter;
+
+                    if (y < radius)
+                        cy = bottomCenter;
+                    else if (y >= size - radius)
+                        cy = topCenter;
+
+                    float dx = x - cx;
+                    float dy = y - cy;
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    bool inCorner =
+                        (x < radius || x >= size - radius) &&
+                        (y < radius || y >= size - radius);
+
+                    float alphaFactor = inCorner
+                        ? Mathf.Clamp01(r + 0.5f - distance)
+                        : 1f;
+
+                    Color32 pixel = fill;
+                    pixel.a = (byte)Mathf.RoundToInt(fill.a * alphaFactor);
+                    pixels[y * size + x] = pixel;
+                }
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply(false, false);
             tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Point;
+            tex.filterMode = FilterMode.Bilinear;
             tex.hideFlags = HideFlags.HideAndDontSave;
 
             return tex;
@@ -212,21 +258,21 @@ namespace BanMod
             tableRowStyle = null;
             tableRowAltStyle = null;
 
-            windowTex = MakeTex(Color.black);
-            sectionTex = MakeTex(Color.black);
-            buttonTex = MakeTex(new Color(0.02f, 0.02f, 0.02f, 1f));
-            buttonHoverTex = MakeTex(new Color(0.02f, 0.10f, 0.18f, 1f));
-            buttonActiveTex = MakeTex(new Color(0.02f, 0.10f, 0.18f, 1f));
-            dangerTex = MakeTex(new Color(0.48f, 0.12f, 0.12f, 1f));
-            backTex = MakeTex(new Color(0.02f, 0.02f, 0.02f, 1f));
-            tableHeaderTex = MakeTex(Color.black);
-            tableRowTex = MakeTex(Color.black);
-            tableRowAltTex = MakeTex(new Color(0.03f, 0.03f, 0.03f, 1f));
+            windowTex = MakeTex(BanModUiStyles.WindowColor);
+            sectionTex = MakeTex(BanModUiStyles.PanelColor);
+            buttonTex = MakeTex(BanModUiStyles.ButtonColor);
+            buttonHoverTex = MakeTex(BanModUiStyles.ButtonHoverColor);
+            buttonActiveTex = MakeTex(BanModUiStyles.ButtonActiveColor);
+            dangerTex = MakeTex(BanModUiStyles.DangerColor);
+            backTex = MakeTex(BanModUiStyles.ButtonColor);
+            tableHeaderTex = MakeTex(new Color(0.075f, 0.085f, 0.11f, 1f));
+            tableRowTex = MakeTex(BanModUiStyles.PanelColor);
+            tableRowAltTex = MakeTex(new Color(0.075f, 0.082f, 0.105f, 1f));
 
             windowStyle = new GUIStyle(GUI.skin.window)
             {
                 padding = new RectOffset { left = 16, right = 16, top = 16, bottom = 16 },
-                border = new RectOffset { left = 6, right = 6, top = 6, bottom = 6 }
+                border = new RectOffset { left = 18, right = 18, top = 18, bottom = 18 }
             };
             windowStyle.normal.background = windowTex;
             windowStyle.onNormal.background = windowTex;
@@ -243,7 +289,7 @@ namespace BanMod
                 richText = true,
                 wordWrap = true
             };
-            titleStyle.normal.textColor = new Color(0.97f, 0.97f, 0.97f);
+            titleStyle.normal.textColor = Color.white;
 
             headerStyle = new GUIStyle(GUI.skin.label)
             {
@@ -253,7 +299,7 @@ namespace BanMod
                 richText = true,
                 wordWrap = true
             };
-            headerStyle.normal.textColor = new Color(0.88f, 0.92f, 1f);
+            headerStyle.normal.textColor = BanModUiStyles.HeaderTextColor;
 
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
@@ -263,7 +309,8 @@ namespace BanMod
                 wordWrap = true,
                 richText = true,
                 padding = new RectOffset { left = 12, right = 12, top = 10, bottom = 10 },
-                fixedHeight = ButtonHeight
+                fixedHeight = ButtonHeight,
+                border = new RectOffset { left = 12, right = 12, top = 12, bottom = 12 }
             };
             buttonStyle.normal.background = buttonTex;
             buttonStyle.hover.background = buttonHoverTex;
@@ -310,12 +357,13 @@ namespace BanMod
                 richText = true,
                 alignment = TextAnchor.UpperLeft
             };
-            textStyle.normal.textColor = new Color(0.93f, 0.93f, 0.93f);
+            textStyle.normal.textColor = BanModUiStyles.TextColor;
 
             sectionStyle = new GUIStyle(GUI.skin.box)
             {
                 padding = new RectOffset { left = 14, right = 14, top = 14, bottom = 14 },
-                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 12 }
+                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 12 },
+                border = new RectOffset { left = 14, right = 14, top = 14, bottom = 14 }
             };
             sectionStyle.normal.background = sectionTex;
             sectionStyle.onNormal.background = sectionTex;
@@ -342,12 +390,13 @@ namespace BanMod
                 richText = true,
                 wordWrap = true
             };
-            tableCellStyle.normal.textColor = new Color(0.92f, 0.92f, 0.92f);
+            tableCellStyle.normal.textColor = BanModUiStyles.TextColor;
 
             tableHeaderRowStyle = new GUIStyle(GUI.skin.box)
             {
                 padding = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 },
-                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 6 }
+                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 6 },
+                border = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 }
             };
             tableHeaderRowStyle.normal.background = tableHeaderTex;
             tableHeaderRowStyle.onNormal.background = tableHeaderTex;
@@ -359,7 +408,8 @@ namespace BanMod
             tableRowStyle = new GUIStyle(GUI.skin.box)
             {
                 padding = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 },
-                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 6 }
+                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 6 },
+                border = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 }
             };
             tableRowStyle.normal.background = tableRowTex;
             tableRowStyle.onNormal.background = tableRowTex;
@@ -371,7 +421,8 @@ namespace BanMod
             tableRowAltStyle = new GUIStyle(GUI.skin.box)
             {
                 padding = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 },
-                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 6 }
+                margin = new RectOffset { left = 0, right = 0, top = 0, bottom = 6 },
+                border = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 }
             };
             tableRowAltStyle.normal.background = tableRowAltTex;
             tableRowAltStyle.onNormal.background = tableRowAltTex;

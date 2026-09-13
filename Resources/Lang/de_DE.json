@@ -1,6 +1,7 @@
 {
   "LanguageID": "9",
   "Action": "Aktion",
+      "ImpostorWinsTimer": "Die Impostor haben gewonnen, weil der Spieltimer abgelaufen ist",
   "ActionCheaterlist": "Aktion für Cheater",
   "AddBanToList": "Gesperrte/Blockierte Spieler zur Ban-Liste hinzufügen",
   "AddedtoDenynamelist": " zur Denyname.txt-Liste hinzugefügt",

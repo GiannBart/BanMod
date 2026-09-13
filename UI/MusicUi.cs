@@ -311,41 +311,17 @@ public class CustomMusicPlayer : MonoBehaviour
     {
         if (_windowStyle == null)
         {
-            _windowStyle = new GUIStyle(GUI.skin.window);
-
-            Texture2D bg = MakeTex(1, 1, Color.black);
-
-            _windowStyle.normal.background = bg;
-            _windowStyle.active.background = bg;
-            _windowStyle.focused.background = bg;
-            _windowStyle.hover.background = bg;
-            _windowStyle.onNormal.background = bg;
-            _windowStyle.onActive.background = bg;
-            _windowStyle.onFocused.background = bg;
-            _windowStyle.onHover.background = bg;
-
-            _windowStyle.padding = new RectOffset();
-            _windowStyle.padding.left = 12;
-            _windowStyle.padding.right = 12;
-            _windowStyle.padding.top = 12;
-            _windowStyle.padding.bottom = 12;
-
-            _windowStyle.border = new RectOffset();
-            _windowStyle.border.left = 8;
-            _windowStyle.border.right = 8;
-            _windowStyle.border.top = 8;
-            _windowStyle.border.bottom = 8;
+            _windowStyle = new GUIStyle(BanModUiStyles.BlackWindow);
         }
 
         if (_titleStyle == null)
         {
-            _titleStyle = new GUIStyle(GUI.skin.label)
+            _titleStyle = new GUIStyle(BanModUiStyles.TitleLabel)
             {
                 fontSize = 20,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
-            _titleStyle.normal.textColor = Color.white;
         }
     }
 
@@ -361,11 +337,11 @@ public class CustomMusicPlayer : MonoBehaviour
 
     private void _draw(int id)
     {
-        GUILayout.BeginVertical(GUI.skin.box);
+        GUILayout.BeginVertical(BanModUiStyles.DarkBox);
         GUILayout.Label("♫  Music Player  ♫", _titleStyle, GUILayout.Height(28));
         GUILayout.EndVertical();
 
-        GUILayout.BeginVertical(GUI.skin.box);
+        GUILayout.BeginVertical(BanModUiStyles.DarkBox);
         GUILayout.Label("<color=cyan><b>" + _l5 + "</b></color>");
 
         float currentPos = (_l1.clip != null) ? _l1.time : 0f;
@@ -389,21 +365,21 @@ public class CustomMusicPlayer : MonoBehaviour
         GUILayout.EndHorizontal();
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("<<")) PrevTrack();
+        if (GUILayout.Button("<<", BanModUiStyles.ButtonDark)) PrevTrack();
         string pL = _l1 != null && _l1.isPlaying ? _s("UGF1c2U=") : _s("UGxheQ==");
-        if (GUILayout.Button(pL))
+        if (GUILayout.Button(pL, BanModUiStyles.AccentButton))
         {
             if (_l1 == null) { }
             else if (_l1.isPlaying) _l1.Pause();
             else _l1.Play();
         }
-        if (GUILayout.Button(">>")) NextTrack();
+        if (GUILayout.Button(">>", BanModUiStyles.ButtonDark)) NextTrack();
         GUILayout.EndHorizontal();
 
         _l7 = GUILayout.Toggle(_l7, " Shuffle", _l7 ? BanModUiStyles.ToggleOnBlueOutline : BanModUiStyles.ToggleOffDark);
         _l6 = GUILayout.Toggle(_l6, " AutoPlay", _l6 ? BanModUiStyles.ToggleOnBlueOutline : BanModUiStyles.ToggleOffDark);
 
-        if (GUILayout.Button(_b1 ? _s("Q2xvc2VQbGF5bGlzdA==") : _s("T3BlblBsYXlsaXN0")))
+        if (GUILayout.Button(_b1 ? _s("Q2xvc2VQbGF5bGlzdA==") : _s("T3BlblBsYXlsaXN0"), BanModUiStyles.ButtonDark))
             _b1 = !_b1;
 
         if (_b1)
@@ -413,7 +389,7 @@ public class CustomMusicPlayer : MonoBehaviour
             {
                 string n = Path.GetFileName(_l2[i]);
                 if (i == _l3) n = "<color=yellow><b>▶ " + n + "</b></color>";
-                if (GUILayout.Button(n, GUI.skin.label)) PlayAtIndex(i);
+                if (GUILayout.Button(n, BanModUiStyles.ButtonDark)) PlayAtIndex(i);
             }
             GUILayout.EndScrollView();
         }

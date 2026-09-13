@@ -235,7 +235,7 @@ namespace BanMod
                     return LoadOrCreateGameModePreset("HotPotato.json", CreateHotPotatoDefaults());
 
                 case GameModeType.BanMod:
-                    return LoadOrCreateGameModePreset("BanMod.json", CreateBanModDefaults()); 
+                    return LoadOrCreateGameModePreset("BanMod.json", CreateBanModDefaults());
 
                 case GameModeType.KaitoRun:
                     return LoadOrCreateGameModePreset("KaitoRun.json", CreateKaitoRunDefaults());
@@ -963,8 +963,8 @@ namespace BanMod
                 case GameModeType.SnS: return "SnS";
                 case GameModeType.PnS: return "PnS";
                 case GameModeType.HotPotato: return "HotPotato";
-                case GameModeType.ZombieMode: return "ZombieMode"; 
-                case GameModeType.BanMod: return "BanMod"; 
+                case GameModeType.ZombieMode: return "ZombieMode";
+                case GameModeType.BanMod: return "BanMod";
                 case GameModeType.KaitoRun: return "KaitoRun";
                 case GameModeType.Default: return "Default";
                 case GameModeType.TaskRun: return "TaskRun";
@@ -1079,7 +1079,7 @@ namespace BanMod
             try
             {
                 if (Options.GameMode != null)
-                    return  Options.GameMode.Selected;
+                    return Options.GameMode.Selected;
             }
             catch
             {
@@ -1105,7 +1105,7 @@ namespace BanMod
                     return "ZombieMode.json";
 
                 case GameModeType.BanMod:
-                    return "BanMod.json"; 
+                    return "BanMod.json";
 
                 case GameModeType.KaitoRun:
                     return "KaitoRun.json";
@@ -1999,7 +1999,8 @@ namespace BanMod
                 currentEvent != null &&
                 currentEvent.isMouse;
 
-            GUI.backgroundColor = Color.black;
+            Color oldBackground = GUI.backgroundColor;
+            GUI.backgroundColor = Color.white;
 
             _windowRect = GUI.Window(
                 315,
@@ -2009,7 +2010,7 @@ namespace BanMod
                 BanModUiStyles.BlackWindow
             );
 
-            GUI.backgroundColor = Color.white;
+            GUI.backgroundColor = oldBackground;
 
             if (consumeMouse &&
                 currentEvent != null &&
@@ -2089,8 +2090,6 @@ namespace BanMod
 
             GUILayout.Space(6);
 
-            GUI.backgroundColor = new Color(0.8f, 0f, 0f, 1f);
-
             if (GUILayout.Button(
                 "CLOSE",
                 _closeButtonStyle,
@@ -2099,8 +2098,6 @@ namespace BanMod
             {
                 MenuRouter.Open(MenuRouter.Panel.None);
             }
-
-            GUI.backgroundColor = Color.white;
 
             GUI.DragWindow();
         }
@@ -2582,8 +2579,9 @@ namespace BanMod
             if (_titleStyle != null)
                 return;
 
+            // Visual-only restyle: same UI flow/callbacks, shared modern theme.
             _titleStyle =
-                new GUIStyle(GUI.skin.label)
+                new GUIStyle(BanModUiStyles.TitleLabel)
                 {
                     fontSize = 22,
                     fontStyle = FontStyle.Bold,
@@ -2591,7 +2589,7 @@ namespace BanMod
                 };
 
             _sectionStyle =
-                new GUIStyle(GUI.skin.label)
+                new GUIStyle(BanModUiStyles.HeaderLabel)
                 {
                     fontSize = 16,
                     fontStyle = FontStyle.Bold,
@@ -2599,7 +2597,7 @@ namespace BanMod
                 };
 
             _slotTitleStyle =
-                new GUIStyle(GUI.skin.label)
+                new GUIStyle(BanModUiStyles.HeaderLabel)
                 {
                     fontSize = 15,
                     fontStyle = FontStyle.Bold,
@@ -2607,7 +2605,7 @@ namespace BanMod
                 };
 
             _labelStyle =
-                new GUIStyle(GUI.skin.label)
+                new GUIStyle(BanModUiStyles.BodyLabel)
                 {
                     fontSize = 13,
                     alignment = TextAnchor.MiddleCenter,
@@ -2615,14 +2613,14 @@ namespace BanMod
                 };
 
             _buttonStyle =
-                new GUIStyle(GUI.skin.button)
+                new GUIStyle(BanModUiStyles.ButtonDark)
                 {
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter
                 };
 
             _closeButtonStyle =
-                new GUIStyle(GUI.skin.button)
+                new GUIStyle(BanModUiStyles.DangerButton)
                 {
                     fontSize = 17,
                     fontStyle = FontStyle.Bold,
@@ -2630,7 +2628,7 @@ namespace BanMod
                 };
 
             _statusStyle =
-                new GUIStyle(GUI.skin.label)
+                new GUIStyle(BanModUiStyles.MutedLabel)
                 {
                     fontSize = 13,
                     fontStyle = FontStyle.Bold,
@@ -2639,19 +2637,13 @@ namespace BanMod
                 };
 
             _boxStyle =
-                new GUIStyle(GUI.skin.box);
+                new GUIStyle(BanModUiStyles.DarkBox);
 
             _boxStyle.padding = new RectOffset();
             _boxStyle.padding.left = 12;
             _boxStyle.padding.right = 12;
             _boxStyle.padding.top = 10;
             _boxStyle.padding.bottom = 10;
-
-            _titleStyle.normal.textColor = Color.white;
-            _sectionStyle.normal.textColor = Color.cyan;
-            _slotTitleStyle.normal.textColor = Color.cyan;
-            _labelStyle.normal.textColor = Color.white;
-            _statusStyle.normal.textColor = Color.white;
         }
     }
 

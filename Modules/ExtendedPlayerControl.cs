@@ -432,35 +432,20 @@ public static class FixedUpdateUnifiedPatch
 
     private static bool IsDeniedPlayerName(string playerName)
     {
-        const string denyFilePath = "./BAN_DATA/DENIED/DenyName.txt";
-
         if (Time.realtimeSinceStartup >= nextDeniedNamesRefreshTime)
         {
-            nextDeniedNamesRefreshTime = Time.realtimeSinceStartup + 1f;
+            nextDeniedNamesRefreshTime =
+                Time.realtimeSinceStartup + 1f;
+
+            const string denyFilePath =
+                "./BAN_DATA/DENIED/DenyName.txt";
 
             try
             {
-                if (!File.Exists(denyFilePath))
+                if (!File.Exists(denyFilePath) ||
+                    File.GetLastWriteTimeUtc(denyFilePath) != deniedNamesLastWriteUtc)
                 {
-                    string directory = Path.GetDirectoryName(denyFilePath);
-                    if (!string.IsNullOrEmpty(directory))
-                        Directory.CreateDirectory(directory);
-                    File.WriteAllText(denyFilePath, string.Empty);
-                }
-
-                DateTime lastWriteUtc = File.GetLastWriteTimeUtc(denyFilePath);
-                if (lastWriteUtc != deniedNamesLastWriteUtc)
-                {
-                    deniedNames.Clear();
-
-                    foreach (string line in File.ReadLines(denyFilePath))
-                    {
-                        string value = line.Trim();
-                        if (!string.IsNullOrEmpty(value))
-                            deniedNames.Add(value);
-                    }
-
-                    deniedNamesLastWriteUtc = lastWriteUtc;
+                    RefreshDeniedNamesNow();
                 }
             }
             catch
@@ -471,7 +456,45 @@ public static class FixedUpdateUnifiedPatch
         return !string.IsNullOrWhiteSpace(playerName) &&
                deniedNames.Contains(playerName.Trim());
     }
+    public static void RefreshDeniedNamesNow()
+    {
+        const string denyFilePath = "./BAN_DATA/DENIED/DenyName.txt";
 
+        try
+        {
+            if (!File.Exists(denyFilePath))
+            {
+                string directory = Path.GetDirectoryName(denyFilePath);
+
+                if (!string.IsNullOrEmpty(directory))
+                    Directory.CreateDirectory(directory);
+
+                File.WriteAllText(denyFilePath, string.Empty);
+            }
+
+            deniedNames.Clear();
+
+            foreach (string line in File.ReadLines(denyFilePath))
+            {
+                string value = line.Trim();
+
+                if (!string.IsNullOrEmpty(value))
+                    deniedNames.Add(value);
+            }
+
+            deniedNamesLastWriteUtc =
+                File.GetLastWriteTimeUtc(denyFilePath);
+
+            nextDeniedNamesRefreshTime =
+                Time.realtimeSinceStartup + 1f;
+        }
+        catch (Exception ex)
+        {
+            BMLogger.LogError(
+                $"Errore refresh DenyName: {ex.Message}"
+            );
+        }
+    }
     private static bool IsAuthorizedVentUser(PlayerControl player)
     {
         return Utils.Impostor(player) ||

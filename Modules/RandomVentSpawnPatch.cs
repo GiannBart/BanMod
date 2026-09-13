@@ -660,8 +660,17 @@ internal static class RandomVentSpawnManager
             if (AlreadyTriggered || Running)
                 return;
 
-            if (Options.RandomVentSpawn == null ||
-                !Options.RandomVentSpawn.GetBool())
+            bool randomVentSpawnEnabled =
+                Options.RandomVentSpawn != null &&
+                Options.RandomVentSpawn.GetBool();
+
+            bool randomVentSpawnFfaEnabled =
+                Options.RandomVentSpawnffa != null &&
+                Options.RandomVentSpawnffa.GetBool() &&
+                Options.GameMode.GetValue(GameModeType.FFA);
+
+            if (!randomVentSpawnEnabled &&
+                !randomVentSpawnFfaEnabled)
             {
                 return;
             }
@@ -708,7 +717,34 @@ internal static class RandomVentSpawnManager
             );
         }
     }
+    public static void TryStartAfterMeeting()
+    {
+        try
+        {
+            GameModeType gameMode = Options.GameMode.Selected;
+            if (gameMode != GameModeType.FFA)
+                return;
 
+            if (Options.RandomVentSpawnffa == null ||
+                !Options.RandomVentSpawnffa.GetBool())
+            {
+                return;
+            }
+
+            if (Running)
+                return;
+
+            AlreadyTriggered = false;
+
+            TryStart();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError(
+                "[RandomVentSpawn] After meeting failed: " + ex
+            );
+        }
+    }
     private static IEnumerator CoBootPlayersFromRandomVents()
     {
         VentilationSystem system = null;
@@ -1410,5 +1446,16 @@ internal static class RandomVentSpawnIntroEndPatch
     private static void Postfix()
     {
         RandomVentSpawnManager.TryStart();
+    }
+}
+[HarmonyPatch(
+    typeof(ExileController),
+    nameof(ExileController.WrapUp)
+)]
+internal static class RandomVentSpawnAfterMeetingPatch
+{
+    private static void Postfix()
+    {
+        RandomVentSpawnManager.TryStartAfterMeeting();
     }
 }

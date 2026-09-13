@@ -92,7 +92,7 @@ namespace BanMod
 
             InitStyles();
 
-            GUI.backgroundColor = Color.black;
+            GUI.backgroundColor = Color.white;
 
             windowRect = GUI.Window(
                 1,
@@ -158,7 +158,7 @@ namespace BanMod
 
                 GUILayout.Space(6);
 
-                GUI.backgroundColor = new Color(0.8f, 0f, 0f, 1f);
+                GUI.backgroundColor = Color.white;
 
                 if (GUILayout.Button("CLOSE", buttonStyle, GUILayout.Height(36)))
                     MenuRouter.Open(MenuRouter.Panel.None);
@@ -181,7 +181,7 @@ namespace BanMod
 
             GUILayout.Label(Translator.GetString("TASK_PLAYERS"), titleStyle, GUILayout.Height(30));
 
-            GUI.backgroundColor = new Color(0.75f, 0f, 0f, 1f);
+            GUI.backgroundColor = Color.white;
 
             if (GUILayout.Button("X", closeXStyle, GUILayout.Width(28), GUILayout.Height(28)))
             {
@@ -241,7 +241,7 @@ namespace BanMod
             int clientId = GetClientIdSafe(pc);
             string modInfo = GetModInfoSafe(pc);
 
-            GUI.backgroundColor = new Color(0.08f, 0.08f, 0.08f, 1f);
+            GUI.backgroundColor = Color.white;
 
             GUILayout.BeginHorizontal(boxStyle, GUILayout.Height(42));
 
@@ -379,65 +379,59 @@ namespace BanMod
         {
             if (titleStyle == null)
             {
-                titleStyle = new GUIStyle(GUI.skin.label)
+                titleStyle = new GUIStyle(BanModUiStyles.TitleLabel)
                 {
                     fontSize = 22,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = Color.white }
+                    alignment = TextAnchor.MiddleCenter
                 };
             }
 
             if (playerStyle == null)
             {
-                playerStyle = new GUIStyle(GUI.skin.label)
+                playerStyle = new GUIStyle(BanModUiStyles.BodyLabel)
                 {
                     richText = true,
                     fontSize = 14,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = Color.white }
+                    alignment = TextAnchor.MiddleCenter
                 };
             }
 
             if (smallInfoStyle == null)
             {
-                smallInfoStyle = new GUIStyle(GUI.skin.label)
+                smallInfoStyle = new GUIStyle(BanModUiStyles.HeaderLabel)
                 {
                     richText = true,
                     fontSize = 13,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = Color.white }
+                    alignment = TextAnchor.MiddleCenter
                 };
             }
 
             if (buttonStyle == null)
             {
-                buttonStyle = new GUIStyle(GUI.skin.button)
+                buttonStyle = new GUIStyle(BanModUiStyles.ButtonDark)
                 {
                     fontSize = 14,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = Color.white }
+                    alignment = TextAnchor.MiddleCenter
                 };
             }
 
             if (closeXStyle == null)
             {
-                closeXStyle = new GUIStyle(GUI.skin.button)
+                closeXStyle = new GUIStyle(BanModUiStyles.DangerButton)
                 {
                     fontSize = 16,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = Color.white },
-                    hover = { textColor = Color.white }
+                    alignment = TextAnchor.MiddleCenter
                 };
             }
 
             if (boxStyle == null)
             {
-                boxStyle = new GUIStyle(GUI.skin.box)
+                boxStyle = new GUIStyle(BanModUiStyles.DarkBox)
                 {
                     padding = new RectOffset
                     {

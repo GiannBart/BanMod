@@ -211,10 +211,10 @@ namespace BanMod
 
         void EnsureStyles()
         {
-            titleStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            headerStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            buttonStyle ??= new GUIStyle(GUI.skin.button);
-            exitButtonStyle ??= new GUIStyle(GUI.skin.button) { fontSize = 18, fontStyle = FontStyle.Bold };
+            titleStyle ??= new GUIStyle(BanModUiStyles.TitleLabel) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            headerStyle ??= new GUIStyle(BanModUiStyles.HeaderLabel) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            buttonStyle ??= new GUIStyle(BanModUiStyles.ButtonDark);
+            exitButtonStyle ??= new GUIStyle(BanModUiStyles.DangerButton) { fontSize = 18, fontStyle = FontStyle.Bold };
         }
 
         void OnGUI()
@@ -222,7 +222,7 @@ namespace BanMod
             if (!showMenu) return;
             EnsureStyles();
 
-            GUI.backgroundColor = Color.black;
+            GUI.backgroundColor = Color.white;
             windowRect = GUI.Window(2, windowRect, (GUI.WindowFunction)DrawWindow, "", BanModUiStyles.BlackWindow);
         }
 
@@ -249,14 +249,14 @@ namespace BanMod
 
             if (selectingPlayer || selectingColor)
             {
-                if (GUILayout.Button(GetString("PreviousPage"), GUILayout.Height(40)))
+                if (GUILayout.Button(GetString("PreviousPage"), BanModUiStyles.ButtonDark, GUILayout.Height(40)))
                 {
                     selectingPlayer = false;
                     selectingColor = false;
                 }
             }
 
-            GUI.backgroundColor = new Color(0.8f, 0f, 0f);
+            GUI.backgroundColor = Color.white;
             if (GUILayout.Button(GetString("ExitButton"), exitButtonStyle, GUILayout.Height(45)))
                 MenuRouter.Open(MenuRouter.Panel.None);
 

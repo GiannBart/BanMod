@@ -652,7 +652,216 @@ public static class Utils
             player.Data.MarkDirty();
 
         }
+        public static class MainMenuInfo
+        {
+            private class InfoMessage
+            {
+                public GameObject Root;
+                public float ExpireAt;
+            }
 
+            private static readonly List<InfoMessage> Messages = new();
+
+            // Posizione dello stack
+            private const float StartX = 3.2f;
+            private const float StartY = -2.3f;
+
+            // Distanza tra una notifica e l'altra
+            private const float Spacing = 0.8f;
+
+            // Durata in secondi
+            private const float Duration = 3f;
+
+            // Dimensioni riquadro
+            private const float BoxWidth = 5.5f;
+            private const float BoxHeight = 0.65f;
+
+            private static Sprite BackgroundSprite;
+
+            public static void Show(string message)
+            {
+                var menu = Object.FindObjectOfType<MainMenuManager>();
+
+                if (menu == null)
+                    return;
+
+                Cleanup();
+
+                // =========================
+                // ROOT
+                // =========================
+
+                var root = new GameObject($"MainMenuInfo_{Messages.Count}");
+                root.transform.SetParent(menu.transform, false);
+
+                // =========================
+                // SFONDO NERO
+                // =========================
+
+                var background = new GameObject("Background");
+                background.transform.SetParent(root.transform, false);
+
+                var renderer = background.AddComponent<SpriteRenderer>();
+
+                if (BackgroundSprite == null)
+                {
+                    var texture = new Texture2D(1, 1);
+
+                    texture.SetPixel(
+                        0,
+                        0,
+                        Color.white
+                    );
+
+                    texture.Apply();
+
+                    BackgroundSprite = Sprite.Create(
+                        texture,
+                        new Rect(0, 0, 1, 1),
+                        new Vector2(0.5f, 0.5f),
+                        1f
+                    );
+                }
+
+                renderer.sprite = BackgroundSprite;
+
+                renderer.color = new Color(
+                    0f,
+                    0f,
+                    0f,
+                    0.85f
+                );
+
+                renderer.sortingOrder = 1000;
+
+                background.transform.localScale = new Vector3(
+                    BoxWidth,
+                    BoxHeight,
+                    1f
+                );
+
+                background.transform.localPosition = new Vector3(
+                    0f,
+                    0f,
+                    0f
+                );
+
+                // =========================
+                // TESTO
+                // =========================
+
+                var textObject = new GameObject("Text");
+                textObject.transform.SetParent(root.transform, false);
+
+                var text = textObject.AddComponent<TextMeshPro>();
+
+                text.text = message;
+
+                text.fontSize = 2.2f;
+
+                // IMPORTANTE:
+                // Center evita che il testo venga spostato
+                // fuori dallo schermo.
+                text.alignment = TextAlignmentOptions.Center;
+
+                text.enableWordWrapping = false;
+
+                text.color = Color.white;
+
+                text.renderer.sortingOrder = 1001;
+
+                textObject.transform.localPosition = new Vector3(
+                    0f,
+                    0f,
+                    -0.1f
+                );
+
+                // =========================
+                // AGGIUNGI ALLA LISTA
+                // =========================
+
+                Messages.Add(new InfoMessage
+                {
+                    Root = root,
+                    ExpireAt = Time.time + Duration
+                });
+
+                Reposition();
+            }
+
+            public static void Update()
+            {
+                bool changed = false;
+
+                for (int i = Messages.Count - 1; i >= 0; i--)
+                {
+                    var message = Messages[i];
+
+                    if (
+                        message.Root == null ||
+                        Time.time >= message.ExpireAt
+                    )
+                    {
+                        if (message.Root != null)
+                        {
+                            Object.Destroy(message.Root);
+                        }
+
+                        Messages.RemoveAt(i);
+
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                {
+                    Reposition();
+                }
+            }
+
+            private static void Cleanup()
+            {
+                for (int i = Messages.Count - 1; i >= 0; i--)
+                {
+                    if (Messages[i].Root == null)
+                    {
+                        Messages.RemoveAt(i);
+                    }
+                }
+            }
+
+            private static void Reposition()
+            {
+                for (int i = 0; i < Messages.Count; i++)
+                {
+                    if (Messages[i].Root == null)
+                        continue;
+
+                    // Prima notifica in basso,
+                    // le successive salgono.
+                    float y = StartY + (i * Spacing);
+
+                    Messages[i].Root.transform.localPosition = new Vector3(
+                        StartX,
+                        y,
+                        -5f
+                    );
+                }
+            }
+
+            public static void Clear()
+            {
+                foreach (var message in Messages)
+                {
+                    if (message.Root != null)
+                    {
+                        Object.Destroy(message.Root);
+                    }
+                }
+
+                Messages.Clear();
+            }
+        }
         public static void BypassScanner(bool value)
         {
             try
@@ -1143,7 +1352,6 @@ public static class Utils
     }
     public static readonly string[] Insulti = new[]
     {
-        "sei inutile come il tutorial di Among Us",
         "Non mi aspettavo niente da te e sono rimasto comunque deluso",
         "sei cosi brutto/a che se ti vede il gatto nero si gratta le palle e gira l'angolo",
         "sei così vacca che in India ti fanno sacra",
@@ -1155,198 +1363,134 @@ public static class Utils
         "non ti picchio solo perchè la merda schizza!",
         "Sei raro come una figura mitologica: il corpo di uomo e la testa di cazzo",
         "Sei come Unieuro: batti, forte, sempre",
-        "Quando Dio diede l'intelligenza all'umanità tu dov'eri? Al cesso!?",
-        "sei cretino di tuo oppure ci hai studiato per esserlo?",
-        "Meglio se non pensi, altrimenti il tuo cervello va in carenza d'ossigeno.",
         "sei come una nuvola, se ti levi dalle palle è una bella giornata.",
         "cagati in mano e poi prenditi a sberle.",
-        "Sei simpatico come un riccio nelle mutande!",
-        "Sei simpatico come un gatto attaccato ai maroni",
-        "Essere stupidi è un diritto ma tu ne hai fatto un ABUSO !!",
-        "Sei talmente scemo da essere secondo anche nella tua categoria!",
-        "Hai più problemi tu che un libro di matematica.",
-        "Credevo che la cosa più brutta esistente fosse la fame nel mondo, poi ho visto te!",
-        "Partecipa a un concorso di intelligenza, qualcuno deve pur arrivare ultimo!",
         "E' vero che la natura fa brutti scherzi, ma a te t'ha preso proprio per il culo.",
-        "Ma quando Dio ha donato il cervello all' umanità, tu perchè l' hai rifiutato?",
         "Sei talmente stupido che riusciresti a farti investire da un auto parcheggiata.",
-        "Hai il quoziente intellettivo di un comodino!!!",
         "Se sei in giro con la bici e ti senti felice, guarda bene, forse hai dimenticato il sellino!",
-        "Hai la faccia giusta per lavorare nella pubblicita'... dei lassativi.",
         "Vorrei poterti entrare nella testa, per provare l'ebbrezza del vuoto",
-        "I tuoi silenzi sono più intelligenti delle tue parole",
         "Sei utile come un culo senza il buco",
-        "Se lo scemo fosse un mestiere tu avresti una ditta e molti dipendenti!!!",
-        "sei come un coltello svizzero... rompi i coglioni in 36 modi diversi",
         "Sei cosi scemo che se vai al cinema e leggi vietato ai minori di 18 torni con 17 amici",
         "Non prendertela se ti considerano mezzo scemo. Si vede che ti conoscono solo a metà.",
-        "Sei talmente scemo che quando fai il cretino sembri normale!",
         "Sei così stupido che non troveresti una spina in una foresta di cactus.",
         "Ti farei tanti applausi… ma con la tua faccia in mezzo!",
         "Oggi ho sentito che è stato ritrovato un corpo senza cervello, ti prego dimmi che stai bene!",
-        "Hai il cervello così piccolo che per cambiare idea devi fare manovra!",
         "Ti darei cinque minuti di intelligenza solo per farti capire quanto sei idiota!",
-        "Meriti l’Oscar come Miglior cervello non protagonista",
-        "Se sei intelligente, lo nascondi molto bene.",
-        "Tu non sei scemo, sei solo diversamente intelligente.",
-        "Come fai ad amare la natura dopo tutto quello che ti ha fatto?",
-        "Sei la prova che Dio ha un gran senso dell’umorismo.",
-        "Lo sai come si tiene sulle spine un imbecille? \n\n\n\n\n\n\n\n\n\nDomani te lo dico…",
-        "Non sei stupido! Hai solo sfortuna quando pensi.",
         "Sei talmente stupido che accenderesti la luce per vedere se è buio.",
-        "Non sto dicendo che hai problemi, ma hai provato a spegnere e riavviarti?",
-        "vuoi che ci siano meno stronzi in circolazione? Resta a casa.",
-        "Se ti sto dando fastidio dimmelo, che continuo!",
         "Se ti ho offeso con queste battute, ti chiedo scusa. Non pensavo sapessi leggere.",
-        "Parlare con te è come aggiornare Windows: inutile, frustrante e sempre fuori tempo",
-        "Hai un cervello così liscio che se ci versi l’acqua scivola via senza toccare niente",
-        "Se l’idiozia fosse un virus, tu saresti il paziente zero",
-        "Non saprei se insultarti o compatirti, quindi faccio entrambe le cose",
-        "La tua presenza è meno gradita di un pop-up con scritto 'virus rilevato'",
-        "Il tuo livello di inutilità sfida ogni logica conosciuta",
-        "Se la stupidità fosse un’arte, tu saresti un museo intero",
-        "Hai la consistenza mentale di una gelatina scaduta",
-        "Quando parli, anche il silenzio si vergogna",
-        "Ti impegni a essere così o ti viene naturale?",
-        "Sei l’unico che potrebbe perdere contro un tutorial",
-        "Quando fai una scelta, anche il destino sbuffa",
-        "Vorrei capire cosa ti passa per la testa, ma temo il deserto",
-        "Di’ qualcosa di intelligente ogni tanto, fai felice anche il tuo cervello",
-        "Sei la versione umana delle notifiche fastidiose",
-        "Ogni volta che parli, un neurone muore… e non hai molta riserva",
-        "Il tuo cervello è così vuoto che l’eco si rifiuta pure di risponderti.",
-        "Non so se mi fai pena o ridere, quindi per sicurezza evito entrambe le cose.",
-        "Se sei la versione migliore di te stesso… non voglio vedere l’alpha.",
-        "Quando parli sembri un aggiornamento fallito: rumore, errori e nessun miglioramento.",
-        "Non hai la facoltà di pensare: hai un fastidioso rumore di fondo.",
-        "Non dico che sei inutile, ma se fossi un caricatore sarebbe quello della stampante.",
-        "Ti impegni a essere così o ti svegli già programmato male?",
-        "Sei la prova che non tutti i processi mentali hanno successo.",
-        "Parli tanto, ma il tuo cervello continua a non essere disponibile.",
-        "Quando ragioni sembra di vedere un vecchio PC che fuma.",
-        "Non sei antipatico: è la tua esistenza che fa crashare l’ambiente.",
-        "Sei il tipo di persona che riesce a perdere anche contro un personaggio AFK.",
         "Non sei un problema da risolvere: sei proprio un errore da ignorare.",
-        "Sei talmente limitato che sembri la demo gratuita di una persona vera.",
-        "Quando provi a fare sarcasmo, sembra di guardare un criceto stanco che tenta di correre.",
         "Non serve insultarti: ti ci pensi da solo ogni volta che apri bocca.",
-        "Il tuo cervello non è in ritardo: è proprio rimasto all’installazione.",
         "Vorrei cimentarmi in un duello intellettuale con te, ma vedo che sei disarmato.",
         "quando eri piccolo la tua altalena era probabilmente troppo vicina al muro!",
-        "L'intelligenza sembra inseguirti - ma sfortunatamente sei più veloce.",
         "Uno di noi due è più stupido di me.",
         "Ricordo di essere stato al tuo livello di ignoranza, ero solo un bambino all'epoca.",
         "fai un clistere nelle orecchie perchè è il tuo cervello che è pieno di cacca non l'intestino.",
-        "sei così inutile che pure tua madre ti mette tra le notifiche silenziate",
-"hai la faccia di uno che è nato durante un errore di sistema",
-"sei talmente scemo che il tuo cervello ha il cartello vendesi",
-"hai più vuoto in testa che dignità in corpo",
-"sei il risultato di quando la natura clicca su invia per sbaglio",
-"sei così coglione che se piove zuppa esci col cucchiaio bucato",
-"hai la simpatia di una scoreggia in ascensore pieno",
-"sei così brutto che lo specchio ti guarda e cambia stanza",
-"hai il cervello più liscio del culo di un neonato",
-"sei talmente inutile che pure il tuo angelo custode ha dato le dimissioni",
-"hai la faccia di uno che ha litigato con la bellezza e ha perso male",
-"sei così stupido che se ti danno corda ti impicchi metaforicamente da solo",
-"hai più merda in testa che un cesso dell'autogrill",
-"sei il tipo di persona che fa bestemmiare anche gli atei",
-"sei così sfigato che se compri un boomerang non torna per scelta",
-"hai il fascino di un rutto dopo il kebab",
-"sei talmente scemo che il QI ti manda gli auguri da lontano",
-"hai la grazia di un bidone che rotola giù per le scale",
-"sei così inutile che se fossi un organo saresti l'appendice infiammata",
-"hai il cervello in offerta, ma nessuno lo prende manco gratis",
-"sei la prova che due neuroni possono litigare e perderli entrambi",
-"sei così brutto che la fotocamera frontale si mette in pausa",
-"hai la dignità di una ciabatta trovata in spiaggia a novembre",
-"sei talmente coglione che se ti perdi ti cercano per obbligo morale",
-"hai il carisma di un calzino bagnato dentro una scarpa chiusa",
-"sei così inutile che pure il cestino ti chiede la differenziata",
-"hai la faccia di uno che ha preso schiaffi pure dal destino",
-"sei talmente scarso che la mediocrità ti fa da tutor",
-"hai il cervello che fa eco e pure l'eco se ne va",
-"sei così fastidioso che pure le zanzare ti mutano",
-"hai la finezza di un rutto durante una confessione",
-"sei talmente vuoto che potresti affittarti come cantina",
-"hai il fascino di una gomma masticata sotto il banco",
-"sei così scemo che se ti dicono 'sali' scendi per protesta",
-"hai la simpatia di una diarrea prima di un colloquio",
-"sei più inutile di un preservativo bucato",
-"hai la faccia di uno che ha perso a morra cinese contro uno specchio",
-"sei talmente limitato che anche il recinto ti guarda male",
-"hai il cervello con due neuroni: uno dorme e l'altro lo copre",
-"sei così brutto che il filtro bellezza chiede il congedo",
-"hai più difetti tu che scuse un traditore beccato",
-"sei il motivo per cui il silenzio dovrebbe essere obbligatorio",
-"sei così coglione che se ti clonano denunciano il laboratorio",
-"hai il fascino di un water intasato il giorno di Ferragosto",
-"sei talmente inutile che pure il tuo posto vuoto rende meglio",
-"hai il cervello così spento che Enel ti manda il rimborso",
-"sei la risposta sbagliata a una domanda mai fatta",
-"sei così sfigato che se ti cade il pane resta in piedi per evitarti",
-"hai la classe di uno sputo su una camicia bianca",
-"sei talmente scemo che il tuo pensiero più profondo è una pozzanghera",
-"hai il carisma di una multa presa sotto casa",
-"sei così inutile che se fossi un bottone saresti quello finto",
-"hai la faccia di chi è stato bocciato pure dalla fortuna",
-"sei talmente coglione che il tuo cervello ti ha bloccato su WhatsApp",
-"hai la simpatia di un call center mentre stai cagando",
-"sei così vuoto che se ti scuotono fai rumore di monetine false",
-"hai il fascino di una mutanda stesa male",
-"sei più fuori posto di un bidet in cucina",
-"hai la grazia di un mulo ubriaco in un negozio di vetri",
-"sei talmente scemo che se studi peggiori",
-"hai il cervello che lavora a nero e pure male",
-"sei così inutile che il tuo CV lo usa il camino",
-"hai la faccia di uno che è stato disegnato di lunedì",
-"sei talmente brutto che il buio ti accende la luce",
-"hai la dignità di un fazzoletto usato due volte",
-"sei così fastidioso che pure il mal di testa ti evita",
-"hai il cervello con la segreteria: lascia un pensiero dopo il bip",
-"sei il tipo di persona che fa rimpiangere il silenzio imbarazzante",
-"sei talmente inutile che il tuo superpotere è occupare spazio",
-"hai la faccia di chi ha perso una gara di bellezza contro un citofono",
-"sei così coglione che se ti danno ragione ti confondi",
-"hai la simpatia di un’unghia incarnita in vacanza",
-"sei più vuoto di una promessa fatta da ubriaco",
-"hai il fascino di un frigo spento pieno di pesce",
-"sei talmente scemo che il tuo cervello ti ha messo in spam",
-"hai la classe di una scoreggia sotto le coperte",
-"sei così inutile che anche il nulla ti dice levati",
-"hai il cervello in modalità provvisoria da quando sei nato",
-"sei la dimostrazione che respirare non basta per essere utili",
-"sei talmente brutto che il tuo riflesso finge di non conoscerti",
-"hai la delicatezza di una padella sui denti",
-"sei così sfigato che se ti lanci nel vuoto il vuoto si sposta",
-"hai più problemi tu che una lavatrice in centrifuga coi mattoni",
-"sei il motivo per cui certi gruppi hanno il tasto espelli",
-"sei talmente coglione che l'intelligenza ti usa come confine",
-"hai il fascino di una crosta sul ginocchio",
-"sei così inutile che se sparisci nessuno aggiorna la rubrica",
-"hai la faccia di una sveglia rotta: fastidiosa e inutile",
-"sei talmente scemo che se ti fanno una domanda si offende il punto interrogativo",
-"hai il cervello più secco di un panino del distributore",
-"sei così fastidioso che pure la pubblicità ti skippa",
-"hai la personalità di una ciabatta spaiata",
-"sei talmente vuoto che potresti fare da garage al vento",
-"hai la simpatia di una puntura sul culo",
-"sei così inutile che se fossi un mobile saresti il piedino zoppo",
-"hai la faccia di uno che è stato assemblato senza istruzioni",
-"sei talmente coglione che se pensi troppo ti viene il jet lag",
-"hai il carisma di un tombino aperto",
-"sei così brutto che pure il citofono abbassa lo sguardo",
-"hai più imbarazzo addosso che vestiti puliti",
-"sei talmente scemo che il tuo cervello ha chiesto il divorzio",
-"hai la grazia di un maiale sui pattini",
-"sei così inutile che pure la polvere ti scansa",
-"hai il fascino di una macchia di sugo sul divano",
-"sei il tipo di persona che fa sembrare intelligente una sedia",
-"sei talmente scarso che anche l'ultimo posto ti evita",
-"hai il cervello che funziona a bestemmie e comunque male",
-"sei così fastidioso che il silenzio ti fa causa",
-"hai la faccia di chi è nato già in modalità imbarazzo",
-"sei talmente inutile che il tuo nome pesa più di te"
+        "sei così sfigato che se compri un boomerang non torna per scelta",
+        "hai la simpatia di una diarrea prima di un colloquio",
+        "Sei così lento che Internet Explorer ti manda a cagare perché deve aspettarti.",
+        "sei più inutile di un preservativo bucato",
+        "Sei così coglione che se ti mettono il cervello nel culo caghi idee migliori.",
+"Sei talmente rincoglionito che pure il tuo cazzo ti guarda e scuote la testa.",
+"Sei così inutile che se ti infilassero nel culo a qualcuno saresti comunque d'intralcio.",
+"Sei così stronzo che quando scorreggi chiedi scusa alla merda.",
+"Sei talmente idiota che se avessi un neurone in più sarebbe comunque in ferie.",
+"Sei così coglione che potresti inciampare nel tuo stesso cazzo anche senza averlo.",
+"Sei una testa di cazzo con così tanta esperienza che ormai dovresti avere la partita IVA.",
+"Sei così stupido che quando ti masturbi perdi contro te stesso.",
+"Sei talmente merda che le mosche ti vedono e ordinano da asporto.",
+"Sei così inutile che anche il buco del culo ha più responsabilità di te.",
+"Sei così rincoglionito che se ti dicono 'vai a cagare' chiedi l'indirizzo.",
+"Sei talmente coglione che se il cervello fosse merda avresti comunque la stitichezza.",
+"Sei così brutto che quando ti fai una sega chiudi gli occhi per non rovinarti il momento.",
+"Sei così stronzo che persino il tuo culo vorrebbe cambiare proprietario.",
+"Sei così coglione che se ti sparano in testa il proiettile esce chiedendo scusa per il disturbo.",
+"Sei talmente idiota che il tuo cervello ha messo il cartello 'affittasi'.",
+"Sei così inutile che persino una scorreggia ha più impatto sociale di te.",
+"Sei così coglione che se ti fai un clistere rischi di lavarti anche il cervello.",
+"Sei così merda che quando vai al cesso il water tira lo sciacquone prima che ti siedi.",
+"Sei così stronzo che persino la diarrea ti considera troppo liquido.",
+"Sei talmente rincoglionito che quando ti dicono 'fatti fottere' chiedi giorno e ora.",
+"Sei così stupido che il tuo cazzo ha più memoria muscolare del tuo cervello.",
+"Sei così inutile che il preservativo rotto almeno ogni tanto crea qualcosa.",
+"Sei così coglione che se ti mettono un dito nel culo pensi sia un aggiornamento firmware.",
+"Sei così stronzo che se ti caghi addosso migliori il profumo.",
+"Sei talmente testa di cazzo che quando pensi ti viene un'erezione al cervello, ma dura due secondi.",
+"Sei così idiota che se ti dessero un cervello nuovo chiederesti lo scontrino per cambiarlo.",
+"Sei così brutto che il tuo specchio ha chiesto il trasferimento.",
+"Sei così coglione che se scopi una bambola gonfiabile è lei che finge l'orgasmo.",
+"Sei talmente inutile che se fossi carta igienica saresti già sporca prima dell'uso.",
+"Sei così scemo che se ti infili una lampadina nel culo probabilmente ti si accende un'idea.",
+"Sei così stronzo che il tuo culo ti denuncia per concorrenza sleale.",
+"Sei così rincoglionito che potresti perderti dentro un monolocale.",
+"Sei così coglione che se ti mettono davanti a un bivio riesci a sbagliare tre volte.",
+"Sei così stupido che quando caghi perdi il 90% della tua massa cerebrale.",
+"Sei talmente merda che persino lo scopino del cesso ti guarda dall'alto in basso.",
+"Sei così coglione che hai probabilmente bisogno di un tutorial per farti una sega.",
+"Sei così inutile che se fossi un vibratore avresti le pile scariche dalla fabbrica.",
+"Sei così stupido che hai più probabilità di trovare il tuo cervello in un uovo Kinder.",
+"Sei talmente stronzo che quando sei nato il medico ha schiaffeggiato tua madre per vendetta.",
+"Sei così rincoglionito che quando senti 'testa di cazzo' ti giri pensando ti abbiano chiamato per nome.",
+"Sei così coglione che potresti venire bocciato a un test della personalità.",
+"Sei talmente brutto che quando ti spogli il tuo cazzo prova a rientrare.",
+"Sei così inutile che se ti mettono nel bidone dell'umido arriva una multa per raccolta differenziata sbagliata.",
+"Sei così coglione che il tuo angelo custode ha chiesto il reddito di cittadinanza.",
+"Sei così stupido che anche i tuoi spermatozoi probabilmente nuotano verso il culo.",
+"Sei così stronzo che se ti lavi il culo l'acqua presenta denuncia.",
+"Sei talmente rincoglionito che quando dici una cosa intelligente probabilmente stai citando qualcun altro.",
+"Sei così coglione che se il cervello fosse un muscolo saresti paraplegico dalla fronte in su.",
+"Sei così inutile che se fossi una supposta ti cagherebbero fuori per principio.",
+"Sei così merda che se cadi nel cesso il water ti sputa fuori.",
+"Sei talmente coglione che anche il tuo culo pensa più in profondità di te.",
+"Sei così stronzo che quando vai a cagare fai sembrare il bagno più pulito prima di entrare.",
+"Sei così rincoglionito che il tuo cervello gira su Windows Vista piratato.",
+"Sei così coglione che il tuo albero genealogico dovrebbe essere una linea retta.",
+"Sei così inutile che se fossi un cazzo non riusciresti neanche a stare duro.",
+"Sei così idiota che potresti essere battuto a scacchi da un preservativo usato.",
+"Sei così stronzo che la carta igienica si rifiuta di toccarti.",
+"Sei talmente coglione che quando ti togli le mutande perdi metà del tuo quoziente intellettivo.",
+"Sei così rincoglionito che se ti infilano una chiavetta USB nel culo provi a leggere i file.",
+"Sei così merda che il letame ti considera un collega poco qualificato.",
+"Sei così coglione che se ti chiedono sesso orale inizi a leggere ad alta voce.",
+"Sei così stupido che quando senti parlare di sega circolare pensi sia un'orgia.",
+"Sei così inutile che il tuo cazzo probabilmente viene usato solo per pisciare, e pure male.",
+"Sei talmente coglione che il tuo cervello potrebbe stare comodamente dentro una supposta.",
+"Sei così stronzo che quando caghi crei una copia di backup.",
+"Sei così rincoglionito che se ti infilano un dito nel culo chiedi se prende il Wi-Fi.",
+"Sei così brutto che Pornhub ti chiede la verifica per assicurarsi che tu non sia un contenuto violento.",
+"Sei così coglione che persino una sega a due mani sarebbe troppo multitasking per te.",
+"Sei così inutile che in un'orgia ti userebbero per tenere la porta.",
+"Sei così stupido che se ti dicono 'testicolo' probabilmente rispondi 'presente'.",
+"Sei talmente testa di cazzo che se ti metti un preservativo in testa finalmente sembri vestito bene.",
+"Sei così rincoglionito che il tuo cervello ha bisogno del Viagra per avere un pensiero.",
+"Sei così merda che quando passi vicino a un bagno pubblico migliori l'atmosfera.",
+"Sei così coglione che se ti infilano una scopa nel culo finalmente hai una spina dorsale.",
+"Sei così inutile che persino il tuo cazzo probabilmente ti usa solo come supporto logistico.",
+"Sei talmente stronzo che se fossi carta igienica saresti quella trasparente da autogrill.",
+"Sei così stupido che potresti farti inculare da una porta girevole.",
+"Sei così rincoglionito che se ti dicono 'mettici la testa' probabilmente abbassi i pantaloni.",
+"Sei così coglione che se avessi un cervello nel culo finalmente penseresti prima di cagare.",
+"Sei così brutto che persino una glory hole chiederebbe di vedere prima la faccia.",
+"Sei così inutile che se fossi un preservativo saresti taglia XS e pure bucato.",
+"Sei così coglione che il tuo cervello ha meno attività del tuo cazzo dopo cinque seghe.",
+"Sei talmente merda che quando entri in bagno la tavoletta del cesso si alza da sola per rispetto.",
+"Sei così stupido che se ti dicono 'non fare il coglione' vai in crisi d'identità.",
+"Sei così stronzo che potresti cagare in un letamaio e abbassarne il valore immobiliare.",
+"Sei così rincoglionito che persino le tue scoregge escono con più idee di te.",
+"Sei così coglione che se il buon senso fosse una malattia saresti immune.",
+"Sei così inutile che il tuo culo probabilmente è la parte più produttiva del tuo corpo.",
+"Sei talmente testa di cazzo che quando ti metti un cappello sembra un preservativo.",
+"Sei così stupido che la tua sega più riuscita probabilmente è quella con cui ti hanno costruito.",
+"Sei così coglione che se ti mettessero il cervello in vendita avrebbero paura dell'accusa di truffa.",
+"Sei così stronzo che persino la merda ti considera tossico.",
+"Sei così rincoglionito che il tuo unico pensiero profondo è quando ti siedi sul cesso.",
+"Sei così inutile che anche un cazzo moscio ha più possibilità di concludere qualcosa.",
+"Sei così coglione che se ti infilano una matita nel culo finalmente produci qualcosa di scritto.",
+"Sei così brutto che quando apri Pornhub il sito passa automaticamente alla modalità audio.",
+"Sei così stronzo che quando scoreggi il tuo culo ti chiede di abbassare i toni.",
+"Sei così coglione che se ti mandano affanculo probabilmente sbagli strada.",
+"Sei così rincoglionito che hai bisogno delle rotelle anche per andare a cagare.",
+"Sei così inutile che un buco nel preservativo ha più prospettive future di te.",
+"Sei così testa di cazzo che se ti facessero una TAC troverebbero due palle e nessun cervello."
     };
 
     public static void Exile(NetworkedPlayerInfo playerToExileInfo)
@@ -4010,13 +4154,132 @@ public static class MatchSummary1
             $"Meeting Time: {meetingTime}\n" +
             $"Total Match Time: {totalMatchTime}";
     }
+    private static List<string> SplitMessage(
+    string message,
+    int maxLength = 120)
+    {
+        var result = new List<string>();
 
+        if (string.IsNullOrWhiteSpace(message))
+            return result;
+
+        string normalized = message
+            .Replace("\r\n", "\n")
+            .Replace("\r", "\n")
+            .Trim();
+
+        string[] lines = normalized.Split('\n');
+
+        var current = new System.Text.StringBuilder();
+
+        foreach (string rawLine in lines)
+        {
+            string line = rawLine.TrimEnd();
+
+            // Se una singola riga supera 120 caratteri,
+            // dobbiamo dividerla forzatamente.
+            if (line.Length > maxLength)
+            {
+                if (current.Length > 0)
+                {
+                    result.Add(current.ToString());
+                    current.Clear();
+                }
+
+                int index = 0;
+
+                while (index < line.Length)
+                {
+                    int length =
+                        System.Math.Min(
+                            maxLength,
+                            line.Length - index
+                        );
+
+                    result.Add(
+                        line.Substring(index, length)
+                    );
+
+                    index += length;
+                }
+
+                continue;
+            }
+
+            int additionalLength =
+                line.Length +
+                (current.Length > 0 ? 1 : 0);
+
+            if (current.Length + additionalLength >
+                maxLength)
+            {
+                if (current.Length > 0)
+                {
+                    result.Add(current.ToString());
+                    current.Clear();
+                }
+            }
+
+            if (current.Length > 0)
+                current.Append('\n');
+
+            current.Append(line);
+        }
+
+        if (current.Length > 0)
+            result.Add(current.ToString());
+
+        return result;
+    }
+    //public static List<string> GetSummaryMessages()
+    //{
+    //    CaptureGameTimer();
+
+    //    string resultMessage =
+    //        BuildBaseSummaryReport();
+
+    //    if (!GameTimerWasEnabled)
+    //    {
+    //        string matchTime =
+    //            ToFullWidthNumbers(
+    //                GetMatchTime()
+    //            );
+
+    //        return new List<string>
+    //        {
+    //            $"{resultMessage}\n" +
+    //            $"Match Time: {matchTime}"
+    //        };
+    //    }
+
+    //    string timerMessage =
+    //        BuildTimerMessage();
+
+    //    string completeMessage =
+    //        $"{resultMessage}\n{timerMessage}";
+
+    //    if (completeMessage.Length <= 120)
+    //    {
+    //        return new List<string>
+    //        {
+    //            completeMessage
+    //        };
+    //    }
+
+    //    return new List<string>
+    //    {
+    //        resultMessage,
+    //        timerMessage
+    //    };
+    //}
     public static List<string> GetSummaryMessages()
     {
         CaptureGameTimer();
 
         string resultMessage =
             BuildBaseSummaryReport();
+
+        string completeMessage;
 
         if (!GameTimerWasEnabled)
         {
@@ -4025,34 +4288,25 @@ public static class MatchSummary1
                     GetMatchTime()
                 );
 
-            return new List<string>
-            {
+            completeMessage =
                 $"{resultMessage}\n" +
-                $"Match Time: {matchTime}"
-            };
+                $"Match Time: {matchTime}";
+        }
+        else
+        {
+            string timerMessage =
+                BuildTimerMessage();
+
+            completeMessage =
+                $"{resultMessage}\n" +
+                $"{timerMessage}";
         }
 
-        string timerMessage =
-            BuildTimerMessage();
-
-        string completeMessage =
-            $"{resultMessage}\n{timerMessage}";
-
-        if (completeMessage.Length <= 120)
-        {
-            return new List<string>
-            {
-                completeMessage
-            };
-        }
-
-        return new List<string>
-        {
-            resultMessage,
-            timerMessage
-        };
+        return SplitMessage(
+            completeMessage,
+            120
+        );
     }
-
     public static string GetSummaryReport()
     {
         return string.Join(
@@ -4535,5 +4789,136 @@ public static class BMImage
         }
 
         return null;
+    }
+    public static class PrivateNameUtility
+    {
+        private static readonly Dictionary<byte, Coroutine> ActiveTimers = new();
+
+        public static void SetText(PlayerControl player, string text)
+        {
+            if (!IsValid(player))
+                return;
+
+            StopTimer(player, false);
+            SendPrivateName(player, text);
+        }
+
+        public static void StartTimer(
+            PlayerControl player,
+            int seconds,
+            string format = "{0}s")
+        {
+            if (!IsValid(player))
+                return;
+
+            if (seconds < 0)
+                seconds = 0;
+
+            StopTimer(player, false);
+
+            Coroutine coroutine = player.StartCoroutine(
+                TimerCoroutine(player, seconds, format)
+            );
+
+            ActiveTimers[player.PlayerId] = coroutine;
+        }
+
+        public static void StopTimer(
+            PlayerControl player,
+            bool restoreName = true)
+        {
+            if (player == null)
+                return;
+
+            if (ActiveTimers.TryGetValue(player.PlayerId, out Coroutine coroutine))
+            {
+                if (coroutine != null)
+                    player.StopCoroutine(coroutine);
+
+                ActiveTimers.Remove(player.PlayerId);
+            }
+
+            if (restoreName && IsValid(player))
+                SendPrivateName(player, player.Data.PlayerName);
+        }
+
+        public static void Reset(PlayerControl player)
+        {
+            if (!IsValid(player))
+                return;
+
+            StopTimer(player, false);
+            SendPrivateName(player, player.Data.PlayerName);
+        }
+
+        private static IEnumerator TimerCoroutine(
+            PlayerControl player,
+            int seconds,
+            string format)
+        {
+            for (int remaining = seconds; remaining >= 0; remaining--)
+            {
+                if (!IsValid(player))
+                    break;
+
+                string text;
+
+                try
+                {
+                    text = string.Format(format, remaining);
+                }
+                catch
+                {
+                    text = remaining.ToString();
+                }
+
+                SendPrivateName(player, text);
+
+                if (remaining > 0)
+                    yield return new WaitForSecondsRealtime(1f);
+            }
+
+            if (player != null)
+                ActiveTimers.Remove(player.PlayerId);
+        }
+
+        private static void SendPrivateName(
+            PlayerControl player,
+            string text)
+        {
+            if (!IsValid(player))
+                return;
+
+            AmongUsClient client = AmongUsClient.Instance;
+
+            int targetClientId = client.GetClientIdFromCharacter(player);
+
+            if (targetClientId < 0)
+                return;
+
+            MessageWriter writer = client.StartRpcImmediately(
+                player.NetId,
+                (byte)RpcCalls.SetName,
+                SendOption.Reliable,
+                targetClientId
+            );
+
+            writer.Write(player.Data.NetId);
+            writer.Write(text ?? string.Empty);
+            writer.Write(false);
+
+            client.FinishRpcImmediately(writer);
+        }
+
+        private static bool IsValid(PlayerControl player)
+        {
+            return player != null
+                && player.Data != null
+                && AmongUsClient.Instance != null;
+        }
+        //PrivateNameUtility.SetText(player, "testo");
+        //PrivateNameUtility.StartTimer(player, 30, "Timer: {0}s");
+        //PrivateNameUtility.StopTimer(player);
+        //PrivateNameUtility.Reset(player);
     }
 }

@@ -13,6 +13,8 @@
   "ActiveChat": "Activate Chat",
   "Resize_Player": "Resize Player",
   "ActiveLobbyDecorations": "Activate Lobby Decorations",
+  "symbolcm1": "smile ㋡\nsmilea ㋛\nsmileb ッ\nsmilec シ\nsmiled ツ\nsmilee ヅ\nsmilef\n웃cross †\nheart ♥\nheart1 ♡\ninfinity ∞",
+  "symbolcm2": "note ♫\nnote1 ♪\nstar ★\nstar1 ☆\ncheck ✓\nying ☯\ndivide ┇\nflower ✿\nflower1 ❀\nsun ☀",
   "Always": "Always",
   "UnidentifiedCheater": "Unidentified Cheater is closing doors!",
   "AnonymousVotes": "Anonymous Votes",
@@ -1374,11 +1376,13 @@
   "ZombieSpeedMultiplier": "Zombie Speed (%)",
   "ZombieVisionMultiplier": "Zombie Vision (%)",
   "ZombieWins": "Zombie Wins",
-    "ZombieMode": "ZombieMode",
+  "ZombieMode": "ZombieMode",
   "HotPotato": "HotPotato",
   "HotPotatoFirstDelaySeconds": "First Potato Timer (sec)",
   "HotPotatoExplosionSeconds": "Explosion Timer (sec)",
   "ZombieTouchesToInfect": "Touches to Infect",
   "ZombieTouchDurationSeconds": "Touch Duration (sec)",
+  "BlockVent": "Block Vent",
+  "ImpostorWinsGameTimer": "The Impostors won because the game timer expired",
   "MODTEXTWARNING": "<size=90%><color=#FFCC00><b>Another mod has been detected running together with BanMod.</b></color>\n\nDue to the high number of bug reports coming from installations with multiple active mods, this notice is shown to inform you that <b>BanMod does not guarantee full compatibility with other mods</b>.\n\n<color=#FFCC00><b>Before reporting an issue:</b></color>\nIf you experience errors, crashes, or unexpected behavior, please temporarily remove the other mods and check whether the issue still occurs. Reports sent from clients using additional mods may not be reviewed or may be closed without further action.\n\n<color=#66CCFF><b>Harmless mods:</b></color>\nIf you use simple mods, for example to unlock skins or cosmetic content, you can generally ignore this message. However, avoid enabling any options that modify the chat, as they may cause bugs.\n\n<color=#FF6666><b>Advanced mods or cheat menus:</b></color>\nMods that deeply modify the game, chat, roles, player behavior, or provide unintended advantages may cause serious compatibility issues.\n\nIf a player is reported for using hacks or appears on a cheater list, access to some BanMod features may be limited or blocked after a manual review of the report or the modification used.</size>"
 }

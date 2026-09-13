@@ -228,7 +228,7 @@ namespace BanMod
                 }
             }
 
-            GUI.backgroundColor = Color.black;
+            GUI.backgroundColor = Color.white;
             windowRect = GUI.Window(3, windowRect, (GUI.WindowFunction)WindowFunction, "", BanModUiStyles.BlackWindow);
         }
 
@@ -307,7 +307,7 @@ namespace BanMod
 
             GUILayout.EndScrollView();
 
-            GUI.backgroundColor = new Color(0.8f, 0f, 0f, 1f);
+            GUI.backgroundColor = Color.white;
             if (GUILayout.Button(GetString("Key_SaveClose"), exitButtonStyle, GUILayout.Height(45)))
             {
                 CloseMenu();
@@ -444,17 +444,38 @@ namespace BanMod
         {
             if (titleStyle != null) return;
 
-            titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            categoryStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, alignment = TextAnchor.MiddleLeft };
-            bindButtonStyle = new GUIStyle(GUI.skin.button) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-            exitButtonStyle = new GUIStyle(GUI.skin.button) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            titleStyle = new GUIStyle(BanModUiStyles.TitleLabel)
+            {
+                fontSize = 22,
+                alignment = TextAnchor.MiddleCenter
+            };
 
-            titleStyle.normal.textColor = Color.white;
-            categoryStyle.normal.textColor = Color.cyan;
-            labelStyle.normal.textColor = Color.white;
+            categoryStyle = new GUIStyle(BanModUiStyles.HeaderLabel)
+            {
+                fontSize = 16,
+                alignment = TextAnchor.MiddleCenter
+            };
 
-            rowBoxStyle = new GUIStyle(GUI.skin.box);
+            labelStyle = new GUIStyle(BanModUiStyles.BodyLabel)
+            {
+                fontSize = 14,
+                alignment = TextAnchor.MiddleLeft
+            };
+
+            bindButtonStyle = new GUIStyle(BanModUiStyles.ButtonDark)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+
+            exitButtonStyle = new GUIStyle(BanModUiStyles.DangerButton)
+            {
+                fontSize = 18,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            rowBoxStyle = new GUIStyle(BanModUiStyles.DarkBox);
             rowBoxStyle.padding = new RectOffset();
             rowBoxStyle.padding.left = 10;
             rowBoxStyle.padding.right = 10;

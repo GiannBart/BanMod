@@ -107,7 +107,51 @@ namespace BanMod
         }
 
         private static string Colorize(string text, string colorHex) => $"<color={colorHex}>{text}</color>";
+        private static string BuildFlexibleRegex(string pattern)
+        {
+            string clean = new string(
+                pattern
+                    .ToLowerInvariant()
+                    .Where(char.IsLetterOrDigit)
+                    .ToArray()
+            );
 
+            if (string.IsNullOrEmpty(clean))
+                return @"(?!x)x"; // non matcha mai
+
+            string flexible = string.Join(
+                @"[\s\p{P}\p{S}_]*",
+                clean.Select(c => Regex.Escape(c.ToString()))
+            );
+
+            return $@"(?<![\p{{L}}\p{{N}}]){flexible}(?![\p{{L}}\p{{N}}])";
+        }
+        //public static bool CheckWord(string text)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(text))
+        //            return false;
+
+        //        string lowerText = text.ToLowerInvariant();
+
+        //        foreach (var pattern in BanWords)
+        //        {
+        //            string lowerPattern = pattern.ToLowerInvariant().Trim();
+
+        //            string patternRegex = $@"\b{Regex.Escape(lowerPattern)}\b";
+        //            if (Regex.IsMatch(lowerText, patternRegex, RegexOptions.CultureInvariant))
+        //                return true;
+        //        }
+
+        //        return false;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        BMLogger.Exception(ex, "SpamManager");
+        //        return true;
+        //    }
+        //}
         public static bool CheckWord(string text)
         {
             try
@@ -119,11 +163,18 @@ namespace BanMod
 
                 foreach (var pattern in BanWords)
                 {
-                    string lowerPattern = pattern.ToLowerInvariant().Trim();
+                    if (string.IsNullOrWhiteSpace(pattern))
+                        continue;
 
-                    string patternRegex = $@"\b{Regex.Escape(lowerPattern)}\b";
-                    if (Regex.IsMatch(lowerText, patternRegex, RegexOptions.CultureInvariant))
+                    string patternRegex = BuildFlexibleRegex(pattern);
+
+                    if (Regex.IsMatch(
+                        lowerText,
+                        patternRegex,
+                        RegexOptions.CultureInvariant))
+                    {
                         return true;
+                    }
                 }
 
                 return false;
@@ -135,7 +186,32 @@ namespace BanMod
             }
         }
 
+        //public static bool CheckStart(string text)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(text))
+        //            return false;
 
+        //        string lowerText = text.ToLowerInvariant().Trim();
+
+        //        foreach (var pattern in SpamStart)
+        //        {
+        //            string lowerPattern = pattern.ToLowerInvariant().Trim();
+
+        //            string patternRegex = $@"\b{Regex.Escape(lowerPattern)}\b";
+        //            if (Regex.IsMatch(lowerText, patternRegex, RegexOptions.CultureInvariant))
+        //                return true;
+        //        }
+
+        //        return false;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        BMLogger.Exception(ex, "SpamManager");
+        //        return true;
+        //    }
+        //}
         public static bool CheckStart(string text)
         {
             try
@@ -143,15 +219,22 @@ namespace BanMod
                 if (string.IsNullOrWhiteSpace(text))
                     return false;
 
-                string lowerText = text.ToLowerInvariant().Trim();
+                string lowerText = text.ToLowerInvariant();
 
                 foreach (var pattern in SpamStart)
                 {
-                    string lowerPattern = pattern.ToLowerInvariant().Trim();
+                    if (string.IsNullOrWhiteSpace(pattern))
+                        continue;
 
-                    string patternRegex = $@"\b{Regex.Escape(lowerPattern)}\b";
-                    if (Regex.IsMatch(lowerText, patternRegex, RegexOptions.CultureInvariant))
+                    string patternRegex = BuildFlexibleRegex(pattern);
+
+                    if (Regex.IsMatch(
+                        lowerText,
+                        patternRegex,
+                        RegexOptions.CultureInvariant))
+                    {
                         return true;
+                    }
                 }
 
                 return false;
@@ -162,9 +245,6 @@ namespace BanMod
                 return true;
             }
         }
-
-
-
 
         public static bool CheckStart(PlayerControl player, string text)
         {

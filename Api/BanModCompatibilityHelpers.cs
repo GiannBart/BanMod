@@ -1860,13 +1860,6 @@ namespace BanMod
             startupCheckFinished = result != null && result.Checked;
             startupCheckRunning = false;
             callback?.Invoke(result);
-
-            if (result != null && result.Checked && result.UpdateAvailable &&
-                result.Mandatory && !result.UpdateStarted)
-            {
-                yield return new WaitForSeconds(1f);
-                Application.Quit();
-            }
         }
 
         private static IEnumerator CheckAtStartupInternalCoroutine(Action<StartupUpdateResult> callback)
@@ -2012,48 +2005,14 @@ namespace BanMod
             if (Version.TryParse(serverVersion, out parsedVersion))
                 latestVersion = parsedVersion;
 
-            if (!automaticMandatoryUpdate)
-            {
-                callback?.Invoke(result);
-                yield break;
-            }
-
-            if (string.IsNullOrWhiteSpace(downloadUrl))
-            {
-                result.Error = "Mandatory update response does not contain download_url";
-                lastError = result.Error;
-                isBroken = true;
-                callback?.Invoke(result);
-                yield break;
-            }
-
-            if (string.IsNullOrWhiteSpace(latestSha256) ||
-                !Regex.IsMatch(latestSha256, "^[0-9a-f]{64}$", RegexOptions.IgnoreCase))
-            {
-                result.Error = "Mandatory update response does not contain a valid official SHA256";
-                lastError = result.Error;
-                isBroken = true;
-                callback?.Invoke(result);
-                yield break;
-            }
-
-            bool started = false;
-            string installError = "";
-            yield return DownloadStageAndLaunchCoroutine(
-                downloadUrl,
-                latestSha256,
-                (ok, error) =>
-                {
-                    started = ok;
-                    installError = error ?? "";
-                });
-
-            result.UpdateStarted = started;
-            result.Error = installError;
-            lastError = installError;
-            isBroken = !started;
-
+            // The startup check only reports metadata. Installation starts only
+            // after the player presses Aggiorna in the dedicated update popup.
+            result.UpdateStarted = false;
+            result.Error = "";
+            lastError = "";
+            isBroken = false;
             callback?.Invoke(result);
+            yield break;
         }
 
         private static IEnumerator DownloadStageAndLaunchCoroutine(
@@ -2609,40 +2568,25 @@ namespace BanMod
 
             checkCompleted = true;
 
-            if (result.UpdateAvailable && result.Mandatory)
+            if (result.UpdateAvailable)
             {
-                if (!result.UpdateStarted)
-                {
-                    Debug.LogError("[BanMod Updater] Mandatory update was not installed: " +
-                                   (result.Error ?? "unknown error"));
-
-                    yield return new WaitForSeconds(1f);
-                    Application.Quit();
-                    yield break;
-                }
-
-                yield break;
-            }
-
-            if (result.UpdateAvailable && !result.Mandatory)
-            {
-                string changes = string.IsNullOrWhiteSpace(result.ReleaseNotes)
-                    ? "No details available."
-                    : result.ReleaseNotes;
-
-                string message =
-                    ModUpdater.latestTitle + " is available.\n\n" +
-                    "Changes:\n" +
-                    changes;
+                // Il popup traduce autonomamente titolo, stato e pulsanti usando
+                // la lingua UI selezionata in Among Us. Qui passiamo solo il nome
+                // della release e le note ricevute dal server, senza testo italiano fisso.
+                string releaseNotes = result.ReleaseNotes ?? "";
 
                 Debug.Log(
-                    "[BanMod Updater] Optional update available: " +
+                    "[BanMod Updater] " +
+                    (result.Mandatory ? "Mandatory" : "Optional") +
+                    " update available: " +
                     ModUpdater.latestTitle
                 );
 
-                BanModPopup.CreateMessagePopup(
-                    "Optional update available",
-                    message
+                BanModPopup.CreateUpdatePopup(
+                    ModUpdater.latestTitle,
+                    releaseNotes,
+                    result.Mandatory,
+                    ModUpdater.StartManualUpdate
                 );
             }
         }

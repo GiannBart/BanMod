@@ -3,6 +3,7 @@
   "Action": "操作",
   "ActionCheaterlist": "对作弊者的操作",
   "AddBanToList": "将被封禁/阻止的玩家添加到封禁列表",
+      "ImpostorWinsTimer": "由于游戏计时器到期，内鬼获胜了",
   "AddedtoDenynamelist": " 已添加到 Denyname.txt 列表",
   "AddedtoDenystartlist": " 已添加到 SpamStart.txt 列表",
   "AddedtoDenyWordlist": " 已添加到 BanWord.txt 列表",

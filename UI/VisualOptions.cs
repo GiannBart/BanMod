@@ -186,20 +186,11 @@ namespace BanMod
         {
             if (titleStyle == null)
             {
-                titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                titleStyle.normal.textColor = new Color(1f, 1f, 1f, 1f); 
+                titleStyle = new GUIStyle(BanModUiStyles.TitleLabel) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
 
                 styleDefault = new GUIStyle(BanModUiStyles.ButtonDark) { alignment = TextAnchor.MiddleCenter };
-                styleDefault.normal.textColor = Color.white;
-                styleDefault.hover.textColor = Color.white;
-
                 styleOn = new GUIStyle(BanModUiStyles.ToggleOnBlueOutline) { fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                styleOn.normal.textColor = Color.white;
-                styleOn.hover.textColor = Color.white;
-
                 styleOff = new GUIStyle(BanModUiStyles.ToggleOffDark) { alignment = TextAnchor.MiddleCenter };
-                styleOff.normal.textColor = Color.white;
-                styleOff.hover.textColor = Color.white;
             }
         }
 
@@ -216,7 +207,7 @@ namespace BanMod
             }
             InitStyles();
 
-            GUI.backgroundColor = Color.black;
+            GUI.backgroundColor = Color.white;
             windowRect = GUI.Window(0, windowRect, (GUI.WindowFunction)DrawWindow, "", BanModUiStyles.BlackWindow);
         }
 
@@ -251,8 +242,8 @@ namespace BanMod
 
             GUI.color = new Color(1f, 1f, 1f, 1f);
 
-            GUI.backgroundColor = new Color(0.8f, 0f, 0f, 1f);
-            if (GUILayout.Button(GetString("ExitButton"), GUILayout.Height(42)))
+            GUI.backgroundColor = Color.white;
+            if (GUILayout.Button(GetString("ExitButton"), BanModUiStyles.DangerButton, GUILayout.Height(42)))
             {
                 MenuRouter.Open(MenuRouter.Panel.None);
             }

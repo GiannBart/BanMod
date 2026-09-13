@@ -3,6 +3,7 @@
   "Action": "アクション",
   "ActionCheaterlist": "チーターへのアクション",
   "AddBanToList": "BAN/ブロックされたプレイヤーをBANリストに追加",
+      "ImpostorWinsTimer": "ゲームタイマーが時間切れになったため、インポスターの勝利です",
   "AddedtoDenynamelist": " Denyname.txtリストに追加しました",
   "AddedtoDenystartlist": " SpamStart.txtリストに追加しました",
   "AddedtoDenyWordlist": " BanWord.txtリストに追加しました",

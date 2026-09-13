@@ -401,11 +401,12 @@ namespace BanMod
             bgRect.anchoredPosition = new Vector2(25, 35);
 
             var bgImg = bg.AddComponent<Image>();
-            bgImg.color = new Color(0, 0, 0, 0.95f);
+            bgImg.sprite = BanModUiStyles.RoundedSprite;
+            bgImg.color = BanModUiStyles.WindowColor;
             bgImg.raycastTarget = true;
 
-            Color neutralBtn = new Color(0.22f, 0.22f, 0.22f, 1f);
-            Color applyBtn = new Color(0.30f, 0.30f, 0.30f, 1f);
+            Color neutralBtn = BanModUiStyles.ButtonColor;
+            Color applyBtn = BanModUiStyles.AccentColor;
 
             var imgGO = new GameObject("PreviewImage");
             imgGO.transform.SetParent(bg.transform, false);
@@ -529,6 +530,7 @@ namespace BanMod
             r.anchoredPosition = pos;
 
             var img = go.AddComponent<Image>();
+            img.sprite = BanModUiStyles.RoundedSprite;
             img.color = color;
 
             var btn = go.AddComponent<Button>();
@@ -623,7 +625,8 @@ namespace BanMod
             r.anchoredPosition = new Vector2(-5, -5);
 
             var img = close.AddComponent<Image>();
-            img.color = new Color(0.8f, 0.1f, 0.1f, 1f);
+            img.sprite = BanModUiStyles.RoundedSprite;
+            img.color = BanModUiStyles.DangerColor;
 
             var btn = close.AddComponent<Button>();
             btn.onClick.AddListener((Action)(() =>

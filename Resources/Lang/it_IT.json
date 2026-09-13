@@ -1371,5 +1371,6 @@
   "HotPotatoExplosionSeconds": "Timer Esplosione (sec)",
     "ZombieTouchesToInfect": "Tocchi per infettare",
   "ZombieTouchDurationSeconds": "Durata Tocchi (sec)",
+    "ImpostorWinsTimer": "Gli Impostori hanno vinto perché il timer di gioco è scaduto",
   "ZombieVisionMultiplier": "Visione Zombie (%)"
 }

@@ -1,6 +1,7 @@
 {
   "LanguageID": "1",
   "Action": "Acción",
+      "ImpostorWinsTimer": "Los impostores han ganado porque se agotó el tiempo de juego",
   "ActionCheaterlist": "Acción para tramposos",
   "AddBanToList": "Agregar jugadores baneados/bloqueados a la lista de baneos",
   "AddedtoDenynamelist": " agregado a la lista Denyname.txt",

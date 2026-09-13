@@ -29,9 +29,9 @@ public static class GameStartManagerLastMatchButtonPatch_Update
 internal static class GameStartManagerLastMatchButtonPatchHelper
 {
     private const string ButtonName = "BanMod_LastMatchResultButton";
-    private static readonly Color inactiveButtonColor = new(0f, 0.647f, 1f, 1f);
-    private static readonly Color activeButtonColor = new(0f, 0.847f, 1f, 1f);
-    private static readonly Color TextColor = Color.black;
+    private static readonly Color inactiveButtonColor = new(0.10f, 0.45f, 0.85f, 1f);
+    private static readonly Color activeButtonColor = new(0.12f, 0.55f, 0.96f, 1f);
+    private static readonly Color TextColor = Color.white;
 
     private static readonly Vector3 FixedLocalPosition = new(-0.07144928f, 0.49669075f, 6.556511E-07f);
     private static readonly Vector3 FixedLocalScale = new(1.0000005f, 0.42999995f, 1f);
@@ -213,21 +213,21 @@ internal static class GameStartManagerLastMatchButtonPatchHelper
         if (rootButton == null)
             return;
 
-        rootButton.activeTextColor = Color.black;
-        rootButton.inactiveTextColor = Color.black;
+        rootButton.activeTextColor = Color.white;
+        rootButton.inactiveTextColor = Color.white;
 
         if (rootButton.inactiveSprites != null)
         {
             SpriteRenderer inactiveSr = rootButton.inactiveSprites.GetComponent<SpriteRenderer>();
             if (inactiveSr != null)
-                inactiveSr.color = new Color(0f, 0.647f, 1f, 1f);
+                inactiveSr.color = inactiveButtonColor;
 
             Transform shine = rootButton.inactiveSprites.transform.Find("Shine");
             if (shine != null)
             {
                 SpriteRenderer shineSr = shine.GetComponent<SpriteRenderer>();
                 if (shineSr != null)
-                    shineSr.color = new Color(0f, 1f, 1f, 0.5f);
+                    shineSr.color = new Color(0.35f, 0.75f, 1f, 0.35f);
             }
         }
 
@@ -235,7 +235,7 @@ internal static class GameStartManagerLastMatchButtonPatchHelper
         {
             SpriteRenderer activeSr = rootButton.activeSprites.GetComponent<SpriteRenderer>();
             if (activeSr != null)
-                activeSr.color = new Color(0f, 0.847f, 1f, 1f);
+                activeSr.color = activeButtonColor;
         }
     }
 

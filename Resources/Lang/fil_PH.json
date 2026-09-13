@@ -2,6 +2,7 @@
   "LanguageID": "7",
   "Action": "Aksyon",
   "ActionCheaterlist": "Aksyon para sa cheater",
+      "ImpostorWinsTimer": "Nanalo ang mga Impostor dahil naubos ang oras ng laro",
   "AddBanToList": "Idagdag ang mga na-ban/na-block na manlalaro sa Ban List",
   "AddedtoDenynamelist": " Idinagdag sa listahang Denyname.txt",
   "AddedtoDenystartlist": " Idinagdag sa listahang SpamStart.txt",

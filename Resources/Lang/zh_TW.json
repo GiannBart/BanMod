@@ -3,6 +3,7 @@
   "Action": "操作",
   "ActionCheaterlist": "對作弊者的操作",
   "AddBanToList": "將被封鎖/封鎖的玩家新增到封鎖清單",
+      "ImpostorWinsTimer": "由於遊戲計時器到期，偽裝者獲勝了",
   "AddedtoDenynamelist": " 已新增到 Denyname.txt 清單",
   "AddedtoDenystartlist": " 已新增到 SpamStart.txt 清單",
   "AddedtoDenyWordlist": " 已新增到 BanWord.txt 清單",

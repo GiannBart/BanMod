@@ -26,6 +26,7 @@ using UnityEngine;
 using UnityEngine.Bindings;
 using UnityEngine.Profiling;
 using UnityEngine.UIElements;
+using static BanMod.BMImage;
 using static BanMod.ExtendedPlayerControl;
 using static BanMod.GameStartManagerPatch;
 using static BanMod.RoomZoneManager;
@@ -173,21 +174,85 @@ internal class ChatCommands
 
         switch (command)
         {
-            case "/test":
+            case "/rename":
+                if (!AmongUsClient.Instance.AmHost)
                 {
-                    if (!AmongUsClient.Instance.AmHost)
-                        return true;
-
-                    string elapsed = ToFullWidthNumbers(GameTimeLimit.FormatTime(605f));   // 10:05
-                    string remaining = ToFullWidthNumbers(GameTimeLimit.FormatTime(545f)); // 9:05
-
-                    string message =
-                        $"Elapsed: {elapsed}\r\n" +
-                        $"Remaining: {remaining}";
-
-                    Utils.SendMessage(message);
-                    return true;
+                    return true; 
                 }
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                StoreOriginalName(player.PlayerId);
+                player.RpcSetName(subArgs);
+                return true;
+
+            case "/n":
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                {
+                    string baseName = Regex.Replace(playerName, "<.*?>", "");
+                    string friendCode = player.FriendCode;
+
+                    {
+                        string nameColorHex = colorMap.ContainsKey(subArgs)
+                            ? colorMap[subArgs]
+                            : (Regex.IsMatch(subArgs, "^#([0-9A-Fa-f]{6})$") ? subArgs : null);
+
+                        if (nameColorHex != null)
+                        {
+
+                            StoreOriginalName(player.PlayerId);
+                            string newName = $"<color={nameColorHex}>{baseName}</color>";
+                            player.RpcSetName(newName);
+                        }
+                    }
+                }
+                break;
+
+            case "/символ":
+            case "/symbole":
+            case "/simboli":
+            case "/symbol":
+                {
+                    string symbolmsg1 = GetString("symbolcm1");
+                    string symbolmsg2 = GetString("symbolcm2");
+                    Utils.SendMessage(symbolmsg1);
+                    Utils.SendMessage(symbolmsg2);
+                }
+                return true;
+
+            case "/s": // sinistra
+            case "/l": // left
+            case "/d": // destra
+            case "/r": // right
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                    if (args.Length > 1)
+                    {
+                        string symbolKey = subArgs;
+                        string colorArg = args.Length > 2 ? args[2].ToLowerInvariant() : "";
+
+                        if (symbolMap.TryGetValue(symbolKey, out string rawSymbol))
+                        {
+                            string colorHex = colorMap.ContainsKey(colorArg)
+                                ? colorMap[colorArg]
+                                : (Regex.IsMatch(colorArg, "^#([0-9A-Fa-f]{6})$") ? colorArg : "#FFFFFF");
+
+                            StoreOriginalName(player.PlayerId);
+                            string coloredSymbol = $"<color={colorHex}>{rawSymbol}</color>";
+                            string newName = command == "/s"
+                                ? $"{coloredSymbol}{playerName}"
+                                : $"{playerName}{coloredSymbol}";
+                            player.RpcSetName(newName);
+
+                        }
+                    }
+                break;
+
+            case "/reset":
+            case "/resetname":
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                {
+                    RestoreOriginalName(player.PlayerId);
+                }
+                break;
+
             case "/tpout":
             case "/esci":
                 if (GameStates.isLobby) player.RpcTeleport(new Vector2(0.1f, 3.8f));
@@ -197,6 +262,7 @@ internal class ChatCommands
             case "/entra":
                 if (GameStates.isLobby) player.RpcTeleport(new Vector2(-0.2f, 1.3f));
                 return true;
+
             case "/insultaon":
                 {
                     if (!AmongUsClient.Instance.AmHost)
@@ -1932,12 +1998,41 @@ internal class ChatCommands
                 Utils.ShowCommand4();
                 return true;
 
-            case "/dn": return AppendToFile("DenyName.txt", string.Join(" ", subArgs), "AddedtoDenynamelist");
-            case "/ddn": return RemoveFromFile("DenyName.txt", string.Join(" ", subArgs), "DeletedtoDenynamelist");
-            case "/dw": return AppendToFile("BanWords.txt", string.Join(" ", subArgs), "AddedtoDenyWordlist");
-            case "/ddw": return RemoveFromFile("BanWords.txt", string.Join(" ", subArgs), "DeletedtoDenyWord");
-            case "/ds": return AppendToFile("SpamStart.txt", string.Join(" ", subArgs), "AddedtoDenystartlistlist");
-            case "/dds": return RemoveFromFile("SpamStart.txt", string.Join(" ", subArgs), "DeletedtoDenystartlist");
+            //case "/dn": return AppendToFile("DenyName.txt", string.Join(" ", subArgs), "AddedtoDenynamelist");
+            //case "/ddn": return RemoveFromFile("DenyName.txt", string.Join(" ", subArgs), "DeletedtoDenynamelist");
+            case "/dn":
+                {
+                    string value = string.Join(" ", args.Skip(1)).Trim();
+
+                    bool result = AppendToFile(
+                        "DenyName.txt",
+                        value,
+                        "AddedtoDenynamelist"
+                    );
+
+                    FixedUpdateUnifiedPatch.RefreshDeniedNamesNow();
+
+                    return result;
+                }
+
+            case "/ddn":
+                {
+                    string value = string.Join(" ", args.Skip(1)).Trim();
+
+                    bool result = RemoveFromFile(
+                        "DenyName.txt",
+                        value,
+                        "DeletedtoDenynamelist"
+                    );
+
+                    FixedUpdateUnifiedPatch.RefreshDeniedNamesNow();
+
+                    return result;
+                }
+            case "/dw": return AppendToFile("BanWords.txt",string.Join(" ", args.Skip(1)),"AddedtoDenyWordlist");
+            case "/ddw":return RemoveFromFile("BanWords.txt",string.Join(" ", args.Skip(1)),"DeletedtoDenyWord");
+            case "/ds":return AppendToFile("SpamStart.txt",string.Join(" ", args.Skip(1)),"AddedtoDenystartlistlist");
+            case "/dds":return RemoveFromFile("SpamStart.txt",string.Join(" ", args.Skip(1)),"DeletedtoDenystartlist");
             case "/addvip": return AllowedManager.ManageVip(subArgs, add: true);
             case "/deletevip": return AllowedManager.ManageVip(subArgs, add: false);
             case "/addmod": return AllowedManager.ManageModerator(subArgs, add: true);
@@ -1988,15 +2083,90 @@ internal class ChatCommands
 
     static bool AppendToFile(string file, string value, string msgKey)
     {
-        File.AppendAllText($"./BAN_DATA/DENIED/{file}", $"\n{value}");
+        value = value?.Trim();
+
+        if (string.IsNullOrWhiteSpace(value))
+            return true;
+
+        string path = $"./BAN_DATA/DENIED/{file}";
+
+        if (file.Equals("BanWords.txt", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!SpamManager.BanWords.Any(x =>
+                x.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            {
+                File.AppendAllText(
+                    path,
+                    Environment.NewLine + value,
+                    Encoding.UTF8
+                );
+
+                SpamManager.BanWords.Add(value);
+            }
+        }
+
+        else if (file.Equals("SpamStart.txt", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!SpamManager.SpamStart.Any(x =>
+                x.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            {
+                File.AppendAllText(
+                    path,
+                    Environment.NewLine + value,
+                    Encoding.UTF8
+                );
+
+                SpamManager.SpamStart.Add(value);
+            }
+        }
+
+        else
+        {
+            File.AppendAllText(
+                path,
+                Environment.NewLine + value,
+                Encoding.UTF8
+            );
+        }
+
         ShowChat(value + GetString(msgKey));
         return true;
     }
 
     static bool RemoveFromFile(string file, string value, string msgKey)
     {
-        var lines = File.ReadAllLines($"./BAN_DATA/DENIED/{file}").Where(line => !line.Contains(value)).ToList();
-        File.WriteAllLines($"./BAN_DATA/DENIED/{file}", lines);
+        value = value?.Trim();
+
+        if (string.IsNullOrWhiteSpace(value))
+            return true;
+
+        string path = $"./BAN_DATA/DENIED/{file}";
+
+        if (File.Exists(path))
+        {
+            var lines = File.ReadAllLines(path, Encoding.UTF8)
+                .Where(line =>
+                    !line.Trim().Equals(
+                        value,
+                        StringComparison.OrdinalIgnoreCase
+                    ))
+                .ToList();
+
+            File.WriteAllLines(path, lines, Encoding.UTF8);
+        }
+
+        // Rimuove subito anche dalla memoria
+        if (file.Equals("BanWords.txt", StringComparison.OrdinalIgnoreCase))
+        {
+            SpamManager.BanWords.RemoveAll(x =>
+                x.Equals(value, StringComparison.OrdinalIgnoreCase));
+        }
+        else if (file.Equals("SpamStart.txt", StringComparison.OrdinalIgnoreCase))
+        {
+            SpamManager.SpamStart.RemoveAll(x =>
+                x.Equals(value, StringComparison.OrdinalIgnoreCase));
+        }
+
         ShowChat(value + GetString(msgKey));
         return true;
     }
@@ -2040,6 +2210,37 @@ internal class ChatCommands
     }
     private static Stack<NetworkedPlayerInfo.PlayerOutfit> savedOutfits2 = new Stack<NetworkedPlayerInfo.PlayerOutfit>();
     private static Stack<string> savedNames2 = new Stack<string>();
+    public static readonly Dictionary<string, string> originalNamesByFriendCode = new();
+
+    public static void StoreOriginalName(int playerId)
+    {
+        if (!AmongUsClient.Instance.AmHost) return;
+        var player = BanMod.AllPlayerControls.FirstOrDefault(p => p.PlayerId == playerId);
+        if (player == null) return;
+
+        string friendCode = player.FriendCode;
+        if (!string.IsNullOrEmpty(friendCode) && !originalNamesByFriendCode.ContainsKey(friendCode))
+        {
+            originalNamesByFriendCode[friendCode] = player.name;
+        }
+    }
+    public static void RestoreOriginalName(int playerId)
+    {
+        if (!AmongUsClient.Instance.AmHost) return;
+        var player = BanMod.AllPlayerControls.FirstOrDefault(p => p.PlayerId == playerId);
+        if (player == null) return;
+
+        if (Utils.Shapeshifter(player) && player.CurrentOutfitType == PlayerOutfitType.Shapeshifted || Utils.Phantom(player))
+        {
+            return;
+        }
+
+        string friendCode = player.FriendCode;
+        if (!string.IsNullOrEmpty(friendCode) && originalNamesByFriendCode.TryGetValue(friendCode, out string originalName))
+        {
+            player.RpcSetName(originalName);
+        }
+    }
     public static class ChatColorManager
     {
         public static readonly Dictionary<string, string> colorMap = new()
@@ -2255,6 +2456,82 @@ internal class ChatCommands
                     );
                     return;
                 }
+
+            case "/tpout":
+            case "/esci":
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                    player.RpcTeleport(new Vector2(0.1f, 3.8f));
+                return;
+
+            case "/tpin":
+            case "/entra":
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                    player.RpcTeleport(new Vector2(-0.2f, 1.3f));
+                return;
+
+            case "/rename":
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                StoreOriginalName(player.PlayerId);
+                player.RpcSetName(subArgs);
+                return;
+
+
+            case "/n":
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                {
+                    string baseName = Regex.Replace(playerName, "<.*?>", "");
+                    string friendCode = player.FriendCode;
+
+                    {
+                        string nameColorHex = colorMap.ContainsKey(subArg)
+                            ? colorMap[subArg]
+                            : (Regex.IsMatch(subArg, "^#([0-9A-Fa-f]{6})$") ? subArg : null);
+
+                        if (nameColorHex != null)
+                        {
+
+                            StoreOriginalName(player.PlayerId);
+                            string newName = $"<color={nameColorHex}>{baseName}</color>";
+                            player.RpcSetName(newName);
+                        }
+                    }
+                }
+                break;
+
+
+            case "/s": // sinistra
+            case "/l": // left
+            case "/d": // destra
+            case "/r": // right
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                    if (args.Length > 1)
+                    {
+                        string symbolKey = subArg;
+                        string colorArg = args.Length > 2 ? args[2].ToLowerInvariant() : "";
+
+                        if (symbolMap.TryGetValue(symbolKey, out string rawSymbol))
+                        {
+                            string colorHex = colorMap.ContainsKey(colorArg)
+                                ? colorMap[colorArg]
+                                : (Regex.IsMatch(colorArg, "^#([0-9A-Fa-f]{6})$") ? colorArg : "#FFFFFF");
+
+                            StoreOriginalName(player.PlayerId);
+                            string coloredSymbol = $"<color={colorHex}>{rawSymbol}</color>";
+                            string newName = command == "/s"
+                                ? $"{coloredSymbol}{playerName}"
+                                : $"{playerName}{coloredSymbol}";
+                            player.RpcSetName(newName);
+                        }
+                    }
+                break;
+
+            case "/reset":
+            case "/resetname":
+                if (GameStates.isLobby && BanModServerSelection.IsModded25)
+                {
+                    RestoreOriginalName(player.PlayerId);
+                }
+                break;
 
             case "/public":
             case "/private":

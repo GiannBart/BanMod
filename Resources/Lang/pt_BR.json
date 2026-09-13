@@ -3,6 +3,7 @@
   "Action": "Ação",
   "ActionCheaterlist": "Ação para trapaceiro",
   "AddBanToList": "Adicionar jogadores banidos/bloqueados à lista de banimentos",
+      "ImpostorWinsTimer": "Os Impostores venceram porque o tempo de jogo terminou",
   "AddedtoDenynamelist": " adicionado à lista Denyname.txt",
   "AddedtoDenystartlist": " adicionado à lista SpamStart.txt",
   "AddedtoDenyWordlist": " adicionado à lista BanWord.txt",

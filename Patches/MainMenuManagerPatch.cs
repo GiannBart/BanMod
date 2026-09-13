@@ -9,6 +9,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using static BanMod.Translator;
+using static BanMod.Utils.CheatUtils;
 using static Rewired.UI.ControlMapper.ControlMapper;
 using Object = UnityEngine.Object;
 
@@ -1172,5 +1173,13 @@ public static class AccountTabFixPatch
         {
             Debug.LogWarning("[BanMod] Errore AccountTabFixPatch.Postfix: " + e);
         }
+    }
+}
+[HarmonyPatch(typeof(MainMenuManager), nameof(MainMenuManager.LateUpdate))]
+public static class MainMenuManagerUpdatePatch
+{
+    public static void Postfix()
+    {
+        MainMenuInfo.Update();
     }
 }

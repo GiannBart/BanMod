@@ -2,6 +2,7 @@
   "LanguageID": "3",
   "Action": "Ação",
   "ActionCheaterlist": "Ação para batoteiro",
+      "ImpostorWinsTimer": "Os Impostores venceram porque o tempo de jogo terminou",
   "AddBanToList": "Adicionar jogadores banidos/bloqueados à lista de banimentos",
   "AddedtoDenynamelist": " adicionado à lista Denyname.txt",
   "AddedtoDenystartlist": " adicionado à lista SpamStart.txt",

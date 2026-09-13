@@ -167,7 +167,7 @@ namespace BanMod
         {
             if (buttonStyle == null)
             {
-                buttonStyle = new GUIStyle(GUI.skin.button)
+                buttonStyle = new GUIStyle(BanModUiStyles.ButtonDark)
                 {
                     fontSize = 18,
                     alignment = TextAnchor.MiddleCenter,
@@ -177,73 +177,71 @@ namespace BanMod
 
             if (buttonStyle1 == null)
             {
-                buttonStyle1 = new GUIStyle(GUI.skin.button)
+                buttonStyle1 = new GUIStyle(BanModUiStyles.DangerButton)
                 {
                     fontSize = 20,
                     alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.red }
+                    fontStyle = FontStyle.Bold
                 };
             }
 
             if (titleStyle == null)
             {
-                titleStyle = new GUIStyle(GUI.skin.label)
+                titleStyle = new GUIStyle(BanModUiStyles.TitleLabel)
                 {
                     fontSize = 20,
                     alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.white }
+                    fontStyle = FontStyle.Bold
                 };
             }
 
             if (titleStyle1 == null)
             {
-                titleStyle1 = new GUIStyle(GUI.skin.label)
+                titleStyle1 = new GUIStyle(BanModUiStyles.TitleLabel)
                 {
                     fontSize = 28,
                     alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.blue }
+                    fontStyle = FontStyle.Bold
                 };
+                titleStyle1.normal.textColor = BanModUiStyles.AccentColor;
             }
 
             if (titleStyle2 == null)
             {
-                titleStyle2 = new GUIStyle(GUI.skin.label)
+                titleStyle2 = new GUIStyle(BanModUiStyles.HeaderLabel)
                 {
                     fontSize = 20,
                     alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.red }
+                    fontStyle = FontStyle.Bold
                 };
+                titleStyle2.normal.textColor = BanModUiStyles.DangerColor;
             }
 
             if (titleStyle3 == null)
             {
-                titleStyle3 = new GUIStyle(GUI.skin.label)
+                titleStyle3 = new GUIStyle(BanModUiStyles.HeaderLabel)
                 {
                     fontSize = 20,
                     alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.cyan }
+                    fontStyle = FontStyle.Bold
                 };
+                titleStyle3.normal.textColor = BanModUiStyles.AccentHoverColor;
             }
 
             if (titleStyle4 == null)
             {
-                titleStyle4 = new GUIStyle(GUI.skin.label)
+                titleStyle4 = new GUIStyle(BanModUiStyles.HeaderLabel)
                 {
                     fontSize = 22,
                     alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.cyan }
+                    fontStyle = FontStyle.Bold
                 };
+                titleStyle4.normal.textColor = BanModUiStyles.AccentHoverColor;
             }
 
             if (textBoxStyle == null)
             {
-                textBoxStyle = new GUIStyle(GUI.skin.box)
+                textBoxStyle = new GUIStyle(BanModUiStyles.DarkBox)
                 {
                     alignment = TextAnchor.MiddleLeft,
                     fontSize = 30,
@@ -261,11 +259,10 @@ namespace BanMod
 
             if (textInsideBoxStyle == null)
             {
-                textInsideBoxStyle = new GUIStyle(GUI.skin.label)
+                textInsideBoxStyle = new GUIStyle(BanModUiStyles.BodyLabel)
                 {
                     fontSize = 30,
                     fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.white },
                     alignment = TextAnchor.MiddleLeft
                 };
             }
@@ -277,7 +274,7 @@ namespace BanMod
 
             if (showActionMenu)
             {
-                GUI.color = new Color(0f, 0f, 0f, 1f);
+                GUI.color = Color.white;
                 windowRect = GUI.Window(29292, windowRect, (GUI.WindowFunction)DrawActionWindow, "", BanModUiStyles.BlackWindow);
             }
         }
@@ -332,7 +329,7 @@ namespace BanMod
                     rectInput = GUILayoutUtility.GetRect(windowRect.width - 60, 50);
                 }
 
-                GUI.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+                GUI.color = Color.white;
                 GUI.Box(rectInput, "", textBoxStyle);
 
                 Color borderColor = editingInput ? Color.cyan : Color.gray;

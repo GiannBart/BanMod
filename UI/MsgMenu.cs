@@ -125,33 +125,27 @@ namespace BanMod
         {
             if (titleStyle == null)
             {
-                titleStyle = new GUIStyle(GUI.skin.label)
+                titleStyle = new GUIStyle(BanModUiStyles.TitleLabel)
                 {
                     fontSize = 22,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter
                 };
-                titleStyle.normal.textColor = new Color(1f, 1f, 1f, 1f);
 
-                buttonStyle = new GUIStyle(GUI.skin.button)
+                buttonStyle = new GUIStyle(BanModUiStyles.TintableButton)
                 {
                     alignment = TextAnchor.MiddleCenter,
                     wordWrap = true,
                     fontSize = 15,
                     richText = true
                 };
-                buttonStyle.normal.textColor = new Color(1f, 1f, 1f, 1f);
-                buttonStyle.hover.textColor = new Color(1f, 1f, 1f, 1f);
-                buttonStyle.active.textColor = new Color(1f, 1f, 1f, 1f);
-                buttonStyle.focused.textColor = new Color(1f, 1f, 1f, 1f);
 
-                exitButtonStyle = new GUIStyle(GUI.skin.button)
+                exitButtonStyle = new GUIStyle(BanModUiStyles.DangerButton)
                 {
                     fontSize = 18,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter
                 };
-                exitButtonStyle.normal.textColor = Color.white;
             }
         }
 
@@ -166,7 +160,7 @@ namespace BanMod
 
             EnsureStyles();
 
-            GUI.backgroundColor = Color.black;
+            GUI.backgroundColor = Color.white;
             windowRect = GUI.Window(1, windowRect, (GUI.WindowFunction)WindowFunction, "", BanModUiStyles.BlackWindow);
         }
 
@@ -187,7 +181,7 @@ namespace BanMod
 
             GUILayout.FlexibleSpace();
 
-            GUI.backgroundColor = new Color(0.8f, 0f, 0f, 1f);
+            GUI.backgroundColor = Color.white;
             if (GUILayout.Button(GetString("EXIT"), exitButtonStyle, GUILayout.Height(45)))
             {
                 MenuRouter.Open(MenuRouter.Panel.None);

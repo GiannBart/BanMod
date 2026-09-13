@@ -464,7 +464,9 @@ public static class ModdedOriginalChatButton
 
             ButtonRenderer = ButtonObject.AddComponent<SpriteRenderer>();
             ButtonRenderer.sprite = ModdedOriginalChatManager.Enabled ? OnSprite : OffSprite;
-            ButtonRenderer.color = Color.white;
+            ButtonRenderer.color = ModdedOriginalChatManager.Enabled
+                    ? new Color(0.86f, 0.94f, 1f, 1f)
+                    : new Color(0.78f, 0.82f, 0.90f, 1f);
             ButtonRenderer.sortingOrder = short.MaxValue;
 
             try
@@ -782,7 +784,9 @@ public static class ModdedOriginalChatButton
             if (ButtonRenderer != null)
             {
                 ButtonRenderer.sprite = ModdedOriginalChatManager.Enabled ? OnSprite : OffSprite;
-                ButtonRenderer.color = Color.white;
+                ButtonRenderer.color = ModdedOriginalChatManager.Enabled
+                    ? new Color(0.86f, 0.94f, 1f, 1f)
+                    : new Color(0.78f, 0.82f, 0.90f, 1f);
                 ButtonRenderer.enabled = true;
                 ButtonRenderer.sortingOrder = short.MaxValue;
 

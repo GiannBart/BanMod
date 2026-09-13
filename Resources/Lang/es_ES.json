@@ -2,6 +2,7 @@
   "LanguageID": "12",
   "Action": "Acción",
   "ActionCheaterlist": "Acción contra tramposos",
+      "ImpostorWinsTimer": "Los impostores han ganado porque se agotó el tiempo de juego",
   "AddBanToList": "Añadir jugadores vetados/bloqueados a la lista de vetos",
   "AddedtoDenynamelist": " añadido a la lista Denyname.txt",
   "AddedtoDenystartlist": " añadido a la lista SpamStart.txt",

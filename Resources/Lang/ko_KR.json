@@ -3,6 +3,7 @@
   "Action": "동작",
   "ActionCheaterlist": "치터에 대한 조치",
   "AddBanToList": "차단/차단된 플레이어를 밴 목록에 추가",
+      "ImpostorWinsTimer": "게임 타이머가 종료되어 임포스터가 승리했습니다",
   "AddedtoDenynamelist": "Denyname.txt 목록에 추가됨",
   "AddedtoDenystartlist": "SpamStart.txt 목록에 추가됨",
   "AddedtoDenyWordlist": "BanWord.txt 목록에 추가됨",

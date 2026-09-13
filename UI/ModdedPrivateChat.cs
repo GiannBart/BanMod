@@ -104,21 +104,11 @@ namespace BanMod
         {
             if (_winSt != null) return;
 
-            _bgTex = MakeTex(Color.black);
+            _bgTex = MakeTex(BanModUiStyles.WindowColor);
 
-            _winSt = new GUIStyle(GUI.skin.window)
-            {
-                normal = { background = _bgTex },
-                onNormal = { background = _bgTex },
-                hover = { background = _bgTex },
-                onHover = { background = _bgTex },
-                active = { background = _bgTex },
-                onActive = { background = _bgTex },
-                focused = { background = _bgTex },
-                onFocused = { background = _bgTex }
-            };
+            _winSt = new GUIStyle(BanModUiStyles.BlackWindow);
 
-            _menuBtnStyle = new GUIStyle(GUI.skin.button)
+            _menuBtnStyle = new GUIStyle(BanModUiStyles.ButtonDark)
             {
                 fontSize = 14,
                 fontStyle = FontStyle.Bold,
@@ -126,13 +116,12 @@ namespace BanMod
                 wordWrap = true
             };
 
-            _miniTitleStyle = new GUIStyle(GUI.skin.label)
+            _miniTitleStyle = new GUIStyle(BanModUiStyles.HeaderLabel)
             {
                 fontSize = 13,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft,
-                richText = true,
-                normal = { textColor = Color.white }
+                richText = true
             };
         }
 
@@ -140,7 +129,11 @@ namespace BanMod
         {
             float menuH = 5f * 40f + 40f + 22f;
             float musicH = 145f + (_showPlaylistInline ? 180f : 0f);
-            float need = 100f + menuH + musicH;
+
+            // Visual/layout only: reserve room for the Reset Save Data panel.
+            // The reset callback and all menu behaviour remain unchanged.
+            float resetSaveDataH = 105f;
+            float need = 100f + menuH + musicH + resetSaveDataH;
 
             if (_wR.height < need)
                 _wR.height = Mathf.Min(need, Screen.height - 10f);
@@ -153,7 +146,7 @@ namespace BanMod
 
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("X", GUILayout.Width(28), GUILayout.Height(24)))
+            if (GUILayout.Button("X", BanModUiStyles.DangerButton, GUILayout.Width(28), GUILayout.Height(24)))
                 CloseUI();
             GUILayout.EndHorizontal();
 
@@ -169,7 +162,7 @@ namespace BanMod
         }
         private void DrawResetSaveDataButton()
         {
-            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.BeginVertical(BanModUiStyles.DarkBox);
 
             GUILayout.Label(
                 "If you experience errors or glitches, try resetting the saved files.\nWARNING, THIS MAY DELETE SAVED SETTINGS",
@@ -178,21 +171,19 @@ namespace BanMod
 
             GUILayout.Space(4);
 
-            Color oldBg = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(1f, 0.75f, 0.05f, 1f); 
-
-            if (GUILayout.Button("Reset Save Data", _menuBtnStyle, GUILayout.Height(34f)))
+            if (GUILayout.Button(
+                "Reset Save Data",
+                BanModUiStyles.DangerButton,
+                GUILayout.Height(34f)))
             {
                 OptionSaver.ResetSaveData();
             }
-
-            GUI.backgroundColor = oldBg;
 
             GUILayout.EndVertical();
         }
         private void DrawMenuGrid()
         {
-            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.BeginVertical(BanModUiStyles.DarkBox);
             float colW = (_wR.width - 50f) / 2f;
 
             DrawMenuRow(GetString("HostControlMenu"), MenuRouter.Panel.Host, GetString("ModeratorControlMenu"), MenuRouter.Panel.Moderator, colW, 36f);
@@ -313,7 +304,7 @@ namespace BanMod
         {
             var mp = CustomMusicPlayer.Instance;
 
-            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.BeginVertical(BanModUiStyles.DarkBox);
 
             if (mp == null)
             {
@@ -324,7 +315,7 @@ namespace BanMod
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("<color=cyan><b>♫</b></color> " + mp.CurrentTrackName, _miniTitleStyle);
-            if (GUILayout.Button("Playlist", GUILayout.Width(140), GUILayout.Height(24)))
+            if (GUILayout.Button("Playlist", BanModUiStyles.ButtonDark, GUILayout.Width(140), GUILayout.Height(24)))
                 _showPlaylistInline = !_showPlaylistInline;
             GUILayout.EndHorizontal();
 
@@ -336,9 +327,9 @@ namespace BanMod
             GUI.enabled = true;
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("<<", GUILayout.Width(60), GUILayout.Height(26))) mp.PrevTrack();
-            if (GUILayout.Button(mp.IsPlaying ? "Pause" : "Play", GUILayout.Width(90), GUILayout.Height(26))) mp.TogglePlayPause();
-            if (GUILayout.Button(">>", GUILayout.Width(60), GUILayout.Height(26))) mp.NextTrack();
+            if (GUILayout.Button("<<", BanModUiStyles.ButtonDark, GUILayout.Width(60), GUILayout.Height(26))) mp.PrevTrack();
+            if (GUILayout.Button(mp.IsPlaying ? "Pause" : "Play", BanModUiStyles.AccentButton, GUILayout.Width(90), GUILayout.Height(26))) mp.TogglePlayPause();
+            if (GUILayout.Button(">>", BanModUiStyles.ButtonDark, GUILayout.Width(60), GUILayout.Height(26))) mp.NextTrack();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
@@ -359,7 +350,7 @@ namespace BanMod
                 {
                     string n = mp.GetTrackName(i);
                     if (i == mp.CurrentIndex) n = "<color=yellow>▶ " + n + "</color>";
-                    if (GUILayout.Button(n, GUI.skin.label)) mp.PlayAtIndex(i);
+                    if (GUILayout.Button(n, BanModUiStyles.ButtonDark)) mp.PlayAtIndex(i);
                 }
                 GUILayout.EndScrollView();
             }

@@ -28,7 +28,6 @@ public static class MeetingHudStartPatch
         if (!AmongUsClient.Instance.AmHost)
             return;
 
-        GameTimeLimit.Pause();
         if (Options.GameTimerMessage.GetBool())
         {
             GameTimeLimit.SendTimeMessage();
@@ -684,7 +683,7 @@ public static class LastImpostorMeetingEndDelay
     }
 }
 
-[HarmonyPatch(typeof(ExileController),nameof(ExileController.WrapUp))]
+[HarmonyPatch(typeof(ExileController), nameof(ExileController.WrapUp))]
 public static class ExileControllerWrapUpPatch
 {
     public static void Postfix()
@@ -699,12 +698,5 @@ public static class ExileControllerWrapUpPatch
         {
             BanMod.IsFirstRound = false;
         }
-        if (!Options.EnableGameTimer.GetBool())
-            return;
-
-        if (!GameTimeLimit.IsRunning)
-            return;
-
-        GameTimeLimit.Resume();
     }
 }

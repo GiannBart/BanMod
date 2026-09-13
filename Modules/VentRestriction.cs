@@ -6,14 +6,19 @@ namespace BanMod;
 
 public static class VentRestriction
 {
-    public static bool ShouldBlock(
-        PlayerControl player)
+    public static bool ShouldBlock(PlayerControl player)
     {
-        if (!Options.GameMode.GetValue(GameModeType.SnS) &&
-            !Options.GameMode.GetValue(GameModeType.PnS))
-        {
+        bool modeBlocksVents =
+            Options.GameMode.GetValue(GameModeType.SnS) ||
+            Options.GameMode.GetValue(GameModeType.PnS) ||
+            (
+                Options.GameMode.GetValue(GameModeType.FFA) &&
+                Options.NoVent != null &&
+                Options.NoVent.GetBool()
+            );
+
+        if (!modeBlocksVents)
             return false;
-        }
 
         if (player?.Data?.Role == null)
             return false;
