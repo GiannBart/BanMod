@@ -1,8 +1,12 @@
 <div align="center">
 
 [![Join our Discord server](https://img.shields.io/badge/Join_our_Discord_server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/cZBGsZc7aV)
-
 </div>
+
+
+> [!WARNING]
+> ## The ZIP file from previous Epic releases contained a different, incompatible version of BepInEx.
+> ## Please re-download the entire ZIP and replace all the files.
 
 [🇮🇹 Read this README in Italian](https://github.com/GiannBart/BanMod/blob/main/README_IT.md)
 
