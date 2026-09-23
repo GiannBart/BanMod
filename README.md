@@ -1,8 +1,7 @@
 <div align="center">
 
-[![Join our Discord server](https://img.shields.io/badge/Join_our_Discord_server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/cZBGsZc7aV)
+[![Join our Discord server](https://img.shields.io/badge/Join_our_Discord_server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/HGEBsm3vps)
 </div>
-
 
 > [!WARNING]
 > ## The ZIP file from previous Epic releases contained a different, incompatible version of BepInEx.
