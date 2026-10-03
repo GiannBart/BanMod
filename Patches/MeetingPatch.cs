@@ -158,6 +158,30 @@ public static class CombinedReportDeadBodyPatch
         {
             return false;
         }
+        if (gameMode1 == GameModeType.FFATeam)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.Assassin)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.KillRace)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.RoomRush)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.TargetRush)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.DeathRun)
+        {
+            return false;
+        }
         if (gameMode1 == GameModeType.SnS)
         {
             return false;

@@ -77,8 +77,6 @@ public static class DeviceUsageTracker
             return;
         }
 
-        // PlayerControl.FixedUpdate is executed once for every player. This
-        // guard makes the device scan run only once per physics step.
         if (Mathf.Approximately(lastUpdateFixedTime, Time.fixedTime))
             return;
 

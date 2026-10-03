@@ -86,8 +86,6 @@ public static class MatchChatLogger
         float now = Time.realtimeSinceStartup;
         string cleanedMessage = CleanText(message);
 
-        // RpcSendChat can be echoed back through HandleRpc on some game
-        // versions. Ignore only that immediate echo, not later messages.
         if (lastPlayerId == player.PlayerId &&
             string.Equals(
                 lastMessage,
@@ -113,8 +111,6 @@ public static class MatchChatLogger
             Message = cleanedMessage
         });
 
-        // Keep the on-disk file current after every message, so a crash or
-        // forced disconnect does not lose the chat collected so far.
         try
         {
             WriteLog();
@@ -389,7 +385,7 @@ public static class MatchChatLogger
 
     private static string GetLogDirectory()
     {
-        const string ChatPath = "./BAN_DATA/LOG/";
+        const string ChatPath = "./DATA/LOG/";
         return Path.Combine(
             ChatPath,
             "BanMod Chat Logs");
@@ -457,9 +453,6 @@ internal static class MatchChatLoggerReceiveChatPatch
 
         try
         {
-            // Read the RPC payload before ChatController applies its
-            // alive/dead visibility rules. Restoring Position leaves the
-            // original game handler completely untouched.
             string chatText = reader.ReadString();
 
             MatchChatLogger.RecordChat(

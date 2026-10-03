@@ -336,7 +336,6 @@ namespace NLayer.Decoder
 
         void DCT8(float[] _in, float[] _out)
         {
-            /* Even indices */
             ei8[0] = _in[0] + _in[7];
             ei8[1] = _in[3] + _in[4];
             ei8[2] = _in[1] + _in[6];

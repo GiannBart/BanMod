@@ -21,7 +21,7 @@ public static class Engineer
         byte engineerId = engineerPlayer.PlayerId;
 
         string msg = string.Format(GetString("EngineerInfo"));
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(msg, engineerId);
             MessageBlocker.UpdateLastMessageTime();
@@ -85,7 +85,7 @@ public static class EngineerRole_FixedUpdate_Patch
         int remainingFixes = maxFixes - VentFixCounts[playerId];
         message1 = GetString("VentRemain") + $"{VentFixCounts[playerId]} / {maxFixes}";
 
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(message1, playerId);
             MessageBlocker.UpdateLastMessageTime();

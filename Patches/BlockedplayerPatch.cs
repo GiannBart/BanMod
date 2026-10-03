@@ -43,9 +43,6 @@ public static class BlockedPlayersBulkManager
     private static int BulkProcessed;
     private static int BulkTotal;
 
-    // ================================================================
-    // LAST KNOWN NAME
-    // ================================================================
 
     public static void RememberName(
         string puid,
@@ -103,9 +100,6 @@ public static class BlockedPlayersBulkManager
         return null;
     }
 
-    // ================================================================
-    // DISPLAY
-    // ================================================================
 
     public static string GetDisplayText(
         string puid,
@@ -273,10 +267,6 @@ public static class BlockedPlayersBulkManager
         }
     }
 
-    // ================================================================
-    // SELECT / DESELECT
-    // ================================================================
-
     public static void TogglePlayer(
         string puid)
     {
@@ -335,17 +325,12 @@ public static class BlockedPlayersBulkManager
         RefreshVisibleLabels();
     }
 
-    // ================================================================
-    // UNBLOCK / STOP
-    // ================================================================
-
     public static void HandleUnblockButton(
         FriendsListUI ui)
     {
         if (ui == null)
             return;
 
-        // While the batch is running this same button becomes STOP.
         if (BulkRunning)
         {
             CancelRequested = true;
@@ -394,8 +379,6 @@ public static class BlockedPlayersBulkManager
 
         RefreshVisibleLabels();
 
-        // Short grace period: the button has already become STOP,
-        // giving the user a chance to cancel before the first request.
         float initialPause = 0.75f;
 
         while (initialPause > 0f)
@@ -454,12 +437,10 @@ public static class BlockedPlayersBulkManager
                 SelectedPuids.Remove(puid);
             }
 
-            // Failed requests stay blocked and stay selected.
             BulkProcessed++;
 
             RefreshVisibleLabels();
 
-            // Leave enough time to press STOP between requests.
             float pause = 0.50f;
 
             while (pause > 0f)
@@ -536,10 +517,6 @@ public static class BlockedPlayersBulkManager
         );
     }
 
-    // ================================================================
-    // CLEAN SELECTION
-    // ================================================================
-
     private static void CleanupSelection(
         FriendsListManager manager)
     {
@@ -586,10 +563,6 @@ public static class BlockedPlayersBulkManager
             SelectedPuids.Remove(remove[i]);
         }
     }
-
-    // ================================================================
-    // DESTROY GENERATED ROWS
-    // ================================================================
 
     private static void DestroySpawnedBars()
     {
@@ -639,10 +612,6 @@ public static class BlockedPlayersBulkManager
         ControlBars.Clear();
     }
 
-    // ================================================================
-    // BLOCKED UI
-    // ================================================================
-
     public static bool ReplaceRefreshBlockedPlayers(
         FriendsListUI ui)
     {
@@ -658,7 +627,6 @@ public static class BlockedPlayersBulkManager
             return false;
         }
 
-        // Save names seen in Recently Played.
         if (manager.RecentlyPlayedWith != null)
         {
             for (int i = 0;
@@ -703,21 +671,18 @@ public static class BlockedPlayersBulkManager
 
         int row = 0;
 
-        // Row 0 = Select / Deselect all.
         CreateControlBar(
             ui,
             row++,
             ControlAction.SelectAll
         );
 
-        // Row 1 = Unblock selected / Stop unblocking.
         CreateControlBar(
             ui,
             row++,
             ControlAction.UnblockSelected
         );
 
-        // Copy the game's collection into a normal .NET list.
         List<ResponseBlockedPlayer> sorted =
             new List<ResponseBlockedPlayer>();
 
@@ -734,7 +699,6 @@ public static class BlockedPlayersBulkManager
             }
         }
 
-        // Alphabetical by FriendCode, case-insensitive.
         sorted.Sort(
             CompareBlockedPlayersByFriendCode
         );
@@ -839,7 +803,6 @@ public static class BlockedPlayersBulkManager
         bool bEmpty =
             string.IsNullOrWhiteSpace(b.FriendCode);
 
-        // Unknown FriendCodes go to the bottom.
         if (aEmpty && !bEmpty)
             return 1;
 
@@ -954,10 +917,6 @@ public static class BlockedPlayersBulkManager
         }
     }
 
-    // ================================================================
-    // ROW LOOKUP
-    // ================================================================
-
     public static bool TryGetControlAction(
         BlockedPlayerBar bar,
         out ControlAction action)
@@ -995,10 +954,6 @@ public static class BlockedPlayersBulkManager
     }
 }
 
-// ====================================================================
-// SAVE LAST KNOWN NAME
-// ====================================================================
-
 [HarmonyPatch(
     typeof(FriendsListBar),
     nameof(FriendsListBar.SetUp))]
@@ -1021,9 +976,6 @@ public static class FriendsListBarSetUpPatch
     }
 }
 
-// ====================================================================
-// SAVE NAMES FROM RECENTLY PLAYED
-// ====================================================================
 
 [HarmonyPatch(
     typeof(FriendsListManager),
@@ -1043,9 +995,6 @@ public static class AddRecentlyPlayedBlockedNamePatch
     }
 }
 
-// ====================================================================
-// REPLACE BLOCKED LIST
-// ====================================================================
 
 [HarmonyPatch(
     typeof(FriendsListUI),
@@ -1064,10 +1013,6 @@ public static class RefreshBlockedPlayersPatch
         return !replaced;
     }
 }
-
-// ====================================================================
-// BLOCKED BUTTON
-// ====================================================================
 
 [HarmonyPatch(
     typeof(BlockedPlayerBar),

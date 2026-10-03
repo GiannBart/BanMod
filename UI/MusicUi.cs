@@ -128,7 +128,7 @@ public class CustomMusicPlayer : MonoBehaviour
 
     public void RefreshPlaylist()
     {
-        string p = Path.Combine(Directory.GetCurrentDirectory(), _s("QkFOX0RBVEE="), _s("TVVTSUM=")); 
+        string p = Path.Combine(Directory.GetCurrentDirectory(), _s("REFUQQ=="), _s("TVVTSUM=")); 
         if (!Directory.Exists(p)) Directory.CreateDirectory(p);
 
         _l2.Clear();

@@ -130,8 +130,6 @@ namespace BanMod
             float menuH = 5f * 40f + 40f + 22f;
             float musicH = 145f + (_showPlaylistInline ? 180f : 0f);
 
-            // Visual/layout only: reserve room for the Reset Save Data panel.
-            // The reset callback and all menu behaviour remain unchanged.
             float resetSaveDataH = 105f;
             float need = 100f + menuH + musicH + resetSaveDataH;
 

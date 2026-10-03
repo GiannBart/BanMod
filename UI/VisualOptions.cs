@@ -15,7 +15,7 @@ namespace BanMod
         private Rect windowRect;
         private Vector2 windowSize = new Vector2(750, 600);
         private Vector2 scrollPosition = Vector2.zero;
-        private static string configPath = "BAN_DATA/SETTINGS/VisualOptions_config.txt";
+        private static string configPath = "DATA/SETTINGS_CONFIG/VisualOptions_config.txt";
 
         public enum ItemType { Button, Toggle }
 
@@ -86,7 +86,6 @@ namespace BanMod
         {
             menuItems.Clear();
             AddToggle(GetString("Vis_CustomNames"), "UseCustomNames", () => BanMod.UseCustomNames, v => BanMod.UseCustomNames = v);
-            //AddToggle(GetString("Vis_ShowInfo"), "ShowInfo", () => BanMod.ShowInfo, v => BanMod.ShowInfo = v);
             AddToggle(GetString("Vis_NoName"), "ShowNoName", () => BanMod.ShowNoName, v => BanMod.ShowNoName = v);
             AddToggle(GetString("Vis_VipModTag"), "ShowVipModTag", () => BanMod.ShowVipModTag, v => BanMod.ShowVipModTag = v);
             AddToggle(GetString("Vis_ColorName"), "ShowColorName", () => BanMod.ShowColorName, v => BanMod.ShowColorName = v);
@@ -166,13 +165,13 @@ namespace BanMod
         private void ApplyValueToVariable(string name, bool value)
         {
             if (name == "UseCustomNames") BanMod.UseCustomNames = value;
-            //if (name == "ShowInfo") BanMod.ShowInfo = value;
+            if (name == "ShowNoName") BanMod.ShowNoName = value;
             if (name == "ShowVipModTag") BanMod.ShowVipModTag = value;
+            if (name == "ShowColorName") BanMod.ShowColorName = value;
             if (name == "ShowIdInMeeting") BanMod.namewithid = value;
             if (name == "level") BanMod.level = value;
             if (name == "Taskremain") BanMod.Taskremain = value;
         }
-
         private void UpdateMenuItemVisual(string internalName, bool value)
         {
             var item = menuItems.Find(x => x.InternalName == internalName);
@@ -194,6 +193,38 @@ namespace BanMod
             }
         }
 
+        public void ScheduleLobbyVisualRefresh()
+        {
+            CancelInvoke(nameof(DelayedLobbyVisualRefresh));
+            CancelInvoke(nameof(DelayedLobbyVisualRefreshSecond));
+
+            Invoke(nameof(DelayedLobbyVisualRefresh), 0.5f);
+            Invoke(nameof(DelayedLobbyVisualRefreshSecond), 1.5f);
+        }
+
+        private void DelayedLobbyVisualRefresh()
+        {
+            RefreshLobbyVisuals();
+        }
+
+        private void DelayedLobbyVisualRefreshSecond()
+        {
+            RefreshLobbyVisuals();
+        }
+
+        private void RefreshLobbyVisuals()
+        {
+            try
+            {
+                FixedUpdateUnifiedPatch.RefreshAllNameDisplays();
+            }
+            catch (Exception e)
+            {
+                BMLogger.LogError(
+                    $"[VisualOptions] Lobby visual refresh error: {e.Message}"
+                );
+            }
+        }
         public void OpenMenu() { showMenu = true; CenterWindow(); }
         public void CloseMenu() { showMenu = false; }
         private void CenterWindow() { windowRect = new Rect(Screen.width / 2 - windowSize.x / 2, Screen.height / 2 - windowSize.y / 2, windowSize.x, windowSize.y); }

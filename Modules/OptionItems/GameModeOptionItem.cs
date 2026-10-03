@@ -9,66 +9,113 @@ using UnityEngine;
 namespace BanMod
 {
     public sealed class GameModeOptionItem : StringOptionItem
-{
-    private readonly GameModeType[] _order;
-    private readonly GameModeType _defaultMode;
-
-    public GameModeOptionItem(
-        string name,
-        GameModeType[] order,
-        GameModeType defaultMode,
-        OptionCategory category,
-        bool isSingleValue,
-        bool shouldTranslate = true,
-        Action onValueChange = null)
-        : base(
-            OptionItem.NextAutoId(),
-            name,
-            Array.IndexOf(order, defaultMode),
-            category,
-            isSingleValue,
-            Array.ConvertAll(order, mode => mode.ToString()),
-            shouldTranslate,
-            onValueChange)
     {
-        _order = (GameModeType[])order.Clone();
-        _defaultMode = defaultMode;
-    }
+        private GameModeType[] _order;
 
-    public GameModeType Selected
-    {
-        get
+        private readonly GameModeType _defaultMode;
+
+        public GameModeOptionItem(
+            string name,
+            GameModeType[] order,
+            GameModeType defaultMode,
+            OptionCategory category,
+            bool isSingleValue,
+            bool shouldTranslate = true,
+            Action onValueChange = null)
+            : base(
+                OptionItem.NextAutoId(),
+                name,
+                Array.IndexOf(order, defaultMode),
+                category,
+                isSingleValue,
+                Array.ConvertAll(order, mode => mode.ToString()),
+                shouldTranslate,
+                onValueChange)
         {
-            int index = base.GetValue();
-
-            if (index < 0 || index >= _order.Length)
-                return _defaultMode;
-
-            return _order[index];
+            _order = (GameModeType[])order.Clone();
+            _defaultMode = defaultMode;
         }
-    }
 
-    public bool GetValue(GameModeType expected)
-        => Selected == expected;
+        public GameModeType Selected
+        {
+            get
+            {
+                int index = base.GetValue();
 
-    public void SetValue(GameModeType mode, bool doSync = true)
-    {
-        int index = Array.IndexOf(_order, mode);
+                if (index < 0 || index >= _order.Length)
+                    return _defaultMode;
 
-        if (index < 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(mode),
-                mode,
-                "GameMode non presente nell'ordine corrente.");
+                return _order[index];
+            }
+        }
 
-        base.SetValue(index, doSync);
-    }
+        public bool GetValue(GameModeType expected)
+            => Selected == expected;
 
-    public GameModeType[] GetOrder()
-        => (GameModeType[])_order.Clone();
+        public void SetValue(
+            GameModeType mode,
+            bool doSync = true)
+        {
+            int index = Array.IndexOf(_order, mode);
 
-        // Questi producono errori di compilazione quando GameMode
-        // viene usato tramite GameModeOptionItem.
+            if (index < 0)
+                throw new ArgumentOutOfRangeException(
+                    nameof(mode),
+                    mode,
+                    "GameMode non presente nell'ordine corrente.");
+
+            base.SetValue(index, doSync);
+        }
+
+        public GameModeType[] GetOrder()
+            => (GameModeType[])_order.Clone();
+
+        public void SetGameModes(
+            GameModeType[] order,
+            bool doSync = true)
+        {
+            if (order == null || order.Length == 0)
+                throw new ArgumentException(
+                    "La lista dei GameMode non può essere vuota.",
+                    nameof(order));
+
+            GameModeType previousMode = Selected;
+
+            _order = (GameModeType[])order.Clone();
+
+            Selections = Array.ConvertAll(
+                _order,
+                mode => mode.ToString()
+            );
+
+            Rule = (
+                0,
+                _order.Length - 1,
+                1
+            );
+
+            int newIndex =
+                Array.IndexOf(_order, previousMode);
+
+            if (newIndex < 0)
+            {
+                newIndex =
+                    Array.IndexOf(_order, _defaultMode);
+            }
+
+            if (newIndex < 0)
+                newIndex = 0;
+
+            int currentIndex = base.GetValue();
+
+            if (currentIndex != newIndex)
+            {
+                base.SetValue(
+                    newIndex,
+                    doSync
+                );
+            }
+        }
 
         [Obsolete(
             "Non usare GetInt() per GameMode. Usa GetValue(GameModeType) oppure Selected.",

@@ -26,13 +26,8 @@ public sealed class AllowedEntry
 
 public static class AllowedManager
 {
-    private const string AllowedFolderPath = "./BAN_DATA/ALLOWED";
-    private const string AllowedFilePath = "./BAN_DATA/ALLOWED/Allowed.txt";
-
-    private const string FriendsFilePath = "./BAN_DATA/ALLOWED/Friends.txt";
-    private const string VipFilePath = "./BAN_DATA/ALLOWED/Vip.txt";
-    private const string ModeratorFilePath = "./BAN_DATA/ALLOWED/Moderator.txt";
-
+    private const string AllowedFolderPath = "./DATA/VIPs_MODERATORs";
+    private const string AllowedFilePath = "./DATA/VIPs_MODERATORs/VipAndMod.txt";
     public const string ModCreatorFriendCode = "medialteam#6599";
 
     public static void Initialize()
@@ -44,7 +39,6 @@ public static class AllowedManager
             if (!File.Exists(AllowedFilePath))
                 File.WriteAllText(AllowedFilePath, string.Empty);
 
-            MigrateLegacyAllowedFiles();
         }
         catch (Exception ex)
         {
@@ -364,118 +358,7 @@ public static class AllowedManager
         }
     }
 
-    private static void MigrateLegacyAllowedFiles()
-    {
-        try
-        {
-            bool hasFriends = File.Exists(FriendsFilePath);
-            bool hasVip = File.Exists(VipFilePath);
-            bool hasModerator = File.Exists(ModeratorFilePath);
-
-            if (!hasFriends && !hasVip && !hasModerator)
-                return;
-
-            var merged = new Dictionary<string, AllowedEntry>(StringComparer.OrdinalIgnoreCase);
-
-            void AddOrMerge(string filePath, AllowedRole role)
-            {
-                if (!File.Exists(filePath))
-                    return;
-
-                foreach (string rawLine in File.ReadAllLines(filePath))
-                {
-                    if (string.IsNullOrWhiteSpace(rawLine))
-                        continue;
-
-                    var parts = rawLine.Split(',', StringSplitOptions.None);
-
-                    string friendCode = parts.Length > 0 ? parts[0].Trim() : "";
-                    string playerName = parts.Length > 1 ? parts[1].Trim() : "";
-
-                    if (string.IsNullOrWhiteSpace(friendCode))
-                        continue;
-
-                    if (friendCode.Equals(ModCreatorFriendCode, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    if (!merged.TryGetValue(friendCode, out var entry))
-                    {
-                        entry = new AllowedEntry
-                        {
-                            FriendCode = friendCode,
-                            PlayerName = playerName,
-                            Roles = AllowedRole.None
-                        };
-                        merged[friendCode] = entry;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(entry.PlayerName) && !string.IsNullOrWhiteSpace(playerName))
-                        entry.PlayerName = playerName;
-
-                    entry.Roles |= role;
-                }
-            }
-
-            AddOrMerge(FriendsFilePath, AllowedRole.Vip);
-            AddOrMerge(VipFilePath, AllowedRole.Vip);
-            AddOrMerge(ModeratorFilePath, AllowedRole.Moderator);
-
-            var currentEntries = new Dictionary<string, AllowedEntry>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var entry in GetAllEntries())
-            {
-                if (entry == null || string.IsNullOrWhiteSpace(entry.FriendCode))
-                    continue;
-
-                if (entry.FriendCode.Equals(ModCreatorFriendCode, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                currentEntries[entry.FriendCode] = new AllowedEntry
-                {
-                    FriendCode = entry.FriendCode,
-                    PlayerName = entry.PlayerName,
-                    Roles = entry.Roles
-                };
-            }
-
-            foreach (var kvp in merged)
-            {
-                if (!currentEntries.TryGetValue(kvp.Key, out var existing))
-                {
-                    currentEntries[kvp.Key] = new AllowedEntry
-                    {
-                        FriendCode = kvp.Value.FriendCode,
-                        PlayerName = kvp.Value.PlayerName,
-                        Roles = kvp.Value.Roles
-                    };
-                }
-                else
-                {
-                    if (string.IsNullOrWhiteSpace(existing.PlayerName) && !string.IsNullOrWhiteSpace(kvp.Value.PlayerName))
-                        existing.PlayerName = kvp.Value.PlayerName;
-
-                    existing.Roles |= kvp.Value.Roles;
-                }
-            }
-
-            SaveAll(currentEntries.Values.ToList());
-
-            if (File.Exists(FriendsFilePath))
-                File.Delete(FriendsFilePath);
-
-            if (File.Exists(VipFilePath))
-                File.Delete(VipFilePath);
-
-            if (File.Exists(ModeratorFilePath))
-                File.Delete(ModeratorFilePath);
-
-            Debug.Log("[BanMod] Legacy allowed files migrated to Allowed.txt successfully.");
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[BanMod] AllowedManager MigrateLegacyAllowedFiles error: {ex}");
-        }
-    }
+    
 
     private static AllowedEntry ParseLine(string line)
     {

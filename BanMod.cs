@@ -31,18 +31,18 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.8.7";
+    public static string modVersion = "3.9.3";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.8.7";
+    public const string PluginVersion = "3.9.3";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
-    public static List<string> supportedAU = new List<string> { "2026.8.18" };
+    public static List<string> supportedAU = new List<string> { "2026.9.29" };
     public static readonly string ModName = "BanMod";
-    public static NormalGameOptionsV11 NormalOptions => GameOptionsManager.Instance != null ? GameOptionsManager.Instance.currentNormalGameOptions : null;
+    public static NormalGameOptionsV12 NormalOptions => GameOptionsManager.Instance != null ? GameOptionsManager.Instance.currentNormalGameOptions : null;
     public static ManualLogSource PluginLogger;
     public static KeyBindOptions keyBindOptions;
     public static HostControl hostControl;
-    public static ModeratorUi moderatorUi; 
+    public static ModeratorUi moderatorUi;
     public static MsgMenu msgMenu;
     public static PlayerUI playerUI;
     public static SetPlayerUi setplayerUI;
@@ -68,7 +68,6 @@ public partial class BanMod : BasePlugin
     public static string FriendCodeToRemoveShield = null;
     public static readonly HashSet<int> ModdedClients = new();
     public static List<DateTime> HostSelfSetTimes = new List<DateTime>();
-    //public static List<int> forcedImpostorIds = new List<int>();
     public static List<byte> forcedImpostorIds = new List<byte>();
     public static bool forceImpostor = false;
     public static bool _initialized = false;
@@ -113,13 +112,13 @@ public partial class BanMod : BasePlugin
     public static readonly bool ShowinfoButton = true;
     public static readonly bool ShowWebsiteButton = true;
     public static readonly bool ShowGitButton = true;
-    public static readonly bool premiumButton= true;
+    public static readonly bool premiumButton = true;
     public static readonly bool ShowlobbyButton = true;
     public static readonly bool ShowKaitoButton = true;
     public static bool ShowUpdateButton = true;
     public static readonly string GitsiteUrl = "https://github.com/GiannBart/BanMod";
     public static readonly string LobbysiteUrl = "https://banmod.online/";
-    public static readonly string DiscordInviteUrl = "https://discord.gg/cZBGsZc7aV";
+    public static readonly string DiscordInviteUrl = "https://discord.gg/HGEBsm3vps";
     public static readonly string KaitositeUrl = "https://telegra.ph/KaitoRun-Fungle-Lobby-11-16";
     public static bool hasSentHackWarning = false;
     public static bool hasKilled = false;
@@ -158,7 +157,7 @@ public partial class BanMod : BasePlugin
         {
             MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(
                 PlayerControl.LocalPlayer.NetId,
-                (byte)code, 
+                (byte)code,
                 SendOption.Reliable
             );
             writer.EndMessage();
@@ -264,7 +263,7 @@ public partial class BanMod : BasePlugin
             foreach (var client in all)
             {
                 if (client == null) continue;
-                if (client.Id == 255) continue; 
+                if (client.Id == 255) continue;
                 if (client.Character == null) continue;
 
                 result[i++] = client;
@@ -357,7 +356,7 @@ public partial class BanMod : BasePlugin
             return _unityModColor.Value;
         }
     }
-    
+
     public static void LoadHostSetTimes()
     {
         try
@@ -371,7 +370,7 @@ public partial class BanMod : BasePlugin
         }
         catch (Exception)
         {
-            HostSelfSetTimes = new List<DateTime>(); 
+            HostSelfSetTimes = new List<DateTime>();
         }
     }
     public static bool UnlockingAllChat = false;
@@ -382,6 +381,9 @@ public partial class BanMod : BasePlugin
     public static ConfigEntry<bool> DarkTheme { get; private set; }
     public static ConfigEntry<bool> DisableLobbyMusic { get; private set; }
     public static ConfigEntry<bool> AktiveLobby { get; private set; }
+    public static ConfigEntry<bool> HalloweenDecorations { get; private set; }
+    public static ConfigEntry<bool> AnniversaryDecorations { get; private set; }
+    public static ConfigEntry<bool> DleksEht { get; private set; }
     public static ConfigEntry<bool> AktiveChat { get; private set; }
     public static ConfigEntry<bool> ChatOffIfImpostor { get; private set; }
     public static ConfigEntry<bool> Resize_Player { get; private set; }
@@ -461,7 +463,7 @@ public partial class BanMod : BasePlugin
         Instance = this;
         PluginLogger = Log;
         BMLogger.Init(PluginLogger);
-        EnableMatchLog = Config.Bind("Client Options", "EnableMatchLog", true); 
+        EnableMatchLog = Config.Bind("Client Options", "EnableMatchLog", true);
         EnableChatLog = Config.Bind("Client Options", "EnableChatLog", true);
         ShowFPS = Config.Bind("Client Options", "ShowFPS", false);
         GM = Config.Bind("Client Options", "GM", false);
@@ -479,6 +481,10 @@ public partial class BanMod : BasePlugin
         SeeRoleMeeting = Config.Bind("Client Options", "SeeRoleMeeting", true);
         VoteLockEnabled = Config.Bind("Client Options", "VoteLockEnabled", true);
         SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", true);
+        HalloweenDecorations = Config.Bind("Decorations", "HalloweenDecorations", false, "Enable Halloween decorations");
+        AnniversaryDecorations = Config.Bind("Decorations", "AnniversaryDecorations", false, "Enable Anniversary decorations");
+        DleksEht = Config.Bind("Decorations", "DleksEht", false, "Mirror The Skeld (Dleks eht)");
+        SeasonalModeController.Normalize();
 
         CustomMouse = Config.Bind("Client Options", "CustomMouse", false, "Enable or Disable Custom_Cursor");
         spoofLevel = Config.Bind("Client Options", "Level", "");
@@ -490,7 +496,7 @@ public partial class BanMod : BasePlugin
 
         ClassInjector.RegisterTypeInIl2Cpp<KeyBindOptions>();
         ClassInjector.RegisterTypeInIl2Cpp<HostControl>();
-        ClassInjector.RegisterTypeInIl2Cpp<ModeratorUi>(); 
+        ClassInjector.RegisterTypeInIl2Cpp<ModeratorUi>();
         ClassInjector.RegisterTypeInIl2Cpp<MsgMenu>();
         ClassInjector.RegisterTypeInIl2Cpp<PlayerUI>();
         ClassInjector.RegisterTypeInIl2Cpp<SkinUI>();
@@ -500,12 +506,12 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<BanMenuButtonsPatch>();
         ClassInjector.RegisterTypeInIl2Cpp<CustomButtonHandler>();
         ClassInjector.RegisterTypeInIl2Cpp<SpawnProtectionChecker>();
-        ClassInjector.RegisterTypeInIl2Cpp<SpawnProtectionChecker1>(); 
+        ClassInjector.RegisterTypeInIl2Cpp<SpawnProtectionChecker1>();
         ClassInjector.RegisterTypeInIl2Cpp<PlayerPositionUpdater>();
         ClassInjector.RegisterTypeInIl2Cpp<PlayerMouseController>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModUpdateHandler>();
         ClassInjector.RegisterTypeInIl2Cpp<MainMenuManagerPatch.PullingWorker>();
-        ClassInjector.RegisterTypeInIl2Cpp<AnimatedSprite>(); 
+        ClassInjector.RegisterTypeInIl2Cpp<AnimatedSprite>();
         ClassInjector.RegisterTypeInIl2Cpp<BanModGUI>();
         ClassInjector.RegisterTypeInIl2Cpp<PremiumChatUI>();
         ClassInjector.RegisterTypeInIl2Cpp<PreviousMatchSummaryUi>();
@@ -519,20 +525,55 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<LiveTranslatorMenu>();
 
         TemplateLoader.InitTemplates();
-        TemplateLoader.LoadTemplate("WelcomeTemplate");
-        TemplateLoader.LoadTemplate("WelcomeTemplateSns");
-        TemplateLoader.LoadTemplate("WelcomeTemplateKaitoRun");
-        TemplateLoader.LoadTemplate("WelcomeTemplateTaskRun");
-        TemplateLoader.LoadTemplate("WelcomeTemplateJBMode");
-        TemplateLoader.LoadTemplate("WelcomeTemplatePns");
-        TemplateLoader.LoadTemplate("WelcomeTemplateFFA");
-        TemplateLoader.LoadTemplate("RulesInfo");
-        TemplateLoader.LoadTemplate("RulesInfoSns");
-        TemplateLoader.LoadTemplate("RulesInfoPns");
-        TemplateLoader.LoadTemplate("RulesInfoKaitoRun");
-        TemplateLoader.LoadTemplate("RulesInfoTaskRun");
-        TemplateLoader.LoadTemplate("RulesInfoJBMode");
-        TemplateLoader.LoadTemplate("RulesInfoFFA");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplate");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplateSns");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplateKaitoRun");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplateTaskRun");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplateJBMode");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplatePns");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplateFFA");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplateFFATEAM");
+        TemplateLoader.LoadWelcomeTemplate("WelcomeTemplateZombieMode");
+        TemplateLoader.LoadRulesTemplate("RulesInfo");
+        TemplateLoader.LoadRulesTemplate("RulesInfoSns");
+        TemplateLoader.LoadRulesTemplate("RulesInfoPns");
+        TemplateLoader.LoadRulesTemplate("RulesInfoKaitoRun");
+        TemplateLoader.LoadRulesTemplate("RulesInfoTaskRun");
+        TemplateLoader.LoadRulesTemplate("RulesInfoJBMode");
+        TemplateLoader.LoadRulesTemplate("RulesInfoFFA");
+        TemplateLoader.LoadRulesTemplate("RulesInfoFFATEAM");
+        TemplateLoader.LoadRulesTemplate("RulesInfoZombieMode");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateSnsModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateKaitoRunModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateTaskRunModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateJBModeModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplatePnsModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateFFAModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateFFATEAMModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateKillRaceModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateAssassinModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateHotPotatoModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateRoomRushModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateTargetRushModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateDeathRunModded");
+        TemplateLoader.LoadWelcomeModdedTemplate("WelcomeTemplateZombieModeModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoSnsModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoPnsModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoKaitoRunModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoTaskRunModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoJBModeModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoFFAModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoFFATEAMModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoKillRaceModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoHotPotatoModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoAssassinModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoRoomRushModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoTargetRushModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoDeathRunModded");
+        TemplateLoader.LoadRulesModdedTemplate("RulesInfoZombieModeModded");
+
         Translator.Initialize();
         SpamManager.Initialize();
         BanManager.Initialize();
@@ -603,40 +644,66 @@ public partial class BanMod : BasePlugin
     {
         void Update()
         {
-            bool modOptionsOpen = GameSettingMenuPatch.SettingsTab != null && GameSettingMenuPatch.SettingsTab.gameObject != null && GameSettingMenuPatch.SettingsTab.gameObject.activeInHierarchy;
             try
             {
-                if (GameStates.isLobby && !Options.GameMode.GetValue(GameModeType.BanMod))
+                DleksEhtController.Update();
+                bool modOptionsOpen =
+                    GameSettingMenuPatch.SettingsTab != null &&
+                    GameSettingMenuPatch.SettingsTab.gameObject != null &&
+                    GameSettingMenuPatch.SettingsTab.gameObject.activeInHierarchy;
+
+                if (GameStates.isLobby &&
+                    Options.GameMode != null &&
+                    !Options.GameMode.GetValue(GameModeType.BanMod))
                 {
-                    if (Options.DisableRole.GetBool())
+                    if (Options.DisableRole != null &&
+                        Options.DisableRole.GetBool())
                     {
                         BanMod.DisableAllRoles();
                     }
                 }
-                if (GameStates.isLobby && Options.GameMode != null && !Options.GameMode.GetValue(GameModeType.Default) && GameManager.Instance.IsHideAndSeek())
-                {
-                    Options.GameMode.SetValue(GameModeType.Default);
-                    Options.ReOpenSettings();
-                    return;
-                }
-                if (modOptionsOpen && GameStates.isLobby && Options.GameMode != null && Options.GameMode.GetValue(GameModeType.FFA) && !FfaExternalBridge.IsAvailable())
+
+                if (GameStates.isLobby &&
+                    Options.GameMode != null &&
+                    !Options.GameMode.GetValue(GameModeType.Default) &&
+                    GameManager.Instance != null &&
+                    GameManager.Instance.IsHideAndSeek())
                 {
                     Options.GameMode.SetValue(GameModeType.Default);
                     Options.ReOpenSettings();
                     return;
                 }
 
-                if (Options.Jester != null && Options.Jester.GetBool())
+                if (modOptionsOpen &&
+                    GameStates.isLobby &&
+                    Options.GameMode != null &&
+                    (Options.GameMode.GetValue(GameModeType.FFA) || Options.GameMode.GetValue(GameModeType.FFATeam)
+                    || Options.GameMode.GetValue(GameModeType.Assassin)
+                    || Options.GameMode.GetValue(GameModeType.KillRace)
+                    || Options.GameMode.GetValue(GameModeType.HotPotatoModded)) &&
+                    !FfaExternalBridge.IsAvailable())
+                {
+                    Options.GameMode.SetValue(GameModeType.Default);
+                    Options.ReOpenSettings();
+                    return;
+                }
+
+                if (Options.Jester != null &&
+                    Options.Jester.GetBool())
                 {
                     Jester.Update();
                 }
 
-                if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.L))
+                if ((Input.GetKey(KeyCode.LeftControl) ||
+                     Input.GetKey(KeyCode.RightControl)) &&
+                    Input.GetKeyDown(KeyCode.L))
                 {
                     ReconnectHandler.TryRejoin();
                 }
 
-                if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.G))
+                if ((Input.GetKey(KeyCode.LeftControl) ||
+                     Input.GetKey(KeyCode.RightControl)) &&
+                    Input.GetKeyDown(KeyCode.G))
                 {
                     ReconnectHandler.TryNewGame();
                 }
@@ -647,13 +714,15 @@ public partial class BanMod : BasePlugin
                     return;
                 }
 
-                if (!Options.TrackImpostorTeammate.GetBool())
+                if (Options.TrackImpostorTeammate == null ||
+                    !Options.TrackImpostorTeammate.GetBool())
                 {
                     TracersHandler.HideAllArrows();
                     return;
                 }
 
                 var allPlayers = BanMod.AllPlayerControls;
+
                 if (allPlayers == null)
                     return;
 
@@ -661,26 +730,28 @@ public partial class BanMod : BasePlugin
                 {
                     try
                     {
-                        if (player == null)
+                        if (player == null ||
+                            player.Data == null ||
+                            player.Data.Disconnected)
+                        {
                             continue;
-
-                        if (player.Data == null)
-                            continue;
-
-                        if (player.Data.Disconnected)
-                            continue;
+                        }
 
                         TracersHandler.drawPlayerArrow(player);
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning("[BanMod] Errore drawPlayerArrow: " + e);
+                        Debug.LogWarning(
+                            "[BanMod] Errore drawPlayerArrow: " + e
+                        );
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning("[BanMod] Errore BanModUpdateHandler.Update: " + e);
+                Debug.LogWarning(
+                    "[BanMod] Errore BanModUpdateHandler.Update: " + e
+                );
             }
         }
 

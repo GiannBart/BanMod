@@ -59,6 +59,7 @@ namespace BanMod
                             && !Utils.Tracker(p)
                             && !Utils.Engineer(p)
                             && !Judge(p)
+                            && !Utils.SpiritGuide(p)
                             && !Utils.Detective(p))
 
                 .ToList();
@@ -133,7 +134,7 @@ namespace BanMod
 
             string msg = string.Format(GetString("GuesserInfo"));
 
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
             {
                 Utils.RequestProxyMessage(msg, SpecialKillerId);
                 MessageBlocker.UpdateLastMessageTime();

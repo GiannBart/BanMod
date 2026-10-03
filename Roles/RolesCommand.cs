@@ -241,7 +241,7 @@ public static class RolesCommand
     }
     private static void SendDeathMessage(string msg)
     {
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(msg);
             MessageBlocker.UpdateLastMessageTime();

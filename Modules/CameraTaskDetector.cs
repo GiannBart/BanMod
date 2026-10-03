@@ -62,8 +62,6 @@ namespace BanMod
             if (!Options.EnableCamTaskDetector.GetBool() || !GameStates.IsInGameplay || pc == null || pc.Data == null) return;
             if (pc.Data.IsDead || pc.inVent) return;
 
-            // The method is reached from PlayerControl.FixedUpdate for every
-            // player, but its body already processes the whole player list.
             if (Mathf.Approximately(lastProcessedFixedTime, Time.fixedTime)) return;
             lastProcessedFixedTime = Time.fixedTime;
 

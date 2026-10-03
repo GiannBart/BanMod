@@ -91,7 +91,14 @@ internal static class MurderPlayerCombinedPatch
                     }
                     else
                     {
-                        __instance.RpcSetRole(RoleTypes.ImpostorGhost);
+                        if (BanModServerSelection.IsModded25)
+                        {
+                            __instance.RpcMurderPlayer(__instance, true);
+                        }
+                        else
+                        {
+                            __instance.RpcSetRole(RoleTypes.ImpostorGhost);
+                        }
                     }
                 }
             }

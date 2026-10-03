@@ -30,6 +30,9 @@ namespace BanMod
         private const string ForceRoleStatusUrl =
             BanModCore.PublicApiBaseUrl + "/api/forcerole/status";
 
+        private const string ForceRoleEventUrl =
+            BanModCore.PublicApiBaseUrl + "/api/forcerole/event";
+
         private const int RequestTimeoutSeconds = 10;
 
         private static readonly System.Random Random = new System.Random();
@@ -37,15 +40,10 @@ namespace BanMod
         private static bool _accessRefreshRunning = false;
         private static int _stateGeneration = 0;
 
-        // Le richieste verso altri giocatori usano /status. Per il giocatore locale
-        // viene invece creata una vera autorizzazione server prima dell'assegnazione.
         private static readonly Dictionary<byte, int> PendingRoleRequests =
             new Dictionary<byte, int>();
         private static int _nextRoleRequestId = 0;
 
-        // Le selezioni locali vengono serializzate: se il giocatore cambia ruolo
-        // rapidamente, il server riceve una richiesta alla volta e aggiorna sempre
-        // la stessa prenotazione, senza occupare più di uno slot.
         private static bool _selfRoleRequestRunning = false;
         private static int _queuedSelfRoleRequestId = 0;
         private static byte _queuedSelfRolePlayerId = byte.MaxValue;
@@ -57,13 +55,11 @@ namespace BanMod
         private static RoleTypes _authorizedSelfRole = default;
         private static bool _selfRoleCommitStarted = false;
 
-        // Stato dell'ultimo controllo server. Serve soltanto a validare SetRole.
         private static bool _serverAccessKnown = false;
         private static bool _serverAccessAllowed = false;
         private static bool _serverSelfRoleAllowed = false;
         private static bool _serverPermanentUnlock = false;
 
-        // Stato dell'assegnazione esatta avvenuta durante RoleManager.SelectRoles.
         private static bool _selfRoleAssignedInCurrentGame = false;
         private static byte _assignedSelfRolePlayerId = byte.MaxValue;
         private static RoleTypes _assignedSelfRole = default;
@@ -193,9 +189,6 @@ namespace BanMod
             return false;
         }
 
-        // In FFA ForceRole deve essere completamente inattivo: niente GM,
-        // niente chiamate /forcerole e nessuna selezione che possa riapparire
-        // quando si torna a una modalità normale.
         public static void DisableForFfa()
         {
             _stateGeneration++;
@@ -286,6 +279,64 @@ namespace BanMod
             }
         }
 
+        private static IEnumerator SendOtherImpostorRoleEvent(
+    byte targetPlayerId,
+    RoleTypes role)
+        {
+            if (!IsForcedImpostorRole(role))
+                yield break;
+
+            bool identityOk = false;
+            string friendCode = "";
+            string playerName = "";
+            string activationToken = "";
+
+            yield return GetFreshApiIdentity((ok, fc, pn, token) =>
+            {
+                identityOk = ok;
+                friendCode = fc;
+                playerName = pn;
+                activationToken = token;
+            });
+
+            if (!identityOk)
+                yield break;
+
+            PlayerControl target = FindPlayerById(targetPlayerId);
+
+            string targetPlayerName =
+                target != null && target.Data != null
+                    ? target.Data.PlayerName ?? ""
+                    : "";
+
+            int requesterPlayerId =
+                PlayerControl.LocalPlayer != null
+                    ? PlayerControl.LocalPlayer.PlayerId
+                    : -1;
+
+            string eventId = Guid.NewGuid().ToString("N");
+
+            string body = "{"
+                + "\"FriendCode\":" + JsonString(friendCode) + ","
+                + "\"PlayerName\":" + JsonString(playerName) + ","
+                + "\"PlayerId\":" + requesterPlayerId + ","
+                + "\"TargetIsSelf\":false,"
+                + "\"TargetPlayerId\":" + targetPlayerId + ","
+                + "\"TargetPlayerName\":" + JsonString(targetPlayerName) + ","
+                + "\"Role\":" + JsonString(role.ToString()) + ","
+                + "\"AttemptId\":" + JsonString(eventId)
+                + "}";
+
+            ForceRoleLimitDecision ignored = null;
+
+            yield return SendForceRoleRequest(
+                ForceRoleEventUrl,
+                friendCode,
+                body,
+                value => ignored = value
+            );
+        }
+
         private static IEnumerator RequestAndApplyOtherForcedRole(
             byte playerId,
             RoleTypes role,
@@ -323,6 +374,15 @@ namespace BanMod
             }
 
             ForcedRoles[playerId] = role;
+
+            if (IsForcedImpostorRole(role))
+            {
+                yield return SendOtherImpostorRoleEvent(
+                    playerId,
+                    role
+                );
+            }
+
             UpdateGMState("SetForcedRole server approved for other player");
         }
 
@@ -365,8 +425,6 @@ namespace BanMod
                     value => decision = value
                 );
 
-                // Durante la richiesta è stata scelta un'altra opzione: completa
-                // prima questa chiamata e poi aggiorna la stessa prenotazione.
                 if (requestId != _queuedSelfRoleRequestId)
                     continue;
 
@@ -763,13 +821,29 @@ namespace BanMod
             if (string.IsNullOrWhiteSpace(attemptId))
                 attemptId = Guid.NewGuid().ToString("N");
 
-            string body = "{"
-                + "\"FriendCode\":" + JsonString(friendCode) + ","
-                + "\"AttemptId\":" + JsonString(attemptId) + ","
-                + "\"TargetIsSelf\":true,"
-                + "\"PlayerId\":" + playerId + ","
-                + "\"Role\":" + JsonString(role.ToString())
-                + "}";
+            string body;
+
+            if (IsForcedImpostorRole(role))
+            {
+                body = "{"
+                    + "\"FriendCode\":" + JsonString(friendCode) + ","
+                    + "\"PlayerName\":" + JsonString(playerName) + ","
+                    + "\"AttemptId\":" + JsonString(attemptId) + ","
+                    + "\"TargetIsSelf\":true,"
+                    + "\"PlayerId\":" + playerId + ","
+                    + "\"Role\":" + JsonString(role.ToString())
+                    + "}";
+            }
+            else
+            {
+                body = "{"
+                    + "\"FriendCode\":" + JsonString(friendCode) + ","
+                    + "\"AttemptId\":" + JsonString(attemptId) + ","
+                    + "\"TargetIsSelf\":true,"
+                    + "\"PlayerId\":" + playerId + ","
+                    + "\"Role\":" + JsonString(role.ToString())
+                    + "}";
+            }
 
             yield return SendForceRoleRequest(
                 ForceRoleAuthorizeUrl,
@@ -868,12 +942,9 @@ namespace BanMod
 
             _accessRefreshRunning = false;
 
-            // La risposta appartiene a una selezione/lobby ormai resettata.
             if (requestGeneration != _stateGeneration || IsFfaModeActive())
                 yield break;
 
-            // Un timeout o un errore temporaneo non cancella SetRole. Il controllo
-            // verrà ripetuto alla prossima modifica; l'avvio della partita non viene coinvolto.
             if (decision == null || decision.no_response)
             {
                 ForcedRoleLog(
@@ -885,7 +956,6 @@ namespace BanMod
 
             _serverAccessKnown = true;
 
-            // allowed=false riguarda l'accesso generale alla funzione.
             if (!decision.allowed)
             {
                 _serverAccessAllowed = false;
@@ -899,8 +969,6 @@ namespace BanMod
             _serverSelfRoleAllowed = decision.self_allowed || decision.premium;
             _serverPermanentUnlock = decision.premium;
 
-            // Il limite personale non vieta i ruoli sugli altri. Se gli usi
-            // personali sono terminati, viene rimossa soltanto la selezione locale.
             try
             {
                 PlayerControl local = PlayerControl.LocalPlayer;
@@ -1052,8 +1120,6 @@ namespace BanMod
 
         public static void FinishSetRoleGame()
         {
-            // Il consumo viene già confermato subito dopo l'assegnazione esatta.
-            // Qui si esegue soltanto il reset dello stato della partita.
             _stateGeneration++;
             PendingRoleRequests.Clear();
             _queuedSelfRoleRequestId = 0;
@@ -1092,9 +1158,6 @@ namespace BanMod
 
             if (IsLocalPlayerId(playerId))
             {
-                // Per sé stessi /authorize crea la prenotazione che applica davvero
-                // il limite di tre utilizzi. La stessa prenotazione viene aggiornata
-                // quando si cambia ruolo prima dell'avvio.
                 QueueSelfRoleAuthorization(playerId, role, requestId);
                 return;
             }
@@ -1107,7 +1170,6 @@ namespace BanMod
 
         public static void SetForcedRoleNoLimitForPremium(byte playerId, RoleTypes role)
         {
-            // Nessun bypass locale: lo sblocco permanente viene sempre letto dal server.
             SetForcedRole(playerId, role);
         }
 
@@ -1118,8 +1180,6 @@ namespace BanMod
             _queuedSelfRoleRequestId = 0;
             ForcedRoles.Clear();
 
-            // Se il ruolo è già stato assegnato, non cancellare i dati necessari
-            // a un commit eventualmente ancora in corso.
             if (!_selfRoleAssignedInCurrentGame)
             {
                 ClearGameAssignmentState();
@@ -1139,8 +1199,6 @@ namespace BanMod
             {
                 _queuedSelfRoleRequestId = 0;
                 ClearGameAssignmentState();
-                // Manteniamo l'attempt id: una successiva selezione aggiorna la
-                // stessa prenotazione lato server invece di crearne una seconda.
                 ClearSelfRoleAuthorizationState(false);
             }
 
@@ -1260,6 +1318,7 @@ namespace BanMod
             RoleTypes.Phantom,
             RoleTypes.Tracker,
             RoleTypes.Detective,
+            RoleTypes.SpiritGuide,
             RoleTypes.Viper
         };
 
@@ -1291,6 +1350,7 @@ namespace BanMod
                 case RoleTypes.Phantom:
                 case RoleTypes.Tracker:
                 case RoleTypes.Detective:
+                case RoleTypes.SpiritGuide:
                 case RoleTypes.Viper:
                     return true;
 
@@ -1509,7 +1569,6 @@ namespace BanMod
                 int count = GetConfiguredRoleCount(role);
                 int chance = GetConfiguredRoleChance(role);
 
-                // Non configurato -> non entra nel pool
                 if (count <= 0 || chance <= 0)
                     continue;
 
@@ -1517,7 +1576,6 @@ namespace BanMod
                     pool.Add(role);
             }
 
-            // Mischia il pool, ma NON aggiunge ruoli mancanti.
             for (int i = pool.Count - 1; i > 0; i--)
             {
                 int j = rng.Next(i + 1);
@@ -1527,7 +1585,6 @@ namespace BanMod
                 pool[j] = temp;
             }
 
-            // Abbiamo massimo 4 impostori.
             if (pool.Count > 4)
                 pool = pool.Take(4).ToList();
 
@@ -1573,19 +1630,13 @@ namespace BanMod
             if (configuredPool == null)
                 return;
 
-            // Copia locale perché sotto rimuoviamo gli elementi.
             configuredPool = new List<RoleTypes>(configuredPool);
 
-            // Se qualche special è già stato assegnato esattamente,
-            // rimuove una copia corrispondente dal pool.
             RemoveAlreadyUsedSpecialImpostorRolesFromPool(
                 configuredPool,
                 allPlayers
             );
 
-            // IMPORTANTE:
-            // pool vuoto = nessun ruolo speciale configurato.
-            // Quindi non facciamo nulla e gli impostori restano normali.
             if (configuredPool.Count == 0)
                 return;
 
@@ -1603,7 +1654,6 @@ namespace BanMod
                             out RoleTypes forcedRole) &&
                         forcedRole == RoleTypes.Impostor)
                     {
-                        // Forced Impostor deve restare Impostor normale.
                         return false;
                     }
 
@@ -1613,8 +1663,6 @@ namespace BanMod
 
             foreach (var player in baseImpostors)
             {
-                // Finito il pool?
-                // Gli altri restano semplicemente Impostor.
                 if (configuredPool.Count == 0)
                     break;
 
@@ -1697,7 +1745,14 @@ namespace BanMod
 
             if (gameMode == GameModeType.TaskRun ||
                 gameMode == GameModeType.ZombieMode ||
-                gameMode == GameModeType.HotPotato)
+                gameMode == GameModeType.RoomRush ||
+                gameMode == GameModeType.TargetRush ||
+                gameMode == GameModeType.KillRace ||
+                gameMode == GameModeType.Assassin ||
+                gameMode == GameModeType.FFA ||
+                gameMode == GameModeType.FFATeam ||
+                gameMode == GameModeType.DeathRun ||
+                gameMode == GameModeType.HotPotatoModded)
             {
                 return true;
             }
@@ -1711,14 +1766,23 @@ namespace BanMod
                 .Where(ForcedRoleHelpers.IsAliveValidPlayer)
                 .ToList();
 
+            PlayerControl localPlayer = PlayerControl.LocalPlayer;
+
+            bool localIsGM =
+                localPlayer != null &&
+                (BanMod.GM.Value || ForcedRoleSystem.GM);
+
             bool hasForcedExactRoles = ForcedRoleSystem.ForcedRoles.Count > 0;
             bool hasForcedImpostors = BanMod.forcedImpostorIds.Count > 0;
             bool jesterActive = Options.Jester.GetBool() || Jester.ForcedJesterSelected;
             bool hideAndSeek = GameManager.Instance.IsHideAndSeek();
             bool taskRun = gameMode == GameModeType.TaskRun;
             bool zombieMode = gameMode == GameModeType.ZombieMode;
-            bool hotpotatoMode = gameMode == GameModeType.HotPotato;
-            bool zeroImpostorsMode = taskRun || zombieMode || hotpotatoMode;
+            bool hotpotatoMode = gameMode == GameModeType.HotPotatoModded;
+            bool roomrushMode = gameMode == GameModeType.RoomRush;
+            bool targetrushMode = gameMode == GameModeType.TargetRush;
+            bool deathrunMode = gameMode == GameModeType.DeathRun;
+            bool zeroImpostorsMode = taskRun || zombieMode || roomrushMode || targetrushMode || deathrunMode || hotpotatoMode;
             bool fourImpActive = !zeroImpostorsMode && !hideAndSeek && ForcedRoleHelpers.ShouldForceFourImpostors(allPlayersList.Count);
 
             ForcedRoleSystem.ForcedRoleLog($"SelectRoles flags | taskRun={taskRun} hideAndSeek={hideAndSeek} jesterActive={jesterActive} forceImpostor={BanMod.forceImpostor} hasForcedImpostors={hasForcedImpostors} hasForcedExactRoles={hasForcedExactRoles} fourImpActive={fourImpActive} forcedRolesCount={ForcedRoleSystem.ForcedRoles.Count}");
@@ -1729,7 +1793,8 @@ namespace BanMod
                 !BanMod.forceImpostor &&
                 !hasForcedImpostors &&
                 !hasForcedExactRoles &&
-                !fourImpActive)
+                !fourImpActive &&
+                !localIsGM)
             {
                 ForcedRoleSystem.ForcedRoleLog("SelectRoles usa vanilla: nessuna condizione attiva");
                 return true;
@@ -1737,113 +1802,76 @@ namespace BanMod
 
             var gameOptions = GameOptionsManager.Instance.CurrentGameOptions;
 
-            if (GameManager.Instance.IsHideAndSeek())
+            if (GameManager.Instance != null &&
+    GameManager.Instance.IsHideAndSeek())
             {
-                int impostorsRequired = Options.NumSeekers != null ? Options.NumSeekers.GetInt() : 1;
+                PrepareHnsSeekers();
 
-                var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV11>();
+                var hnsOptions =
+                    GameOptionsManager.Instance?
+                        .CurrentGameOptions?
+                        .Cast<HideNSeekGameOptionsV12>();
+
                 if (hnsOptions != null)
-                    hnsOptions.NumImpostors = impostorsRequired;
-
-                for (int i = 0; i < impostorsRequired; i++)
                 {
-                    string selectedName = Options.SeekerSelections[i].GetString();
+                    int seekerCount = Math.Max(1, HnsSeekers.Count);
 
-                    if (selectedName != "Round-robin")
+                    hnsOptions.NumImpostors = seekerCount;
+
+                    if (HnsSeekers.Count > 0)
                     {
-                        var foundPlayer = allPlayersList.Find(p => p.Data.PlayerName == selectedName);
-                        if (foundPlayer != null && !BanMod.forcedImpostorIds.Contains(foundPlayer.PlayerId))
+                        hnsOptions.ImpostorPlayerID = HnsSeekers[0];
+                    }
+                }
+
+
+                foreach (PlayerControl player in PlayerControl.AllPlayerControls)
+                {
+                    if (player == null ||
+                        player.Data == null ||
+                        player.Data.Disconnected)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        bool isSeeker =
+                            HnsSeekers.Contains(player.PlayerId);
+
+                        if (isSeeker)
                         {
-                            BanMod.forcedImpostorIds.Add(foundPlayer.PlayerId);
+                            RoleManager.Instance.SetRole(
+                                player,
+                                RoleTypes.Impostor);
+
+                            player.RpcSetRole(
+                                RoleTypes.Impostor,
+                                false);
+
+                            BMLogger.Info(
+                                $"[HnS] Seeker assegnato: " +
+                                $"{player.Data.PlayerName} " +
+                                $"PlayerId={player.PlayerId}");
+                        }
+                        else
+                        {
+                            RoleManager.Instance.SetRole(
+                                player,
+                                RoleTypes.Engineer);
+
+                            player.RpcSetRole(
+                                RoleTypes.Engineer,
+                                false);
                         }
                     }
-                }
-
-                var randHns = new System.Random();
-
-                List<PlayerControl> forcedImpostors;
-                if (Options.Jester.GetBool())
-                {
-                    forcedImpostors = allPlayersList
-                        .Where(p => BanMod.forcedImpostorIds.Contains(p.PlayerId))
-                        .Where(p => !Jester.IsJester(p))
-                        .ToList();
-                }
-                else
-                {
-                    forcedImpostors = allPlayersList
-                        .Where(p => BanMod.forcedImpostorIds.Contains(p.PlayerId))
-                        .ToList();
-                }
-
-                if (forcedImpostors.Count > impostorsRequired)
-                    forcedImpostors = forcedImpostors.Take(impostorsRequired).ToList();
-
-                var impostorsToAssign = new List<PlayerControl>(forcedImpostors);
-
-                if (impostorsToAssign.Count < impostorsRequired)
-                {
-                    int needed = impostorsRequired - impostorsToAssign.Count;
-
-                    IEnumerable<PlayerControl> candidates = allPlayersList
-                        .Where(p => !impostorsToAssign.Contains(p));
-
-                    if (Options.Jester.GetBool())
+                    catch (Exception ex)
                     {
-                        candidates = candidates.Where(p => !Jester.IsJester(p));
+                        BMLogger.LogError(
+                            $"[HnS] Errore assegnazione ruolo " +
+                            $"PlayerId={player.PlayerId}: {ex}");
                     }
-
-                    impostorsToAssign.AddRange(
-                        candidates
-                            .OrderBy(_ => randHns.Next())
-                            .Take(needed)
-                            .ToList()
-                    );
                 }
-
-                var impostorInfos = new Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo>();
-                foreach (var imp in impostorsToAssign)
-                    impostorInfos.Add(imp.Data);
-
-                GameManager.Instance.LogicRoleSelection.AssignRolesForTeam(
-                    impostorInfos,
-                    gameOptions,
-                    RoleTeamTypes.Impostor,
-                    int.MaxValue,
-                    new Il2CppSystem.Nullable<RoleTypes>()
-                );
-
-                List<NetworkedPlayerInfo> crewmateInfos;
-                if (Options.Jester.GetBool())
-                {
-                    crewmateInfos = allPlayersList
-                        .Where(p => !impostorsToAssign.Contains(p))
-                        .Where(p => !Jester.IsJester(p))
-                        .Select(p => p.Data)
-                        .ToList();
-                }
-                else
-                {
-                    crewmateInfos = allPlayersList
-                        .Where(p => !impostorsToAssign.Contains(p))
-                        .Select(p => p.Data)
-                        .ToList();
-                }
-
-                var il2cppCrewmates = new Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo>();
-                foreach (var cm in crewmateInfos)
-                    il2cppCrewmates.Add(cm);
-
-                GameManager.Instance.LogicRoleSelection.AssignRolesForTeam(
-                    il2cppCrewmates,
-                    gameOptions,
-                    RoleTeamTypes.Crewmate,
-                    int.MaxValue,
-                    new Il2CppSystem.Nullable<RoleTypes>(RoleTypes.Crewmate)
-                );
-
-                foreach (var pc in PlayerControl.AllPlayerControls)
-                    pc.Data.Role?.Initialize(pc);
 
                 return false;
             }
@@ -1868,17 +1896,6 @@ namespace BanMod
 
                 }
 
-                if (!zeroImpostorsMode && allPlayersList.Count > 0)
-                {
-                    int requiredForcedImpostorSlots = ForcedRoleSystem.ForcedRoles
-                        .Where(entry => allPlayersList.Any(p => p.PlayerId == entry.Key))
-                        .Count(entry => RoleManager.IsImpostorRole(entry.Value));
-
-                    adjustedNumImpostors = Math.Max(
-                        adjustedNumImpostors,
-                        Math.Min(requiredForcedImpostorSlots, allPlayersList.Count)
-                    );
-                }
 
                 int crewSlotsTotal = Math.Max(0, allPlayersList.Count - adjustedNumImpostors);
 
@@ -1905,8 +1922,13 @@ namespace BanMod
 
                     var player = allPlayersList.FirstOrDefault(p => p.PlayerId == playerId);
                     if (player == null)
+                    {
                         continue;
-
+                    }
+                    if (localIsGM && localPlayer != null && player.PlayerId == localPlayer.PlayerId)
+                    {
+                        continue;
+                    }
                     if (hasRealJester && Jester.IsJester(player))
                     {
                         continue;
@@ -1983,6 +2005,7 @@ namespace BanMod
                 var impostorsToAssign = new List<PlayerControl>();
 
                 var forcedImpostorCandidates = allPlayersList
+                    .Where(p => !localIsGM || localPlayer == null || p.PlayerId != localPlayer.PlayerId)
                     .Where(p => BanMod.forcedImpostorIds.Contains(p.PlayerId))
                     .Where(p => !exactAssignedPlayers.Contains(p.PlayerId))
                     .Where(p => !(hasRealJester && Jester.IsJester(p)))
@@ -1998,6 +2021,7 @@ namespace BanMod
                     int needed = impostorSlotsRemaining - impostorsToAssign.Count;
 
                     var randomImpostorCandidates = allPlayersList
+                        .Where(p => !localIsGM || localPlayer == null || p.PlayerId != localPlayer.PlayerId)
                         .Where(p => !exactAssignedPlayers.Contains(p.PlayerId))
                         .Where(p => !impostorsToAssign.Contains(p))
                         .Where(p => !(hasRealJester && Jester.IsJester(p)))
@@ -2051,8 +2075,13 @@ namespace BanMod
 
                     var player = allPlayersList.FirstOrDefault(p => p.PlayerId == playerId);
                     if (player == null)
+                    {
                         continue;
-
+                    }
+                    if (localIsGM && localPlayer != null && player.PlayerId == localPlayer.PlayerId)
+                    {
+                        continue;
+                    }
                     if (!exactAssignedPlayers.Contains(player.PlayerId))
                         continue;
 
@@ -2081,16 +2110,6 @@ namespace BanMod
                     }
                 }
 
-                //foreach (var pc in PlayerControl.AllPlayerControls)
-                //{
-                //    try
-                //    {
-                //        pc.Data.Role?.Initialize(pc);
-                //    }
-                //    catch (Exception)
-                //    {
-                //    }
-                //}
                 foreach (var pc in PlayerControl.AllPlayerControls)
                 {
                     if (pc.Data != null)
@@ -2106,16 +2125,95 @@ namespace BanMod
                 ForcedRoleSystem.MarkSelfRoleAssignmentForEndGame();
                 return false;
             }
-            //finally
-            //{
-            //    ForcedRoleHelpers.RestoreRoleOptions(roleOptionBackup);
-            //}
             finally
             {
                 if (roleOptionBackup != null && roleOptionBackup.Count > 0)
                 {
                     ForcedRoleHelpers.RestoreRoleOptions(roleOptionBackup);
                 }
+            }
+        }
+        private static readonly List<byte> HnsSeekers = new();
+
+        private static void PrepareHnsSeekers()
+        {
+            HnsSeekers.Clear();
+
+            if (GameData.Instance == null ||
+                AmongUsClient.Instance == null)
+                return;
+
+            var available = GameData.Instance.AllPlayers
+                .ToArray()
+                .Where(p => p != null && !p.Disconnected)
+                .ToList();
+
+            if (available.Count == 0)
+                return;
+
+            int count = Options.NumSeekers != null
+                ? Options.NumSeekers.GetInt()
+                : 1;
+
+            count = Math.Max(1, Math.Min(count, available.Count));
+
+            for (int i = 0; i < count; i++)
+            {
+                string choice = "Round-robin";
+
+                if (Options.SeekerSelections != null &&
+                    i < Options.SeekerSelections.Count &&
+                    Options.SeekerSelections[i] != null)
+                {
+                    try
+                    {
+                        choice = Options.SeekerSelections[i].GetString();
+                    }
+                    catch
+                    {
+                        choice = "Round-robin";
+                    }
+                }
+
+                NetworkedPlayerInfo picked = null;
+
+                if (!string.IsNullOrWhiteSpace(choice) &&
+                    !string.Equals(
+                        choice,
+                        "Round-robin",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    picked = available.FirstOrDefault(p =>
+                        string.Equals(
+                            p.PlayerName,
+                            choice,
+                            StringComparison.Ordinal));
+                }
+
+                if (picked == null)
+                {
+                    var pseudo =
+                        new PseudoRandomList<NetworkedPlayerInfo>(
+                            AmongUsClient.Instance.GameId);
+
+                    foreach (var player in available)
+                        pseudo.Add(player);
+
+                    int skips =
+                        GameData.RoundsPlayedInSession + i;
+
+                    for (int x = 0; x < skips; x++)
+                        pseudo.PickRandom();
+
+                    picked = pseudo.PickRandom();
+                }
+
+                if (picked == null)
+                    continue;
+
+                HnsSeekers.Add(picked.PlayerId);
+
+                available.Remove(picked);
             }
         }
     }
@@ -2127,6 +2225,4 @@ namespace BanMod
             ForcedRoleSystem.FinishSetRoleGame();
         }
     }
-
-
 }

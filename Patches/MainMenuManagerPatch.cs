@@ -134,7 +134,6 @@ namespace BanMod
             public WorkerMode mode;
 
             private SpriteRenderer renderer;
-            private AnimatedSprite animator;
 
             private Vector3 pullOffset = new(-1.8f, -2.2f, 0f);
             private Vector3 pushOffset = new(1.2f, -2.2f, 0f);
@@ -170,23 +169,6 @@ namespace BanMod
                     renderer.sortingLayerName = "UI";
                     renderer.sortingOrder = 5000;
 
-                    animator = gameObject.AddComponent<AnimatedSprite>();
-                    if (animator == null)
-                    {
-                        Debug.LogWarning("[BanMod] PullingWorker.Setup: AnimatedSprite nullo.");
-                        enabled = false;
-                        return;
-                    }
-
-                    animator.renderer = renderer;
-
-                    Sprite[] anim = mode == WorkerMode.Pull
-                        ? LoadFrames("run_left", 4)
-                        : LoadFrames("return_right", 5);
-
-                    if (anim != null && anim.Length > 0)
-                        animator.SetAnimation(anim, 12f);
-
                     transform.localScale = Vector3.one * 1.2f;
 
                     Vector3 baseOffset = mode == WorkerMode.Pull ? pullOffset : pushOffset;
@@ -196,26 +178,6 @@ namespace BanMod
                 {
                     Debug.LogWarning("[BanMod] Errore PullingWorker.Setup: " + e);
                     enabled = false;
-                }
-            }
-
-            public void PlayGreeting()
-            {
-                try
-                {
-                    if (animator == null || renderer == null)
-                        return;
-
-                    Sprite[] greetFrames = LoadFrames("greet", 4);
-                    if (greetFrames == null || greetFrames.Length == 0)
-                        return;
-
-                    isGreeting = true;
-                    animator.SetAnimation(greetFrames, 6f);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning("[BanMod] Errore PullingWorker.PlayGreeting: " + e);
                 }
             }
 
@@ -449,16 +411,6 @@ namespace BanMod
                             if (Vector3.Distance(RightPanel.transform.localPosition, shown) < 0.01f)
                             {
                                 panelState = PanelState.Visible;
-
-                                if (activeWorker != null)
-                                {
-                                    var worker = activeWorker.GetComponent<PullingWorker>();
-
-                                    if (worker != null)
-                                        worker.PlayGreeting();
-                                    else
-                                        activeWorker = null;
-                                }
                             }
 
                             break;
@@ -528,13 +480,6 @@ namespace BanMod
                         {
                             worker.mode = WorkerMode.Push;
 
-                            var anim = worker.GetComponent<AnimatedSprite>();
-                            if (anim != null)
-                            {
-                                Sprite[] frames = LoadFrames("return_right", 5);
-                                if (frames != null && frames.Length > 0)
-                                    anim.SetAnimation(frames, 12f);
-                            }
                         }
                         else
                         {
@@ -817,7 +762,7 @@ namespace BanMod
         {
             try
             {
-                string folderPath = System.IO.Path.Combine(Application.dataPath, "..", "BAN_DATA", "IMAGE", "Background");
+                string folderPath = System.IO.Path.Combine(Application.dataPath, "..", "DATA", "IMAGE", "Background");
 
                 if (!System.IO.Directory.Exists(folderPath))
                 {
@@ -1180,6 +1125,6 @@ public static class MainMenuManagerUpdatePatch
 {
     public static void Postfix()
     {
-        MainMenuInfo.Update();
+        Utils.MainMenuInfo.Update();
     }
 }

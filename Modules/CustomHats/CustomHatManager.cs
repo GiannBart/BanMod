@@ -28,7 +28,7 @@ namespace BanMod.Modules.CustomHats
         private static readonly Dictionary<string, string> ExternalAssetPathIndex =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly string BanDataDirectory = Path.Combine(BepInEx.Paths.GameRootPath, "BAN_DATA", "IMAGE");
+        private static readonly string BanDataDirectory = Path.Combine(BepInEx.Paths.GameRootPath, "DATA", "IMAGE");
         private static readonly string CustomHatsDirectory = Path.Combine(BanDataDirectory, "CustomHats");
         private static readonly string ExternalManifestPath = Path.Combine(CustomHatsDirectory, "hats.json");
 
@@ -43,8 +43,6 @@ namespace BanMod.Modules.CustomHats
             PendingHats.Clear();
             EnsureExternalFolder();
 
-            // Startup is intentionally blocked here: hats are registered only
-            // after their complete on-disk cache is ready.
             DownloadAllExternalHats();
             LoadExternalHatsOnly();
 

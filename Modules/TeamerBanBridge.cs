@@ -18,7 +18,7 @@ namespace BanMod
 
     public static class ActionTeamersBridge
     {
-        private const string ActionConfigPath = "./BAN_DATA/DENIED/ActionTeamers.txt";
+        private const string ActionConfigPath = "./DATA/DENIED/ActionTeamers.txt";
         private const ActionTeamersMode DefaultAction = ActionTeamersMode.OnlyWarm;
 
         private static bool initialized;
@@ -35,7 +35,7 @@ namespace BanMod
 
             try
             {
-                Directory.CreateDirectory("BAN_DATA/DENIED");
+                Directory.CreateDirectory("DATA/DENIED");
 
                 if (!File.Exists(ActionConfigPath))
                     File.WriteAllText(ActionConfigPath, DefaultAction.ToString());
@@ -155,7 +155,7 @@ namespace BanMod
         {
             try
             {
-                Directory.CreateDirectory("BAN_DATA/DENIED");
+                Directory.CreateDirectory("DATA/DENIED");
                 File.WriteAllText(ActionConfigPath, action.ToString());
 
                 ShowNotify("ActionTeamers impostato su: " + ActionToDisplayName(action));

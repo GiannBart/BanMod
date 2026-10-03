@@ -887,7 +887,6 @@ namespace NLayer.Decoder
                         break;
                 }
 
-                // precalculate the critical bands per bucket
                 int cbL = 0, cbS = 0;
                 int next_cbL = _sfBandIndexL[1], next_cbS = _sfBandIndexS[1] * 3;
                 for (int i = 0; i < 576; i++)
@@ -906,7 +905,6 @@ namespace NLayer.Decoder
                     _cbLookupS[i] = (byte)cbS;
                 }
 
-                // set up the short block windows
                 int idx = 0;
                 for (cbS = 0; cbS < 12; cbS++)
                 {
@@ -966,16 +964,14 @@ namespace NLayer.Decoder
 
                     if (_mixedBlockFlag[gr][ch])
                     {
-                        // mixed has bands 0..7 of long, then 3..11 of short
                         for (; cb < 8; cb++)
                         {
                             _scalefac[ch][3][cb] = _bitRes.GetBits(slen0);
                         }
                         cb = 3;
-                        bits -= slen0;  // mixed blocks need slen0 fewer bits
+                        bits -= slen0;  
                     }
 
-                    // short / mixed: just read from wherever cb happens to be through 11
                     for (; cb < 6; cb++)
                     {
                         _scalefac[ch][0][cb] = _bitRes.GetBits(slen0);
@@ -1012,7 +1008,6 @@ namespace NLayer.Decoder
             }
             else
             {
-                // long: read if gr == 0, otherwise honor scfsi for the channel
                 bits = 0;
                 if (gr == 0 || _scfsi[ch][0] == 0)
                 {
@@ -1089,7 +1084,6 @@ namespace NLayer.Decoder
             var sfc = _scalefacCompress[gr][ch];
 
             int blockTypeNumber;
-            // block type number = 2 if mixed short, 1 if pure short, otherwise 0
             if (_blockType[gr][ch] == 2)
             {
                 if (_mixedBlockFlag[gr][ch])

@@ -772,6 +772,9 @@ public static class PreviousMatchPopupTracker
                 case RoleTypes.Detective:
                     return $"<color=#00FFFF>{GetString("Detective")}</color>";
 
+                case RoleTypes.SpiritGuide:
+                    return $"<color=#00FFFF>{GetString("SpiritGuide")}</color>";
+
                 case RoleTypes.Tracker:
                     return $"<color=#00FFFF>{GetString("Tracker")}</color>";
 
@@ -780,6 +783,9 @@ public static class PreviousMatchPopupTracker
 
                 case RoleTypes.Crewmate:
                     return $"<color=#00FFFF>{GetString("Crewmate")}</color>";
+
+                case RoleTypes.Judge:
+                    return $"<color=#00FFFF>{GetString("Judge")}</color>";
             }
         }
 

@@ -255,7 +255,6 @@ namespace BanMod
         {
             try
             {
-                // Notifications must only be shown on the host.
                 if (AmongUsClient.Instance == null ||
                     !AmongUsClient.Instance.AmHost)
                     return;
@@ -263,12 +262,10 @@ namespace BanMod
                 if (moderator?.Data == null)
                     return;
 
-                // Never notify actions performed by the host itself.
                 if (moderator == PlayerControl.LocalPlayer ||
                     moderator.AmOwner)
                     return;
 
-                // The sender must be an actually authorized moderator.
                 if (!IsActualModerator(moderator))
                     return;
 
@@ -290,7 +287,6 @@ namespace BanMod
                         $" -> <color=#FFFFFF>{target.Data.PlayerName}</color>";
                 }
 
-                // LOG
                 BMLogger.Info(
                     $"MODERATOR ACTION | " +
                     $"Source={source} | " +
@@ -301,7 +297,6 @@ namespace BanMod
                     LogTag
                 );
 
-                // HOST HUD
                 if (HudManager.Instance?.Notifier != null)
                 {
                     NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
@@ -328,8 +323,6 @@ namespace BanMod
             byte targetPlayerId,
             bool fromModeratorCommand)
         {
-            // false = action executed locally by the host.
-            // It must not be reported or shown.
             if (!fromModeratorCommand)
                 return;
 

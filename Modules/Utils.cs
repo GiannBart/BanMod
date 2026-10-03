@@ -8,6 +8,7 @@ using BepInEx.Unity.IL2CPP.Utils;
 using HarmonyLib;
 using Hazel;
 using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystem.Diagnostics;
 using Il2CppSystem.IO.Ports;
 using Il2CppSystem.Security.Cryptography;
@@ -236,21 +237,36 @@ public static class Utils
     }
     public static void SetPlayerRole(PlayerControl target, RoleTypes role)
     {
-        if (!AmongUsClient.Instance.AmHost)
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
         {
             Debug.LogWarning("[RoleCheats] Solo l'host può impostare i ruoli.");
             return;
         }
 
-        if (target == null)
+        if (target == null || target.Data == null)
         {
             Debug.LogWarning("[RoleCheats] Player nullo.");
             return;
         }
 
-        target.RpcSetRole(role);
+        try
+        {
+            RoleManager.Instance.SetRole(target, role);
+        }
+        catch (Exception e)
+        {
+            BMLogger.Info($"[RoleCheats] SetRole locale fallito: {e}");
+        }
 
-        BMLogger.Info($"[RoleCheats] Ruolo {role} assegnato a {target.Data.PlayerName}");
+        try
+        {
+            target.RpcSetRole(role, true);
+        }
+        catch (Exception e)
+        {
+            BMLogger.Info($"[RoleCheats] RpcSetRole fallito: {e}");
+        }
     }
 
     internal static string GetPlatformName(PlayerControl player, bool useTag = false)
@@ -652,216 +668,7 @@ public static class Utils
             player.Data.MarkDirty();
 
         }
-        public static class MainMenuInfo
-        {
-            private class InfoMessage
-            {
-                public GameObject Root;
-                public float ExpireAt;
-            }
-
-            private static readonly List<InfoMessage> Messages = new();
-
-            // Posizione dello stack
-            private const float StartX = 3.2f;
-            private const float StartY = -2.3f;
-
-            // Distanza tra una notifica e l'altra
-            private const float Spacing = 0.8f;
-
-            // Durata in secondi
-            private const float Duration = 3f;
-
-            // Dimensioni riquadro
-            private const float BoxWidth = 5.5f;
-            private const float BoxHeight = 0.65f;
-
-            private static Sprite BackgroundSprite;
-
-            public static void Show(string message)
-            {
-                var menu = Object.FindObjectOfType<MainMenuManager>();
-
-                if (menu == null)
-                    return;
-
-                Cleanup();
-
-                // =========================
-                // ROOT
-                // =========================
-
-                var root = new GameObject($"MainMenuInfo_{Messages.Count}");
-                root.transform.SetParent(menu.transform, false);
-
-                // =========================
-                // SFONDO NERO
-                // =========================
-
-                var background = new GameObject("Background");
-                background.transform.SetParent(root.transform, false);
-
-                var renderer = background.AddComponent<SpriteRenderer>();
-
-                if (BackgroundSprite == null)
-                {
-                    var texture = new Texture2D(1, 1);
-
-                    texture.SetPixel(
-                        0,
-                        0,
-                        Color.white
-                    );
-
-                    texture.Apply();
-
-                    BackgroundSprite = Sprite.Create(
-                        texture,
-                        new Rect(0, 0, 1, 1),
-                        new Vector2(0.5f, 0.5f),
-                        1f
-                    );
-                }
-
-                renderer.sprite = BackgroundSprite;
-
-                renderer.color = new Color(
-                    0f,
-                    0f,
-                    0f,
-                    0.85f
-                );
-
-                renderer.sortingOrder = 1000;
-
-                background.transform.localScale = new Vector3(
-                    BoxWidth,
-                    BoxHeight,
-                    1f
-                );
-
-                background.transform.localPosition = new Vector3(
-                    0f,
-                    0f,
-                    0f
-                );
-
-                // =========================
-                // TESTO
-                // =========================
-
-                var textObject = new GameObject("Text");
-                textObject.transform.SetParent(root.transform, false);
-
-                var text = textObject.AddComponent<TextMeshPro>();
-
-                text.text = message;
-
-                text.fontSize = 2.2f;
-
-                // IMPORTANTE:
-                // Center evita che il testo venga spostato
-                // fuori dallo schermo.
-                text.alignment = TextAlignmentOptions.Center;
-
-                text.enableWordWrapping = false;
-
-                text.color = Color.white;
-
-                text.renderer.sortingOrder = 1001;
-
-                textObject.transform.localPosition = new Vector3(
-                    0f,
-                    0f,
-                    -0.1f
-                );
-
-                // =========================
-                // AGGIUNGI ALLA LISTA
-                // =========================
-
-                Messages.Add(new InfoMessage
-                {
-                    Root = root,
-                    ExpireAt = Time.time + Duration
-                });
-
-                Reposition();
-            }
-
-            public static void Update()
-            {
-                bool changed = false;
-
-                for (int i = Messages.Count - 1; i >= 0; i--)
-                {
-                    var message = Messages[i];
-
-                    if (
-                        message.Root == null ||
-                        Time.time >= message.ExpireAt
-                    )
-                    {
-                        if (message.Root != null)
-                        {
-                            Object.Destroy(message.Root);
-                        }
-
-                        Messages.RemoveAt(i);
-
-                        changed = true;
-                    }
-                }
-
-                if (changed)
-                {
-                    Reposition();
-                }
-            }
-
-            private static void Cleanup()
-            {
-                for (int i = Messages.Count - 1; i >= 0; i--)
-                {
-                    if (Messages[i].Root == null)
-                    {
-                        Messages.RemoveAt(i);
-                    }
-                }
-            }
-
-            private static void Reposition()
-            {
-                for (int i = 0; i < Messages.Count; i++)
-                {
-                    if (Messages[i].Root == null)
-                        continue;
-
-                    // Prima notifica in basso,
-                    // le successive salgono.
-                    float y = StartY + (i * Spacing);
-
-                    Messages[i].Root.transform.localPosition = new Vector3(
-                        StartX,
-                        y,
-                        -5f
-                    );
-                }
-            }
-
-            public static void Clear()
-            {
-                foreach (var message in Messages)
-                {
-                    if (message.Root != null)
-                    {
-                        Object.Destroy(message.Root);
-                    }
-                }
-
-                Messages.Clear();
-            }
-        }
+        
         public static void BypassScanner(bool value)
         {
             try
@@ -938,7 +745,518 @@ public static class Utils
             ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Security, 0);
         }
     }
+    public static class MainMenuInfo
+    {
+        private class InfoMessage
+        {
+            public GameObject Root;
+            public float ExpireAt;
+        }
 
+        private static readonly List<InfoMessage> Messages = new();
+
+        private const float StartX = 3.2f;
+        private const float StartY = -2.3f;
+        private const float Spacing = 0.45f;
+        private const float Duration = 3f;
+        private const float BoxWidth = 5.7f;
+        private const float BoxHeight = 0.75f;
+
+        private static readonly Color BackgroundColor =
+            new Color(0.055f, 0.060f, 0.075f, 0.98f);
+
+        private static readonly Color BorderColor =
+            new Color(0.15f, 0.55f, 0.90f, 0.65f);
+
+        private static readonly Color AccentColor =
+            new Color(0.20f, 0.70f, 1.00f, 1f);
+
+        private static readonly Color TextColor =
+            new Color(0.90f, 0.95f, 1.00f, 1f);
+
+        private static readonly Color ShadowColor =
+            new Color(0f, 0f, 0f, 0.55f);
+
+        private static Sprite RoundedSprite;
+
+
+        public static void Show(string message)
+        {
+            var menu = Object.FindObjectOfType<MainMenuManager>();
+
+            if (menu == null)
+                return;
+
+            Cleanup();
+            EnsureResources();
+
+            var root = new GameObject(
+                $"MainMenuInfo_{Messages.Count}"
+            );
+
+            root.transform.SetParent(
+                menu.transform,
+                false
+            );
+            root.transform.localScale = new Vector3(
+                0.5f,
+                0.5f,
+                1f
+            );
+
+            var shadow = new GameObject("Shadow");
+
+            shadow.transform.SetParent(
+                root.transform,
+                false
+            );
+
+            var shadowRenderer =
+                shadow.AddComponent<SpriteRenderer>();
+
+            shadowRenderer.sprite = RoundedSprite;
+            shadowRenderer.color = ShadowColor;
+            shadowRenderer.sortingOrder = 998;
+
+            shadow.transform.localScale =
+                new Vector3(
+                    BoxWidth + 0.08f,
+                    BoxHeight + 0.08f,
+                    1f
+                );
+
+            shadow.transform.localPosition =
+                new Vector3(
+                    0.05f,
+                    -0.05f,
+                    0.08f
+                );
+
+
+
+            var border = new GameObject("Border");
+
+            border.transform.SetParent(
+                root.transform,
+                false
+            );
+
+            var borderRenderer =
+                border.AddComponent<SpriteRenderer>();
+
+            borderRenderer.sprite = RoundedSprite;
+            borderRenderer.color = BorderColor;
+            borderRenderer.sortingOrder = 999;
+
+            border.transform.localScale =
+                new Vector3(
+                    BoxWidth + 0.045f,
+                    BoxHeight + 0.045f,
+                    1f
+                );
+
+            border.transform.localPosition =
+                Vector3.zero;
+
+
+            var background =
+                new GameObject("Background");
+
+            background.transform.SetParent(
+                root.transform,
+                false
+            );
+
+            var backgroundRenderer =
+                background.AddComponent<SpriteRenderer>();
+
+            backgroundRenderer.sprite =
+                RoundedSprite;
+
+            backgroundRenderer.color =
+                BackgroundColor;
+
+            backgroundRenderer.sortingOrder =
+                1000;
+
+            background.transform.localScale =
+                new Vector3(
+                    BoxWidth,
+                    BoxHeight,
+                    1f
+                );
+
+            background.transform.localPosition =
+                Vector3.zero;
+
+
+            var accent =
+                new GameObject("Accent");
+
+            accent.transform.SetParent(
+                root.transform,
+                false
+            );
+
+            var accentRenderer =
+                accent.AddComponent<SpriteRenderer>();
+
+            accentRenderer.sprite =
+                RoundedSprite;
+
+            accentRenderer.color =
+                AccentColor;
+
+            accentRenderer.sortingOrder =
+                1001;
+
+            accent.transform.localScale =
+                new Vector3(
+                    0.075f,
+                    BoxHeight - 0.14f,
+                    1f
+                );
+
+            accent.transform.localPosition =
+                new Vector3(
+                    -(BoxWidth / 2f) + 0.14f,
+                    0f,
+                    -0.03f
+                );
+
+
+            var textObject =
+                new GameObject("Text");
+
+            textObject.transform.SetParent(
+                root.transform,
+                false
+            );
+
+            var text =
+                textObject.AddComponent<TextMeshPro>();
+
+            text.text = message;
+
+            text.fontSize = 2.45f;
+
+            text.fontStyle =
+                FontStyles.Bold;
+
+            text.alignment =
+                TextAlignmentOptions.Center;
+
+            text.enableWordWrapping =
+                false;
+
+            text.richText = true;
+
+            text.color =
+                TextColor;
+
+            text.renderer.sortingOrder =
+                1002;
+
+            text.outlineWidth = 0.12f;
+
+            text.outlineColor =
+                new Color(
+                    0f,
+                    0f,
+                    0f,
+                    0.75f
+                );
+
+            textObject.transform.localPosition =
+                new Vector3(
+                    0.10f,
+                    0f,
+                    -0.10f
+                );
+
+
+            Messages.Add(
+                new InfoMessage
+                {
+                    Root = root,
+
+                    ExpireAt =
+                        Time.time + Duration
+                }
+            );
+
+            Reposition();
+        }
+
+
+        public static void Update()
+        {
+            bool changed = false;
+
+            for (
+                int i = Messages.Count - 1;
+                i >= 0;
+                i--
+            )
+            {
+                var message =
+                    Messages[i];
+
+                if (
+                    message.Root == null ||
+                    Time.time >= message.ExpireAt
+                )
+                {
+                    if (message.Root != null)
+                    {
+                        Object.Destroy(
+                            message.Root
+                        );
+                    }
+
+                    Messages.RemoveAt(i);
+
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                Reposition();
+            }
+        }
+
+        private static void Cleanup()
+        {
+            for (
+                int i = Messages.Count - 1;
+                i >= 0;
+                i--
+            )
+            {
+                if (Messages[i].Root == null)
+                {
+                    Messages.RemoveAt(i);
+                }
+            }
+        }
+
+        private static void Reposition()
+        {
+            for (
+                int i = 0;
+                i < Messages.Count;
+                i++
+            )
+            {
+                if (Messages[i].Root == null)
+                    continue;
+
+                float y =
+                    StartY +
+                    (i * Spacing);
+
+                Messages[i]
+                    .Root
+                    .transform
+                    .localPosition =
+                    new Vector3(
+                        StartX,
+                        y,
+                        -5f
+                    );
+            }
+        }
+
+        private static void EnsureResources()
+        {
+            if (RoundedSprite != null)
+                return;
+
+            const int size = 64;
+            const int radius = 15;
+
+            Texture2D texture =
+                new Texture2D(
+                    size,
+                    size,
+                    TextureFormat.RGBA32,
+                    false
+                );
+
+            texture.hideFlags =
+                HideFlags.DontUnloadUnusedAsset;
+
+            texture.wrapMode =
+                TextureWrapMode.Clamp;
+
+            texture.filterMode =
+                FilterMode.Bilinear;
+
+            Color32[] pixels =
+                new Color32[size * size];
+
+            Color32 fill =
+                Color.white;
+
+            float r =
+                Mathf.Max(
+                    1f,
+                    radius
+                );
+
+            float leftCenter =
+                r - 0.5f;
+
+            float rightCenter =
+                size - r - 0.5f;
+
+            float bottomCenter =
+                r - 0.5f;
+
+            float topCenter =
+                size - r - 0.5f;
+
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float cx = x;
+                    float cy = y;
+
+                    if (x < radius)
+                    {
+                        cx =
+                            leftCenter;
+                    }
+                    else if (
+                        x >= size - radius
+                    )
+                    {
+                        cx =
+                            rightCenter;
+                    }
+
+                    if (y < radius)
+                    {
+                        cy =
+                            bottomCenter;
+                    }
+                    else if (
+                        y >= size - radius
+                    )
+                    {
+                        cy =
+                            topCenter;
+                    }
+
+
+                    float dx =
+                        x - cx;
+
+                    float dy =
+                        y - cy;
+
+                    float distance =
+                        Mathf.Sqrt(
+                            dx * dx +
+                            dy * dy
+                        );
+
+
+                    bool inCorner =
+                        (
+                            x < radius ||
+                            x >= size - radius
+                        )
+                        &&
+                        (
+                            y < radius ||
+                            y >= size - radius
+                        );
+
+
+                    float alphaFactor =
+                        1f;
+
+                    if (inCorner)
+                    {
+                        alphaFactor =
+                            Mathf.Clamp01(
+                                r +
+                                0.5f -
+                                distance
+                            );
+                    }
+
+
+                    Color32 pixel =
+                        fill;
+
+                    pixel.a =
+                        (byte)Mathf.RoundToInt(
+                            fill.a *
+                            alphaFactor
+                        );
+
+                    pixels[
+                        y * size + x
+                    ] = pixel;
+                }
+            }
+
+
+            texture.SetPixels32(
+                pixels
+            );
+
+            texture.Apply(
+                false,
+                false
+            );
+
+
+            RoundedSprite =
+                Sprite.Create(
+                    texture,
+
+                    new Rect(
+                        0,
+                        0,
+                        size,
+                        size
+                    ),
+
+                    new Vector2(
+                        0.5f,
+                        0.5f
+                    ),
+
+                    size
+                );
+
+            RoundedSprite.hideFlags =
+                HideFlags.DontUnloadUnusedAsset;
+        }
+
+        public static void Clear()
+        {
+            foreach (
+                var message in Messages
+            )
+            {
+                if (message.Root != null)
+                {
+                    Object.Destroy(
+                        message.Root
+                    );
+                }
+            }
+
+            Messages.Clear();
+        }
+    }
     public static string RemoveHtmlTags(this string str) => Regex.Replace(str, "<[^>]*?>", string.Empty);
     public static string ColorString(Color32 color, string str) => $"<color=#{color.r:x2}{color.g:x2}{color.b:x2}{color.a:x2}>{str}</color>";
     private static readonly Dictionary<string, Sprite> CachedSprites = [];
@@ -1174,6 +1492,18 @@ public static class Utils
         else if (Normal && gameMode == GameModeType.FFA)
         {
             lobbymode = "FFA";
+        }
+        else if (Normal && gameMode == GameModeType.RoomRush)
+        {
+            lobbymode = "RoomRush";
+        }
+        else if (Normal && gameMode == GameModeType.TargetRush)
+        {
+            lobbymode = "TargetRush";
+        }
+        else if (Normal && gameMode == GameModeType.DeathRun)
+        {
+            lobbymode = "DeathRun";
         }
         else 
         {
@@ -1665,17 +1995,24 @@ public static class Utils
 
     private static Stack<NetworkedPlayerInfo.PlayerOutfit> savedOutfits = new Stack<NetworkedPlayerInfo.PlayerOutfit>();
     private static Stack<string> savedNames = new Stack<string>();
-
-    public static void SendInfo()
-    {
-        string title = TemplateLoader.LoadTemplate("InfoTemplate");
-        Utils.SendMessage(title); 
-        MessageBlocker.UpdateLastMessageTime();
-    }
+    private static DateTime _lastRulesSendTime = DateTime.MinValue;
 
     public static void SendRules()
     {
+        bool isHost = AmongUsClient.Instance.AmHost;
+
+        if (!isHost)
+        {
+            TimeSpan elapsed = DateTime.UtcNow - _lastRulesSendTime;
+
+            if (elapsed < TimeSpan.FromMinutes(1))
+            {
+                return;
+            }
+        }
+
         string mode = Options.GameMode.GetString();
+
         string templateName = mode switch
         {
             "SnS" => "RulesInfoSns",
@@ -1685,14 +2022,61 @@ public static class Utils
             "TaskRun" => "RulesInfoTaskRun",
             "JBMode" => "RulesInfoJBMode",
             "FFA" => "RulesInfoFFA",
-            "HotPotato" => "RulesInfoHotPotato",
             "ZombieMode" => "RulesInfoZombieMode",
-            _ => "WelcomeTemplate"
+            "FFATEAM" => "RulesInfoFFATEAM",
+            _ => "RulesInfo"
         };
 
-        string title = TemplateLoader.FormatTemplate(templateName);
-        Utils.SendMessage(title, 255);
-        MessageBlocker.UpdateLastMessageTime();
+        string templateName1 = mode switch
+        {
+            "SnS" => "RulesInfoSnsModded",
+            "PnS" => "RulesInfoPnsModded",
+            "KaitoRun" => "RulesInfoKaitoRunModded",
+            "Default" => "RulesInfoModded",
+            "TaskRun" => "RulesInfoTaskRunModded",
+            "JBMode" => "RulesInfoJBModeModded",
+            "FFA" => "RulesInfoFFAModded",
+            "FFATEAM" => "RulesInfoFFATEAMModded",
+            "KillRace" => "RulesInfoKillRaceModded",
+            "Assassin" => "RulesInfoAssassinModded",
+            "HotPotatoModded" => "RulesInfoHotPotatoModded",
+            "ZombieMode" => "RulesInfoZombieModeModded",
+            "RoomRush" => "RulesInfoRoomRushModded",
+            "DeathRun" => "RulesInfoDeathRunModded",
+            "TargetRush" => "RulesInfoTargetRushModded",
+            _ => "RulesInfoModded"
+        };
+
+        string title = TemplateLoader.FormatRulesTemplate(templateName);
+        string title1 = TemplateLoader.FormatRulesModdedTemplate(templateName1);
+
+        bool sent = false;
+
+        if (BanModServerSelection.IsVanilla)
+        {
+            if (isHost && PlayerControl.LocalPlayer.Data.IsDead)
+            {
+                Utils.RequestProxyMessage(title);
+                MessageBlocker.UpdateLastMessageTime();
+            }
+            else
+            {
+                Utils.SendMessage(title);
+                MessageBlocker.UpdateLastMessageTime();
+            }
+
+            sent = true;
+        }
+        else if (BanModServerSelection.IsModded25)
+        {
+            Utils.SendMessage(title1);
+            sent = true;
+        }
+
+        if (sent)
+        {
+            _lastRulesSendTime = DateTime.UtcNow;
+        }
     }
     public static string GradientText(string text, Color start, Color end)
     {
@@ -1908,55 +2292,256 @@ public static class Utils
     }
     public static class TemplateLoader
     {
-        private static readonly string TemplatesFolder = "./BAN_DATA/TEMPLATE";
-
+        private static readonly string TemplatesWelcomeFolder = "./DATA/TEMPLATE/Welcome";
+        private static readonly string TemplatesRulesFolder = "./DATA/TEMPLATE/Rules";
+        private static readonly string TemplatesWelcomeModdedFolder = "./DATA/TEMPLATE/WelcomeModded";
+        private static readonly string TemplatesRulesModdedFolder = "./DATA/TEMPLATE/RulesModded";
         public static void InitTemplates()
         {
-            Directory.CreateDirectory(TemplatesFolder);
-            //Welcome
-            CreateTemplate("WelcomeTemplate",
-                "Welcome {player} to BanMod");
-            CreateTemplate("WelcomeTemplateSns",
-                "Welcome {player} to BanMod\n Here we're playing SNS mode.");
-            CreateTemplate("WelcomeTemplatePns",
-                "Welcome {player} to BanMod\n Here we're playing PNS mode.");
-            CreateTemplate("WelcomeTemplateKaitoRun",
-                "Welcome {player} to BanMod\n Here we're playing KaitoRun mode.");
-            CreateTemplate("WelcomeTemplateTaskRun",
-                "Welcome {player} to BanMod\n Here we're playing TaskRun mode.");
-            CreateTemplate("WelcomeTemplateJBMode",
-                "Welcome {player} to BanMod\n Here we're playing JBMode.");
-            CreateTemplate("WelcomeTemplateFFA",
-                "Welcome {player} to BanMod\n Here we're playing FFA mode.");
-            CreateTemplate("WelcomeTemplateZombieMode",
-                "Welcome {player} to BanMod\n Here we're playing ZombieMode.");
-            CreateTemplate("WelcomeTemplateHotPotato",
-                "Welcome {player} to BanMod\n Here we're playing HotPotato.");
-            //Rules
-            CreateTemplate("RulesInfo",
-                "Add Rules for NormalMod");
-            CreateTemplate("RulesInfoSns",
-                "Add Rules for SNS");
-            CreateTemplate("RulesInfoPns",
-                "Add Rules for PNS");
-            CreateTemplate("RulesInfoKaitoRun",
-                "Add Rules for KaitoRun");
-            CreateTemplate("RulesInfoTaskRun",
-                "Add Rules for TaskRun");
-            CreateTemplate("RulesInfoJBMode",
-                "Add Rules for JBMode");
-            CreateTemplate("RulesInfoFFA",
-                "Add Rules for FFA");
-            CreateTemplate("RulesInfoZombieMode",
-                "Add Rules for ZombieMode");
-            CreateTemplate("RulesInfoHotPotato",
-                "Add Rules for HotPotato");
+            Directory.CreateDirectory(TemplatesWelcomeFolder);
+
+            CreateWelcomeTemplate("WelcomeTemplate",
+                "Welcome {player}! This lobby uses BanMod. Please follow the host rules.");
+
+            CreateWelcomeTemplate("WelcomeTemplateSns",
+                "Welcome {player}! This lobby is playing SNS. Ask the host for the rules.");
+
+            CreateWelcomeTemplate("WelcomeTemplatePns",
+                "Welcome {player}! This lobby is playing PNS. Ask the host for the rules.");
+
+            CreateWelcomeTemplate("WelcomeTemplateKaitoRun",
+                "Welcome {player}! This lobby is playing KaitoRun. Ask the host for the rules.");
+
+            CreateWelcomeTemplate("WelcomeTemplateTaskRun",
+                "Welcome {player}! This lobby is playing TaskRun. Complete your tasks first.");
+
+            CreateWelcomeTemplate("WelcomeTemplateJBMode",
+                "Welcome {player}! This lobby is playing JBMode. Ask the host for the rules.");
+
+            CreateWelcomeTemplate("WelcomeTemplateFFA",
+                "Welcome {player}! This lobby is playing FFA. Last player alive wins.");
+
+            CreateWelcomeTemplate("WelcomeTemplateFFATEAM",
+                "Welcome {player}! This lobby is playing Team FFA. Last team alive wins.");
+
+            CreateWelcomeTemplate("WelcomeTemplateZombieMode",
+                "Welcome {player}! This lobby is playing ZombieMode. Survive or infect the crew.");
+
+
+            Directory.CreateDirectory(TemplatesWelcomeModdedFolder);
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateModded",
+    "<size=120%><b><color=#3F7CC4>WELCOME</color></b></size>\n" +
+    "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+    "This lobby uses <b><color=#3F7CC4>BanMod</color></b>.\n" +
+    "<color=#A88420><b>Please follow the host rules.</b></color>");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateSnsModded",
+                "<size=120%><b><color=#3F7CC4>SNS</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Kill your assigned target while <b><color=#3E9B63>shapeshifted into them</color></b>.\n" +
+                "<color=#A88420><b>Ask the host for additional rules.</b></color>");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplatePnsModded",
+                "<size=120%><b><color=#2F8FA3>PNS</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Move while <color=#3F7CC4><b>invisible</b></color> and become visible to kill your target.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateKaitoRunModded",
+                "<size=120%><b><color=#C56A32>KAITORUN</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "<color=#C94A4A><b>Do not fix Reactor.</b></color>\n" +
+                "Ask the host for the current rules.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateTaskRunModded",
+                "<size=120%><b><color=#3E9B63>TASKRUN</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Complete all your tasks before everyone else.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateJBModeModded",
+                "<size=120%><b><color=#8A5CC2>JBMODE</color></b></size>\n" +
+                "Welcome <b><color=#3F7CC4>{player}</color></b>!\n\n" +
+                "Rules depend on the <color=#A88420><b>host configuration</b></color>.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateFFAModded",
+                "<size=120%><b><color=#C94A4A>FFA</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Fight everyone.\n" +
+                "<color=#C56A32><b>Last player alive wins.</b></color>");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateFFATEAMModded",
+                "<size=120%><b><color=#3F7CC4>TEAM FFA</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Fight the <color=#C94A4A><b>enemy teams</b></color>.\n" +
+                "<color=#3E9B63><b>Last team alive wins.</b></color>");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateKillRaceModded",
+                "<size=120%><b><color=#C94A4A>KILL RACE</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Follow the rules configured by the host.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateAssassinModded",
+                "<size=120%><b><color=#8A5CC2>ASSASSIN</color></b></size>\n" +
+                "Welcome <b><color=#3F7CC4>{player}</color></b>!\n\n" +
+                "Follow the rules configured by the host.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateZombieModeModded",
+                "<size=120%><b><color=#3E9B63>ZOMBIE MODE</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "<color=#3E9B63><b>Infected</b></color> players must infect the remaining crew.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateHotPotatoModded",
+                "<size=120%><b><color=#C56A32>HOT POTATO</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Pass the potato before the <color=#C94A4A><b>timer expires</b></color>.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateRoomRushModded",
+                "<size=120%><b><color=#A88420>ROOMRUSH</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Reach the indicated room before the <color=#C94A4A><b>timer expires</b></color>.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateDeathRunModded",
+                "<size=120%><b><color=#C56A32>DEATHRUN</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Complete the indicated room route before the <color=#C94A4A><b>timer expires</b></color>.");
+
+            CreateWelcomeModdedTemplate("WelcomeTemplateTargetRushModded",
+                "<size=120%><b><color=#2F8FA3>TARGETRUSH</color></b></size>\n" +
+                "Welcome <b><color=#8A5CC2>{player}</color></b>!\n\n" +
+                "Reach your <color=#3F7CC4><b>personal target room</b></color> before time runs out.");
+
+
+            Directory.CreateDirectory(TemplatesRulesFolder);
+
+            CreateRulesTemplate("RulesInfo",
+                "Respect everyone. No cheating, spam or abuse. Follow the host rules.");
+
+            CreateRulesTemplate("RulesInfoSns",
+                "SNS: Kill your assigned target while shapeshifted into them.");
+
+            CreateRulesTemplate("RulesInfoPns",
+                "PNS: Move invisible and become visible to kill your assigned target.");
+
+            CreateRulesTemplate("RulesInfoKaitoRun",
+                "KaitoRun: Do not fix Reactor. Follow the host rules.");
+
+            CreateRulesTemplate("RulesInfoTaskRun",
+                "TaskRun: Complete all your tasks before everyone else.");
+
+            CreateRulesTemplate("RulesInfoJBMode",
+                "JBMode: Follow the settings and rules selected by the host.");
+
+            CreateRulesTemplate("RulesInfoFFA",
+                "FFA: Fight everyone. Last player alive wins.");
+
+            CreateRulesTemplate("RulesInfoFFATEAM",
+                "Team FFA: Eliminate enemy teams. Last team alive wins.");
+
+            CreateRulesTemplate("RulesInfoZombieMode",
+                "ZombieMode: Infected players infect the crew. Crew must survive and finish tasks.");
+
+
+            Directory.CreateDirectory(TemplatesRulesModdedFolder);
+
+            CreateRulesModdedTemplate("RulesInfoModded",
+    "<size=120%><b><color=#3F7CC4>RULES</color></b></size>\n\n" +
+    "<color=#3E9B63><b>Respect everyone.</b></color>\n" +
+    "No cheating, spam or abuse.\n" +
+    "<color=#A88420><b>Follow the host rules.</b></color>");
+
+            CreateRulesModdedTemplate("RulesInfoSnsModded",
+                "<size=120%><b><color=#3F7CC4>SNS RULES</color></b></size>\n\n" +
+                "Kill your assigned target while <color=#3E9B63><b>shapeshifted into them</b></color>.\n" +
+                "<color=#A88420><b>Ask the host for optional rules.</b></color>");
+
+            CreateRulesModdedTemplate("RulesInfoPnsModded",
+                "<size=120%><b><color=#2F8FA3>PNS RULES</color></b></size>\n\n" +
+                "Move while <color=#3F7CC4><b>invisible</b></color>.\n" +
+                "Become visible to kill your assigned target.");
+
+            CreateRulesModdedTemplate("RulesInfoKaitoRunModded",
+                "<size=120%><b><color=#C56A32>KAITORUN RULES</color></b></size>\n\n" +
+                "<color=#C94A4A><b>Do not fix Reactor.</b></color>\n" +
+                "Follow the host rules.");
+
+            CreateRulesModdedTemplate("RulesInfoTaskRunModded",
+                "<size=120%><b><color=#3E9B63>TASKRUN RULES</color></b></size>\n\n" +
+                "Complete all your tasks before everyone else.");
+
+            CreateRulesModdedTemplate("RulesInfoJBModeModded",
+                "<size=120%><b><color=#8A5CC2>JBMODE RULES</color></b></size>\n\n" +
+                "Rules depend on the <color=#A88420><b>host configuration</b></color>.");
+
+            CreateRulesModdedTemplate("RulesInfoFFAModded",
+                "<size=120%><b><color=#C94A4A>FFA RULES</color></b></size>\n\n" +
+                "Fight everyone.\n" +
+                "<color=#C56A32><b>Last player alive wins.</b></color>");
+
+            CreateRulesModdedTemplate("RulesInfoFFATEAMModded",
+                "<size=120%><b><color=#3F7CC4>TEAM FFA RULES</color></b></size>\n\n" +
+                "Eliminate the <color=#C94A4A><b>enemy teams</b></color>.\n" +
+                "<color=#3E9B63><b>Last team alive wins.</b></color>");
+
+            CreateRulesModdedTemplate("RulesInfoKillRaceModded",
+                "<size=120%><b><color=#C94A4A>KILL RACE RULES</color></b></size>\n\n" +
+                "Follow the rules configured by the host.");
+
+            CreateRulesModdedTemplate("RulesInfoAssassinModded",
+                "<size=120%><b><color=#8A5CC2>ASSASSIN RULES</color></b></size>\n\n" +
+                "Follow the rules configured by the host.");
+
+            CreateRulesModdedTemplate("RulesInfoHotPotatoModded",
+                "<size=120%><b><color=#C56A32>HOT POTATO RULES</color></b></size>\n\n" +
+                "Pass the potato before the <color=#C94A4A><b>timer expires</b></color>.");
+
+            CreateRulesModdedTemplate("RulesInfoZombieModeModded",
+                "<size=120%><b><color=#3E9B63>ZOMBIE MODE RULES</color></b></size>\n\n" +
+                "<color=#3E9B63><b>Infected</b></color> players must infect the remaining crew.");
+
+            CreateRulesModdedTemplate("RulesInfoRoomRushModded",
+                "<size=120%><b><color=#A88420>ROOMRUSH RULES</color></b></size>\n\n" +
+                "Reach the indicated room before the <color=#C94A4A><b>timer expires</b></color>.");
+
+            CreateRulesModdedTemplate("RulesInfoDeathRunModded",
+                "<size=120%><b><color=#C56A32>DEATHRUN RULES</color></b></size>\n\n" +
+                "Complete the indicated room route before the <color=#C94A4A><b>timer expires</b></color>.");
+
+            CreateRulesModdedTemplate("RulesInfoTargetRushModded",
+                "<size=120%><b><color=#2F8FA3>TARGETRUSH RULES</color></b></size>\n\n" +
+                "Reach your <color=#3F7CC4><b>personal target room</b></color> before the timer expires.");
 
         }
 
-        private static void CreateTemplate(string name, string content)
+        private static void CreateWelcomeTemplate(string name, string content)
         {
-            string path = Path.Combine(TemplatesFolder, name + ".txt");
+            string path = Path.Combine(TemplatesWelcomeFolder, name + ".txt");
+
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, content);
+            }
+        }
+        private static void CreateWelcomeModdedTemplate(string name, string content)
+        {
+            string path = Path.Combine(TemplatesWelcomeModdedFolder, name + ".txt");
+
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, content);
+            }
+        }
+        private static void CreateRulesTemplate(string name, string content)
+        {
+            string path = Path.Combine(TemplatesRulesFolder, name + ".txt");
+
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, content);
+            }
+        }
+        private static void CreateRulesModdedTemplate(string name, string content)
+        {
+            string path = Path.Combine(TemplatesRulesModdedFolder, name + ".txt");
 
             if (!File.Exists(path))
             {
@@ -1964,13 +2549,66 @@ public static class Utils
             }
         }
 
-        public static string LoadTemplate(string templateName)
+        public static string LoadWelcomeTemplate(string templateName)
         {
-            string filePath = Path.Combine(TemplatesFolder, templateName + ".txt");
+            string filePath = Path.Combine(TemplatesWelcomeFolder, templateName + ".txt");
 
             if (!File.Exists(filePath))
             {
-                return $"<color=red>Missing template: {templateName}</color>";
+                InitTemplates();
+
+                if (!File.Exists(filePath))
+                {
+                    return $"Missing template: {templateName}";
+                }
+            }
+
+            return File.ReadAllText(filePath).Replace("\\n", "\n");
+        }
+        public static string LoadWelcomeModdedTemplate(string templateName)
+        {
+            string filePath = Path.Combine(TemplatesWelcomeModdedFolder, templateName + ".txt");
+
+            if (!File.Exists(filePath))
+            {
+                InitTemplates();
+
+                if (!File.Exists(filePath))
+                {
+                    return $"Missing template: {templateName}";
+                }
+            }
+
+            return File.ReadAllText(filePath).Replace("\\n", "\n");
+        }
+        public static string LoadRulesTemplate(string templateName)
+        {
+            string filePath = Path.Combine(TemplatesRulesFolder, templateName + ".txt");
+
+            if (!File.Exists(filePath))
+            {
+                InitTemplates();
+
+                if (!File.Exists(filePath))
+                {
+                    return $"Missing template: {templateName}";
+                }
+            }
+
+            return File.ReadAllText(filePath).Replace("\\n", "\n");
+        }
+        public static string LoadRulesModdedTemplate(string templateName)
+        {
+            string filePath = Path.Combine(TemplatesRulesModdedFolder, templateName + ".txt");
+
+            if (!File.Exists(filePath))
+            {
+                InitTemplates();
+
+                if (!File.Exists(filePath))
+                {
+                    return $"Missing template: {templateName}";
+                }
             }
 
             return File.ReadAllText(filePath).Replace("\\n", "\n");
@@ -1985,15 +2623,44 @@ public static class Utils
                 .Replace("{level}", level.ToString());
         }
 
-        public static string FormatTemplate(string templateName, string playerName)
+        public static string FormatWelcomeTemplate(string templateName, string playerName)
         {
-            string template = LoadTemplate(templateName);
+            string template = LoadWelcomeTemplate(templateName);
             return ApplyPlaceholders(template, playerName);
         }
-
-        public static string FormatTemplate(string templateName)
+        public static string FormatWelcomeModdedTemplate(string templateName, string playerName)
         {
-            string template = LoadTemplate(templateName);
+            string template = LoadWelcomeModdedTemplate(templateName);
+            return ApplyPlaceholders(template, playerName);
+        }
+        public static string FormatRulesTemplate(string templateName, string playerName)
+        {
+            string template = LoadRulesTemplate(templateName);
+            return ApplyPlaceholders(template, playerName);
+        }
+        public static string FormatRulesModdedTemplate(string templateName, string playerName)
+        {
+            string template = LoadRulesModdedTemplate(templateName);
+            return ApplyPlaceholders(template, playerName);
+        }
+        public static string FormatWelcomeTemplate(string templateName)
+        {
+            string template = LoadWelcomeTemplate(templateName);
+            return ApplyPlaceholders(template);
+        }
+        public static string FormatWelcomeModdedTemplate(string templateName)
+        {
+            string template = LoadWelcomeModdedTemplate(templateName);
+            return ApplyPlaceholders(template);
+        }
+        public static string FormatRulesTemplate(string templateName)
+        {
+            string template = LoadRulesTemplate(templateName);
+            return ApplyPlaceholders(template);
+        }
+        public static string FormatRulesModdedTemplate(string templateName)
+        {
+            string template = LoadRulesModdedTemplate(templateName);
             return ApplyPlaceholders(template);
         }
     }
@@ -2553,7 +3220,7 @@ public static class Utils
             if (PlayerControl.LocalPlayer == null || PlayerControl.LocalPlayer.Data == null)
                 return;
 
-            if (message.Length > 120)
+            if (message.Length > 120 && BanModServerSelection.IsVanilla)
             {
                 try
                 {
@@ -2649,7 +3316,7 @@ public static class Utils
                 return;
             }
 
-            if (msg.Length > 120)
+            if (msg.Length > 120 && BanModServerSelection.IsVanilla)
             {
                 queue.Dequeue();
                 return;
@@ -2743,7 +3410,7 @@ public static class Utils
             if (string.IsNullOrWhiteSpace(message))
                 return;
 
-            if (message.Length > 120)
+            if (message.Length > 120 && BanModServerSelection.IsVanilla)
                 message = message.Substring(0, 120);
 
             bool sendToAll = target == byte.MaxValue || target == 255;
@@ -2809,7 +3476,7 @@ public static class Utils
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        if (text.Length > 120)
+        if (text.Length > 120 && BanModServerSelection.IsVanilla)
         {
             NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
                 HudManager.Instance.Notifier,
@@ -2850,12 +3517,19 @@ public static class Utils
 
     public static class MessageBlocker
     {
-        public static float lastMessageTime = -3.15f;
-        public static float timeToWait = 3.15f;
+        public static float lastMessageTime = BanModServerSelection.IsVanilla ? -1.5f : 0f;
+        public static float timeToWait = BanModServerSelection.IsVanilla ? 1.5f : 0f;
 
         public static bool CanSendMessage()
         {
-            return Time.time - lastMessageTime >= timeToWait;
+            if (BanModServerSelection.IsVanilla)
+            {
+                return Time.time - lastMessageTime >= timeToWait;
+            }
+            else
+            {
+                return true;
+            }
         }
 
         public static void UpdateLastMessageTime()
@@ -2900,7 +3574,7 @@ public static class Utils
                         continue;
                     }
 
-                    if (msg.text.Length > 120)
+                    if (msg.text.Length > 120 && BanModServerSelection.IsVanilla)
                     {
                         pendingMessages.Dequeue();
                         continue;
@@ -2945,7 +3619,7 @@ public static class Utils
             if (string.IsNullOrWhiteSpace(text))
                 return;
 
-            if (text.Length > 120)
+            if (text.Length > 120 && BanModServerSelection.IsVanilla)
                 return;
 
             lock (queueLock)
@@ -3110,6 +3784,13 @@ public static class Utils
         if (player.Data == null) return false;
         if (player.Data.Role == null) return false;
         return player.Data.RoleType == RoleTypes.Detective;
+    }
+    public static bool SpiritGuide(PlayerControl player)
+    {
+        if (player == null) return false;
+        if (player.Data == null) return false;
+        if (player.Data.Role == null) return false;
+        return player.Data.RoleType == RoleTypes.SpiritGuide;
     }
     public static bool Noisemaker(PlayerControl player)
     {
@@ -3356,7 +4037,6 @@ public static class Utils
     {
         return AllowedManager.IsModerator(friendCode);
     }
-    private static string TryRemove(this string text) => text.Length >= 1200 ? text.Remove(0, 1200) : string.Empty;
     public class PlayerState(byte playerId)
     {
         public readonly byte PlayerId = playerId;
@@ -3643,7 +4323,7 @@ public static class Utils
 
         string msg = GetString("EngineerMessage");
 
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(msg, engineerId); 
             MessageBlocker.UpdateLastMessageTime();
@@ -3666,7 +4346,7 @@ public static class Utils
         byte ShapeshifterId = ShapeshifterPlayer.PlayerId;
 
         string msg = string.Format(GetString("ShapeshifterMessage"));
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(msg, ShapeshifterId);
             MessageBlocker.UpdateLastMessageTime();
@@ -3688,7 +4368,7 @@ public static class Utils
 
         byte PhantomId = PhantomPlayer.PlayerId;
         string msg = string.Format(GetString("PhantomMessage"));
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(msg, PhantomId);
             MessageBlocker.UpdateLastMessageTime();
@@ -3710,7 +4390,7 @@ public static class Utils
 
         byte PhantomId = PhantomPlayer.PlayerId;
         string msg = string.Format(GetString("PhantomNBMessage"));
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(msg, PhantomId);
             MessageBlocker.UpdateLastMessageTime();
@@ -3821,6 +4501,10 @@ public static class MatchSummary1
 
     public static bool GameTimerWasEnabled = false;
     public static bool GameEndedByTimer = false;
+
+    public static GameTimeLimit.TimerWinner GameTimerWinner =
+        GameTimeLimit.TimerWinner.None;
+
     public static bool GameTimerPausedDuringMeetings = false;
 
     public static float GameTimerTotal = 0f;
@@ -3832,7 +4516,8 @@ public static class MatchSummary1
         new List<string>();
 
     private static readonly List<string>
-        LastSavedSummaryMessages = new List<string>();
+        LastSavedSummaryMessages =
+            new List<string>();
 
     public static string ImpostorName = "";
     public static string TaskWinnerName = "";
@@ -3866,16 +4551,24 @@ public static class MatchSummary1
 
     public static string GetMatchTime()
     {
-        float totalTime = MatchTimerRunning
-            ? UnityEngine.Time.realtimeSinceStartup -
-              MatchStartTime
-            : MatchEndTime - MatchStartTime;
+        float totalTime =
+            MatchTimerRunning
+                ? UnityEngine.Time.realtimeSinceStartup -
+                  MatchStartTime
+                : MatchEndTime -
+                  MatchStartTime;
 
         totalTime =
-            UnityEngine.Mathf.Max(0f, totalTime);
+            UnityEngine.Mathf.Max(
+                0f,
+                totalTime
+            );
 
-        int minutes = (int)(totalTime / 60f);
-        int seconds = (int)(totalTime % 60f);
+        int minutes =
+            (int)(totalTime / 60f);
+
+        int seconds =
+            (int)(totalTime % 60f);
 
         return $"{minutes:D2}:{seconds:D2}";
     }
@@ -3884,6 +4577,7 @@ public static class MatchSummary1
     {
         ZombieWin = false;
         ZombieCrewmateWin = false;
+
         HotPotatoWin = false;
         HotPotatoWinnerName = "";
 
@@ -3904,13 +4598,16 @@ public static class MatchSummary1
 
         GameTimerWasEnabled = false;
         GameEndedByTimer = false;
+
+        GameTimerWinner =
+            GameTimeLimit.TimerWinner.None;
+
         GameTimerPausedDuringMeetings = false;
 
         GameTimerTotal = 0f;
         GameTimerElapsed = 0f;
         GameTimerRemaining = 0f;
         GameTimerMeetingTime = 0f;
-
     }
 
     public static void CaptureGameTimer()
@@ -3927,8 +4624,16 @@ public static class MatchSummary1
             GameEndedByTimer ||
             GameTimeLimit.EndedByTimer;
 
+        if (GameTimeLimit.WinnerByTimer !=
+            GameTimeLimit.TimerWinner.None)
+        {
+            GameTimerWinner =
+                GameTimeLimit.WinnerByTimer;
+        }
+
         GameTimerPausedDuringMeetings =
-            Options.PauseGameTimerDuringMeetings
+            Options
+                .PauseGameTimerDuringMeetings
                 .GetBool();
 
         GameTimerTotal =
@@ -3955,31 +4660,60 @@ public static class MatchSummary1
         {
             report.AppendLine(
                 string.Format(
-                    GetString("ImmortalPlayerReport"),
+                    GetString(
+                        "ImmortalPlayerReport"
+                    ),
                     ImmortalManager
                         .LastImmortalPlayerName
                 )
             );
         }
-        if (HotPotatoWin && (Options.GameMode.Selected == GameModeType.HotPotato))
-        {
-            report.AppendLine(
-                "Hot Potato");
 
+        
+        if (Options.GameMode.Selected ==
+            GameModeType.RoomRush)
+        {
             report.AppendLine(
                 $"{GetString("WinnerIs")}: " +
-                HotPotatoWinnerName);
+                RoomRush.WinnerName
+                );
         }
-        else if (ZombieWin && (Options.GameMode.Selected == GameModeType.ZombieMode))
+        else if (Options.GameMode.Selected ==
+            GameModeType.TargetRush)
         {
             report.AppendLine(
-                GetString("ZombieWins"));
+                $"{GetString("WinnerIs")}: " +
+                TargetRush.WinnerName
+                );
+        }
+        else if (Options.GameMode.Selected ==
+            GameModeType.DeathRun)
+        {
+            report.AppendLine(
+                $"{GetString("WinnerIs")}: " +
+                DeathRun.WinnerName
+                );
+        }
+        else if (
+            ZombieWin &&
+            Options.GameMode.Selected ==
+            GameModeType.ZombieMode)
+        {
+            report.AppendLine(
+                GetString("ZombieWins")
+            );
+
             AppendTaskProgress(report);
         }
-        else if (ZombieCrewmateWin && (Options.GameMode.Selected == GameModeType.ZombieMode))
+        else if (
+            ZombieCrewmateWin &&
+            Options.GameMode.Selected ==
+            GameModeType.ZombieMode)
         {
             report.AppendLine(
-                GetString("CrewmateWins"));
+                GetString("CrewmateWins")
+            );
+
             AppendTaskProgress(report);
         }
         else if (TaskWin)
@@ -4028,16 +4762,24 @@ public static class MatchSummary1
         }
         else if (ImpostorWin)
         {
-            if (GameEndedByTimer)
+            if (GameEndedByTimer &&
+                GameTimerWinner ==
+                GameTimeLimit
+                    .TimerWinner
+                    .Impostors)
             {
                 report.AppendLine(
-                    GetString("ImpostorWinsTimer")
+                    GetString(
+                        "ImpostorWinsTimer"
+                    )
                 );
             }
             else
             {
                 report.AppendLine(
-                    GetString("ImpostorWins")
+                    GetString(
+                        "ImpostorWins"
+                    )
                 );
             }
 
@@ -4047,7 +4789,9 @@ public static class MatchSummary1
         else if (CrewmateWin)
         {
             report.AppendLine(
-                GetString("CrewmateWins")
+                GetString(
+                    "CrewmateWins"
+                )
             );
 
             AppendImpostors(report);
@@ -4063,12 +4807,15 @@ public static class MatchSummary1
         System.Text.StringBuilder report)
     {
         var impostors =
-            ImpostorTracker.GetImpostors();
+            ImpostorTracker
+                .GetImpostors();
 
         if (impostors.Count == 0)
         {
             report.AppendLine(
-                GetString("NoImpostorsPresent")
+                GetString(
+                    "NoImpostorsPresent"
+                )
             );
 
             return;
@@ -4120,7 +4867,8 @@ public static class MatchSummary1
 
         if (!GameTimerPausedDuringMeetings)
         {
-            return $"Game Time: {gameTime}";
+            return
+                $"Game Time: {gameTime}";
         }
 
         string configuredTimer =
@@ -4154,50 +4902,75 @@ public static class MatchSummary1
             $"Meeting Time: {meetingTime}\n" +
             $"Total Match Time: {totalMatchTime}";
     }
+
     private static List<string> SplitMessage(
-    string message,
-    int maxLength = 120)
+        string message,
+        int maxLength = 120)
     {
-        var result = new List<string>();
+        var result =
+            new List<string>();
 
-        if (string.IsNullOrWhiteSpace(message))
-            return result;
-
-        string normalized = message
-            .Replace("\r\n", "\n")
-            .Replace("\r", "\n")
-            .Trim();
-
-        string[] lines = normalized.Split('\n');
-
-        var current = new System.Text.StringBuilder();
-
-        foreach (string rawLine in lines)
+        if (string.IsNullOrWhiteSpace(
+                message))
         {
-            string line = rawLine.TrimEnd();
+            return result;
+        }
 
-            // Se una singola riga supera 120 caratteri,
-            // dobbiamo dividerla forzatamente.
-            if (line.Length > maxLength)
+        string normalized =
+            message
+                .Replace(
+                    "\r\n",
+                    "\n"
+                )
+                .Replace(
+                    "\r",
+                    "\n"
+                )
+                .Trim();
+
+        string[] lines =
+            normalized.Split('\n');
+
+        var current =
+            new System.Text
+                .StringBuilder();
+
+        foreach (
+            string rawLine in lines)
+        {
+            string line =
+                rawLine.TrimEnd();
+
+            if (line.Length >
+                maxLength)
             {
                 if (current.Length > 0)
                 {
-                    result.Add(current.ToString());
+                    result.Add(
+                        current.ToString()
+                    );
+
                     current.Clear();
                 }
 
                 int index = 0;
 
-                while (index < line.Length)
+                while (
+                    index <
+                    line.Length)
                 {
                     int length =
                         System.Math.Min(
                             maxLength,
-                            line.Length - index
+                            line.Length -
+                            index
                         );
 
                     result.Add(
-                        line.Substring(index, length)
+                        line.Substring(
+                            index,
+                            length
+                        )
                     );
 
                     index += length;
@@ -4208,71 +4981,47 @@ public static class MatchSummary1
 
             int additionalLength =
                 line.Length +
-                (current.Length > 0 ? 1 : 0);
+                (
+                    current.Length > 0
+                        ? 1
+                        : 0
+                );
 
-            if (current.Length + additionalLength >
+            if (
+                current.Length +
+                additionalLength >
                 maxLength)
             {
                 if (current.Length > 0)
                 {
-                    result.Add(current.ToString());
+                    result.Add(
+                        current.ToString()
+                    );
+
                     current.Clear();
                 }
             }
 
             if (current.Length > 0)
+            {
                 current.Append('\n');
+            }
 
             current.Append(line);
         }
 
         if (current.Length > 0)
-            result.Add(current.ToString());
+        {
+            result.Add(
+                current.ToString()
+            );
+        }
 
         return result;
     }
-    //public static List<string> GetSummaryMessages()
-    //{
-    //    CaptureGameTimer();
 
-    //    string resultMessage =
-    //        BuildBaseSummaryReport();
-
-    //    if (!GameTimerWasEnabled)
-    //    {
-    //        string matchTime =
-    //            ToFullWidthNumbers(
-    //                GetMatchTime()
-    //            );
-
-    //        return new List<string>
-    //        {
-    //            $"{resultMessage}\n" +
-    //            $"Match Time: {matchTime}"
-    //        };
-    //    }
-
-    //    string timerMessage =
-    //        BuildTimerMessage();
-
-    //    string completeMessage =
-    //        $"{resultMessage}\n{timerMessage}";
-
-    //    if (completeMessage.Length <= 120)
-    //    {
-    //        return new List<string>
-    //        {
-    //            completeMessage
-    //        };
-    //    }
-
-    //    return new List<string>
-    //    {
-    //        resultMessage,
-    //        timerMessage
-    //    };
-    //}
-    public static List<string> GetSummaryMessages()
+    public static List<string>
+        GetSummaryMessages()
     {
         CaptureGameTimer();
 
@@ -4307,6 +5056,7 @@ public static class MatchSummary1
             120
         );
     }
+
     public static string GetSummaryReport()
     {
         return string.Join(
@@ -4320,15 +5070,26 @@ public static class MatchSummary1
         List<string> messages =
             GetSummaryMessages();
 
-        LastSavedSummaryMessages.Clear();
+        LastSavedSummaryMessages
+            .Clear();
 
-        foreach (string message in messages)
+        foreach (
+            string message in messages)
         {
-            if (string.IsNullOrWhiteSpace(message))
+            if (string.IsNullOrWhiteSpace(
+                    message))
+            {
                 continue;
+            }
 
-            ReportHistory.Add(message);
-            LastSavedSummaryMessages.Add(message);
+            ReportHistory.Add(
+                message
+            );
+
+            LastSavedSummaryMessages
+                .Add(
+                    message
+                );
         }
     }
 
@@ -4340,7 +5101,8 @@ public static class MatchSummary1
         );
     }
 
-    public static List<string> GetLastSavedReports()
+    public static List<string>
+        GetLastSavedReports()
     {
         return new List<string>(
             LastSavedSummaryMessages
@@ -4368,7 +5130,7 @@ public static class TaskTracker
         if (player.Data.Role?.TeamType == RoleTeamTypes.Impostor)
             return;
         if (gameMode == GameModeType.FFA) return;
-        if (gameMode == GameModeType.HotPotato) return;
+        if (gameMode == GameModeType.HotPotatoModded) return;
         int total = player.Data.Tasks.Count; 
         int done = 0;
         foreach (var task in player.Data.Tasks)
@@ -4790,23 +5552,34 @@ public static class BMImage
 
         return null;
     }
+    
     public static class PrivateNameUtility
     {
+        public enum NameVisibility
+        {
+            Private,
+            Everyone
+        }
+
         private static readonly Dictionary<byte, Coroutine> ActiveTimers = new();
 
-        public static void SetText(PlayerControl player, string text)
+        public static void SetText(
+            PlayerControl player,
+            string text,
+            NameVisibility visibility = NameVisibility.Private)
         {
             if (!IsValid(player))
                 return;
 
             StopTimer(player, false);
-            SendPrivateName(player, text);
+            SendName(player, text, visibility);
         }
 
         public static void StartTimer(
             PlayerControl player,
             int seconds,
-            string format = "{0}s")
+            string format = "{0}s",
+            NameVisibility visibility = NameVisibility.Private)
         {
             if (!IsValid(player))
                 return;
@@ -4817,7 +5590,12 @@ public static class BMImage
             StopTimer(player, false);
 
             Coroutine coroutine = player.StartCoroutine(
-                TimerCoroutine(player, seconds, format)
+                TimerCoroutine(
+                    player,
+                    seconds,
+                    format,
+                    visibility
+                )
             );
 
             ActiveTimers[player.PlayerId] = coroutine;
@@ -4825,12 +5603,15 @@ public static class BMImage
 
         public static void StopTimer(
             PlayerControl player,
-            bool restoreName = true)
+            bool restoreName = true,
+            NameVisibility visibility = NameVisibility.Private)
         {
             if (player == null)
                 return;
 
-            if (ActiveTimers.TryGetValue(player.PlayerId, out Coroutine coroutine))
+            if (ActiveTimers.TryGetValue(
+                player.PlayerId,
+                out Coroutine coroutine))
             {
                 if (coroutine != null)
                     player.StopCoroutine(coroutine);
@@ -4839,22 +5620,36 @@ public static class BMImage
             }
 
             if (restoreName && IsValid(player))
-                SendPrivateName(player, player.Data.PlayerName);
+            {
+                SendName(
+                    player,
+                    player.Data.PlayerName,
+                    visibility
+                );
+            }
         }
 
-        public static void Reset(PlayerControl player)
+        public static void Reset(
+            PlayerControl player,
+            NameVisibility visibility = NameVisibility.Private)
         {
             if (!IsValid(player))
                 return;
 
             StopTimer(player, false);
-            SendPrivateName(player, player.Data.PlayerName);
+
+            SendName(
+                player,
+                player.Data.PlayerName,
+                visibility
+            );
         }
 
         private static IEnumerator TimerCoroutine(
             PlayerControl player,
             int seconds,
-            string format)
+            string format,
+            NameVisibility visibility)
         {
             for (int remaining = seconds; remaining >= 0; remaining--)
             {
@@ -4872,7 +5667,11 @@ public static class BMImage
                     text = remaining.ToString();
                 }
 
-                SendPrivateName(player, text);
+                SendName(
+                    player,
+                    text,
+                    visibility
+                );
 
                 if (remaining > 0)
                     yield return new WaitForSecondsRealtime(1f);
@@ -4882,19 +5681,36 @@ public static class BMImage
                 ActiveTimers.Remove(player.PlayerId);
         }
 
-        private static void SendPrivateName(
+        private static void SendName(
             PlayerControl player,
-            string text)
+            string text,
+            NameVisibility visibility)
         {
             if (!IsValid(player))
                 return;
 
             AmongUsClient client = AmongUsClient.Instance;
 
-            int targetClientId = client.GetClientIdFromCharacter(player);
+            int targetClientId;
 
-            if (targetClientId < 0)
-                return;
+            switch (visibility)
+            {
+                case NameVisibility.Private:
+                    targetClientId =
+                        client.GetClientIdFromCharacter(player);
+
+                    if (targetClientId < 0)
+                        return;
+
+                    break;
+
+                case NameVisibility.Everyone:
+                    targetClientId = -1;
+                    break;
+
+                default:
+                    return;
+            }
 
             MessageWriter writer = client.StartRpcImmediately(
                 player.NetId,
@@ -4914,11 +5730,175 @@ public static class BMImage
         {
             return player != null
                 && player.Data != null
-                && AmongUsClient.Instance != null;
+                && AmongUsClient.Instance != null
+                && AmongUsClient.Instance.AmHost;
         }
-        //PrivateNameUtility.SetText(player, "testo");
-        //PrivateNameUtility.StartTimer(player, 30, "Timer: {0}s");
-        //PrivateNameUtility.StopTimer(player);
-        //PrivateNameUtility.Reset(player);
+    }
+    public static class HostGameTools
+    {
+        public const float FreezeSyncInterval = 0.08f;
+
+        private sealed class FrozenPlayer
+        {
+            public Vector2 Position;
+            public float NextSync;
+
+            public FrozenPlayer(Vector2 position)
+            {
+                Position = position;
+                NextSync = 0f;
+            }
+        }
+
+        private static readonly Dictionary<byte, FrozenPlayer> FrozenPlayers = new();
+
+        public static bool IsHost =>
+            AmongUsClient.Instance != null &&
+            AmongUsClient.Instance.AmHost;
+
+        private static bool IsValid(PlayerControl player)
+        {
+            return IsHost &&
+                   player != null &&
+                   player.Data != null &&
+                   !player.Data.Disconnected;
+        }
+
+        public static bool FreezePlayer(PlayerControl player)
+        {
+            if (!IsValid(player))
+                return false;
+
+            byte id = player.PlayerId;
+
+            Vector2 position = player.GetTruePosition();
+
+            if (FrozenPlayers.TryGetValue(id, out FrozenPlayer frozen))
+            {
+                frozen.Position = position;
+                frozen.NextSync = 0f;
+
+                return true;
+            }
+
+            FrozenPlayers[id] = new FrozenPlayer(position);
+
+            return true;
+        }
+
+        public static bool UnfreezePlayer(PlayerControl player)
+        {
+            if (player == null)
+                return false;
+
+            return FrozenPlayers.Remove(player.PlayerId);
+        }
+
+        public static bool IsFrozen(PlayerControl player)
+        {
+            if (player == null)
+                return false;
+
+            return FrozenPlayers.ContainsKey(
+                player.PlayerId
+            );
+        }
+
+        public static void UpdateFrozenPlayers()
+        {
+            if (!IsHost)
+                return;
+
+            if (FrozenPlayers.Count == 0)
+                return;
+
+            float now = Time.time;
+
+            List<byte> invalidPlayers = null;
+
+            foreach (
+                KeyValuePair<byte, FrozenPlayer> pair
+                in FrozenPlayers
+            )
+            {
+                byte playerId = pair.Key;
+                FrozenPlayer frozen = pair.Value;
+
+                PlayerControl player =
+                    FindPlayerById(playerId);
+
+                if (!IsValid(player))
+                {
+                    invalidPlayers ??= new List<byte>();
+                    invalidPlayers.Add(playerId);
+
+                    continue;
+                }
+
+                if (now < frozen.NextSync)
+                    continue;
+
+                frozen.NextSync =
+                    now + FreezeSyncInterval;
+
+                if (player.NetTransform != null)
+                {
+                    player.NetTransform.RpcSnapTo(
+                        frozen.Position
+                    );
+                }
+            }
+
+            if (invalidPlayers != null)
+            {
+                foreach (byte id in invalidPlayers)
+                    FrozenPlayers.Remove(id);
+            }
+        }
+        public static PlayerControl FindPlayerById(
+            byte playerId)
+        {
+            foreach (
+                PlayerControl player
+                in PlayerControl.AllPlayerControls
+            )
+            {
+                if (player == null)
+                    continue;
+
+                if (player.PlayerId == playerId)
+                    return player;
+            }
+
+            return null;
+        }
+    }
+
+    public sealed class HostGameToolsBehaviour : MonoBehaviour
+    {
+        public static HostGameToolsBehaviour Instance
+        {
+            get;
+            private set;
+        }
+
+        private void Awake()
+        {
+            if (Instance != null &&
+                Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+
+            DontDestroyOnLoad(gameObject);
+        }
+
+        private void Update()
+        {
+            HostGameTools.UpdateFrozenPlayers();
+        }
     }
 }

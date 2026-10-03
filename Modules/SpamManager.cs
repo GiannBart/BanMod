@@ -21,8 +21,8 @@ namespace BanMod
 {
     public static class SpamManager
     {
-        private static readonly string SPAMSTART_FILE_PATH = "./BAN_DATA/DENIED/SpamStart.txt";
-        private static readonly string BANEDWORDS_FILE_PATH = "./BAN_DATA/DENIED/BanWords.txt";
+        private static readonly string SPAMSTART_FILE_PATH = "./DATA/DENIED/SpamStart.txt";
+        private static readonly string BANEDWORDS_FILE_PATH = "./DATA/DENIED/BanWords.txt";
 
         internal static string msg1;
         internal static string msg2;
@@ -39,7 +39,7 @@ namespace BanMod
 
         private static void CreateIfNotExists()
         {
-            Directory.CreateDirectory("BAN_DATA/DENIED");
+            Directory.CreateDirectory("DATA/DENIED");
 
             if (!File.Exists(SPAMSTART_FILE_PATH))
             {
@@ -126,32 +126,7 @@ namespace BanMod
 
             return $@"(?<![\p{{L}}\p{{N}}]){flexible}(?![\p{{L}}\p{{N}}])";
         }
-        //public static bool CheckWord(string text)
-        //{
-        //    try
-        //    {
-        //        if (string.IsNullOrWhiteSpace(text))
-        //            return false;
-
-        //        string lowerText = text.ToLowerInvariant();
-
-        //        foreach (var pattern in BanWords)
-        //        {
-        //            string lowerPattern = pattern.ToLowerInvariant().Trim();
-
-        //            string patternRegex = $@"\b{Regex.Escape(lowerPattern)}\b";
-        //            if (Regex.IsMatch(lowerText, patternRegex, RegexOptions.CultureInvariant))
-        //                return true;
-        //        }
-
-        //        return false;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        BMLogger.Exception(ex, "SpamManager");
-        //        return true;
-        //    }
-        //}
+        
         public static bool CheckWord(string text)
         {
             try
@@ -186,32 +161,7 @@ namespace BanMod
             }
         }
 
-        //public static bool CheckStart(string text)
-        //{
-        //    try
-        //    {
-        //        if (string.IsNullOrWhiteSpace(text))
-        //            return false;
-
-        //        string lowerText = text.ToLowerInvariant().Trim();
-
-        //        foreach (var pattern in SpamStart)
-        //        {
-        //            string lowerPattern = pattern.ToLowerInvariant().Trim();
-
-        //            string patternRegex = $@"\b{Regex.Escape(lowerPattern)}\b";
-        //            if (Regex.IsMatch(lowerText, patternRegex, RegexOptions.CultureInvariant))
-        //                return true;
-        //        }
-
-        //        return false;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        BMLogger.Exception(ex, "SpamManager");
-        //        return true;
-        //    }
-        //}
+       
         public static bool CheckStart(string text)
         {
             try
@@ -248,96 +198,135 @@ namespace BanMod
 
         public static bool CheckStart(PlayerControl player, string text)
         {
-            bool kick = false;
-            string playername = player.Data.PlayerName;
+            if (!Options.AutoKickStart.GetBool())
+                return false;
+
+            if (!AmongUsClient.Instance.AmHost || !GameStates.isLobby)
+                return false;
+
+            if (player == null || player.Data == null)
+                return false;
 
             if (player.PlayerId == PlayerControl.LocalPlayer.PlayerId ||
-                (BanMod.ExcludeFriends.Value && Utils.IsVip(player.FriendCode) ||
-                Utils.IsModerator(player.FriendCode)))
+                (BanMod.ExcludeFriends.Value && Utils.IsVip(player.FriendCode)) ||
+                Utils.IsModerator(player.FriendCode))
+            {
                 return false;
+            }
+
             if (!CheckStart(text))
                 return false;
-            if (!AmongUsClient.Instance.AmHost) return false;
-            if (Options.AutoKickStart.GetBool() && CheckStart(text) && GameStates.isLobby)
-            {
-                var clientId = player.GetClientId();
-                BanMod.SayStartTimes.TryAdd(clientId, 0);
-                BanMod.SayStartTimes[clientId]++;
 
-                NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, playername + GetString("SayStart"));
-                msg1 = GetString("SpamWarning") +
-                       $"{BanMod.SayStartTimes[clientId]} / {Options.AutoKickStartTimes.GetInt()})";
-                if (Options.SendAutoKickStartMsg.GetBool())
-                {
-                    Utils.SendMessage(msg1, player.PlayerId);
-                    MessageBlocker.UpdateLastMessageTime();
-                }
-                if (BanMod.SayStartTimes[clientId] > Options.AutoKickStartTimes.GetInt())
-                {
-                    NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, playername + GetString("KickSayStart"));
-                    kick = true;
-                }
-            }
-            int action = Options.AutoKickStartAction.GetValue();
-            var client = AmongUsClient.Instance.GetClient(player.GetClientId());
-            if (action == 1) 
+            string playername = player.Data.PlayerName;
+            var clientId = player.GetClientId();
+
+            BanMod.SayStartTimes.TryAdd(clientId, 0);
+            BanMod.SayStartTimes[clientId]++;
+
+            NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
+                HudManager.Instance.Notifier,
+                playername + GetString("SayStart")
+            );
+
+            msg1 = GetString("SpamWarning") +
+                   $"{BanMod.SayStartTimes[clientId]} / {Options.AutoKickStartTimes.GetInt()})";
+
+            if (Options.SendAutoKickStartMsg.GetBool())
             {
-                BanManager.AddBanPlayer(client, "CheckSpam");
+                Utils.SendMessage(msg1, player.PlayerId);
+                MessageBlocker.UpdateLastMessageTime();
             }
-            if (kick) AmongUsClient.Instance.KickPlayer(player.GetClientId(), action == 1);
+
+            if (BanMod.SayStartTimes[clientId] <= Options.AutoKickStartTimes.GetInt())
+                return true;
+
+            NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
+                HudManager.Instance.Notifier,
+                playername + GetString("KickSayStart")
+            );
+
+            int action = Options.AutoKickStartAction.GetValue();
+            bool shouldBan = action == 1;
+
+            if (shouldBan)
+            {
+                var client = AmongUsClient.Instance.GetClient(clientId);
+
+                if (client != null)
+                    BanManager.AddBanPlayer(client, "CheckSpam");
+            }
+
+            AmongUsClient.Instance.KickPlayer(clientId, shouldBan);
+
             return true;
         }
 
         public static bool CheckWord(PlayerControl player, string text)
         {
-            bool kick = false;
-            string playername = player.Data.PlayerName;
+            if (!Options.AutoKickStopWords.GetBool())
+                return false;
+
+            if (!AmongUsClient.Instance.AmHost)
+                return false;
+
+            if (player == null || player.Data == null)
+                return false;
 
             if (player.PlayerId == PlayerControl.LocalPlayer.PlayerId ||
-                (BanMod.ExcludeFriends.Value && Utils.IsVip(player.FriendCode) ||
-                Utils.IsModerator(player.FriendCode)))
+                (BanMod.ExcludeFriends.Value && Utils.IsVip(player.FriendCode)) ||
+                Utils.IsModerator(player.FriendCode))
+            {
                 return false;
+            }
+
             if (!CheckWord(text))
                 return false;
-            if (!AmongUsClient.Instance.AmHost) return false;
-            if (Options.AutoKickStopWords.GetBool() && CheckWord(text))
-            {
-                var clientId = player.GetClientId();
-                BanMod.SayBanwordsTimes.TryAdd(clientId, 0);
-                BanMod.SayBanwordsTimes[clientId]++;
 
-                NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, playername + GetString("SayBanWord"));
-                msg2 = GetString("WordWarning") +
-                       $"{BanMod.SayBanwordsTimes[clientId]} / {Options.AutoKickStopWordsTimes.GetInt()})";
-                if (Options.SendAutoKickStopWordsMsg.GetBool())
-                    if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
-                    {
-                        Utils.RequestProxyMessage(msg2, player.PlayerId);
-                        MessageBlocker.UpdateLastMessageTime();
-                    }
-                    else
-                    {
-                        Utils.SendMessage(msg2, player.PlayerId);
-                        MessageBlocker.UpdateLastMessageTime();
-                    }
-                if (BanMod.SayBanwordsTimes[clientId] > Options.AutoKickStopWordsTimes.GetInt())
-                {
-                    NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, playername + GetString("KickSayBanWord"));
-                    kick = true;
-                }
+            string playername = player.Data.PlayerName;
+            var clientId = player.GetClientId();
+
+            BanMod.SayBanwordsTimes.TryAdd(clientId, 0);
+            BanMod.SayBanwordsTimes[clientId]++;
+
+            NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
+                HudManager.Instance.Notifier,
+                playername + GetString("SayBanWord")
+            );
+
+            msg2 = GetString("WordWarning") +
+                   $"{BanMod.SayBanwordsTimes[clientId]} / {Options.AutoKickStopWordsTimes.GetInt()})";
+
+            if (Options.SendAutoKickStopWordsMsg.GetBool())
+            {
+                if (PlayerControl.LocalPlayer.Data.IsDead)
+                    Utils.RequestProxyMessage(msg2, player.PlayerId);
+                else
+                    Utils.SendMessage(msg2, player.PlayerId);
+
+                MessageBlocker.UpdateLastMessageTime();
             }
+
+            if (BanMod.SayBanwordsTimes[clientId] <= Options.AutoKickStopWordsTimes.GetInt())
+                return true;
+
+            NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
+                HudManager.Instance.Notifier,
+                playername + GetString("KickSayBanWord")
+            );
 
             int action = Options.AutoKickStopWordsAction.GetValue();
-            if (kick)
-            {
-                var client = AmongUsClient.Instance.GetClient(player.GetClientId());
-                if (action == 1) 
-                {
-                    BanManager.AddBanPlayer(client, "CheckWord");
-                }
+            bool shouldBan = action == 1;
 
-                AmongUsClient.Instance.KickPlayer(player.GetClientId(), action == 1);
+            if (shouldBan)
+            {
+                var client = AmongUsClient.Instance.GetClient(clientId);
+
+                if (client != null)
+                    BanManager.AddBanPlayer(client, "CheckWord");
             }
+
+            AmongUsClient.Instance.KickPlayer(clientId, shouldBan);
+
             return true;
         }
     }

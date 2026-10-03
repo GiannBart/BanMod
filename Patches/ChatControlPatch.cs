@@ -64,6 +64,7 @@ class ChatControllerUpdatePatch
         {
             DataManager.Settings.Multiplayer.ChatMode = InnerNet.QuickChatModes.FreeChatOrQuickChat;
         }
+
     }
 
     public static void Postfix(ChatController __instance)
@@ -73,11 +74,31 @@ class ChatControllerUpdatePatch
 
         Instance = __instance;
 
-        timelastmessage = __instance.timeSinceLastMessage > 3.15f;
+        if (BanModServerSelection.IsVanilla)
+        {
+            if (__instance.timeSinceLastMessage < 1.5f)
+            {
+                __instance.timeSinceLastMessage = 1.5f;
+            }
+        }
+        else if (BanModServerSelection.IsModded25)
+        {
+            {
+                __instance.timeSinceLastMessage = 3f;
+            }
+        }
 
-        if (__instance.freeChatField != null && __instance.freeChatField.textArea != null)
+        timelastmessage = __instance.timeSinceLastMessage >= (BanModServerSelection.IsVanilla ? 1.5f : 0f);
+        if (__instance.freeChatField != null && __instance.freeChatField.textArea != null && BanModServerSelection.IsVanilla)
         {
             __instance.freeChatField.textArea.characterLimit = 120;
+            __instance.freeChatField.textArea.AllowSymbols = true;
+            __instance.freeChatField.textArea.AllowEmail = true;
+            __instance.freeChatField.textArea.allowAllCharacters = true;
+        }
+        else
+        {
+            __instance.freeChatField.textArea.characterLimit = 1200;
             __instance.freeChatField.textArea.AllowSymbols = true;
             __instance.freeChatField.textArea.AllowEmail = true;
             __instance.freeChatField.textArea.allowAllCharacters = true;
@@ -327,7 +348,7 @@ class ChatSendPatch
         if (isModdedChat)
             return true;
 
-        if (!string.IsNullOrEmpty(freeMessage) && freeMessage.Length > 120)
+        if (!string.IsNullOrEmpty(freeMessage) && freeMessage.Length > 120 && BanModServerSelection.IsVanilla)
         {
             NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
                 HudManager.Instance.Notifier,
@@ -339,7 +360,7 @@ class ChatSendPatch
         if (!quickChatReady && string.IsNullOrWhiteSpace(freeMessage))
             return false;
 
-        if (__instance.timeSinceLastMessage <= 3.15f)
+        if (__instance.timeSinceLastMessage <= 1.5f && BanModServerSelection.IsVanilla)
         {
             if (HudManager.Instance?.Notifier != null)
             {
@@ -384,12 +405,15 @@ internal class UpdateCharCountPatch
 
         __instance.charCountText.enableWordWrapping = false;
 
-        if (length < (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost ? 80 : 100))
-            __instance.charCountText.color = Color.cyan;
-        else if (length < (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost ? 101 : 120))
-            __instance.charCountText.color = new Color(1f, 1f, 0f, 1f);
-        else
-            __instance.charCountText.color = Color.red;
+        if (BanModServerSelection.IsVanilla)
+        {
+            if (length < (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost ? 80 : 100))
+                __instance.charCountText.color = Color.cyan;
+            else if (length < (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost ? 101 : 120))
+                __instance.charCountText.color = new Color(1f, 1f, 0f, 1f);
+            else
+                __instance.charCountText.color = Color.red;
+        }
     }
 }
 
@@ -406,6 +430,7 @@ public static class AllowPaste_TextBoxTMP_Start_Postfix
         __instance.AllowSymbols = true;
     }
 }
+
 public static class ChatCopyData
 {
     public static readonly Dictionary<ChatBubble, string> Messages =
@@ -423,6 +448,7 @@ public static class ChatBubblePatch
         ChatCopyData.Messages[__instance] = chatText;
     }
 }
+
 
 [HarmonyPatch(typeof(ChatController), "Update")]
 public static class ChatCopyPatch
@@ -497,5 +523,26 @@ public static class ChatCopyPatch
             return null;
 
         return nearestBubble;
+    }
+}
+[HarmonyPatch(typeof(TextBoxTMP), nameof(TextBoxTMP.IsCharAllowed))]
+public static class TextBoxTMP_IsCharAllowed_Patch
+{
+    public static bool Prefix(char __0, ref bool __result)
+    {
+        if (!BanModServerSelection.IsVanilla)
+            return true;
+
+        if (__0 == '<' || __0 == '>' || __0 == '[' || __0 == ']')
+        {
+            __result = false;
+            return false;
+        }
+
+        if (char.IsControl(__0))
+            return true;
+
+        __result = true;
+        return false;
     }
 }

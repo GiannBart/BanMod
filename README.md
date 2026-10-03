@@ -99,7 +99,7 @@ Among Us updates may break compatibility. Always check the latest release before
 
 ### Updating and uninstalling
 
-When instructed by the release notes, back up the `BAN_DATA` folder. Remove obsolete or duplicate BanMod DLLs from `BepInEx/plugins` and do not mix files from different releases.
+When instructed by the release notes, back up the `DATA` folder. Remove obsolete or duplicate BanMod DLLs from `BepInEx/plugins` and do not mix files from different releases.
 
 To uninstall, first save any presets or configuration files you want to keep, then use your platform's file verification:
 

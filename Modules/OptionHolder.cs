@@ -197,7 +197,6 @@ namespace BanMod
         public static OptionItem AllowColorChangeAll;
         public static OptionItem AllowColorChangeModerator;
         public static OptionItem DisableRole;
-        public static OptionItem extendlobby;
         public static OptionItem DisableMeetingsAndReports;
         public static OptionItem TrackImpostorTeammate;
         public static OptionItem revealVotes;
@@ -355,7 +354,6 @@ namespace BanMod
         public static OptionItem sendtoAll;
         public static OptionItem BlockSwitches;
         public static OptionItem Enablesabotage;
-        //public static OptionItem Veryshort;
         public static OptionItem DisableAllSabotages;
         public static OptionItem DisableReactorSabotage;
         public static OptionItem DisableCommsSabotage;
@@ -393,7 +391,6 @@ namespace BanMod
         public static IntegerOptionItem NumSeekers;
         public static IntegerOptionItem DecontaminationTime;
         public static OptionItem MoreImp;
-        public static bool MoreSeek = true;
         public static IntegerOptionItem NumImpostor;
         public static IntegerOptionItem SabotageCooldown;
         public static IntegerOptionItem FfaVentMaxSeconds;
@@ -408,11 +405,16 @@ namespace BanMod
         public static OptionItem Profiler;
         public static StringOptionItem ProfilerHintMode;
         public static StringOptionItem ProtectFirstPlayer;
-        public static StringOptionItem FfaTeamMode;
+        public static StringOptionItem FfaKillerRole;
+        public static StringOptionItem FfaTeamKillerRole;
+        public static StringOptionItem KillRaceKillerRole;
+        public static StringOptionItem HotPotatoKillerRole;
+        public static StringOptionItem AssassinKillerRole;
         public static StringOptionItem FfaTeamCount;
-        public static StringOptionItem FfaHotPotatoMode;
-        public static IntegerOptionItem FfaHotPotatoFirstDelaySeconds;
-        public static IntegerOptionItem FfaHotPotatoExplosionSeconds;
+        public static IntegerOptionItem HotPotatoModdedFirstDelaySeconds;
+        public static IntegerOptionItem HotPotatoModdedExplosionSeconds;
+        public static IntegerOptionItem KillRaceDurationSeconds;
+        public static IntegerOptionItem KillRaceRespawnSeconds;
         public static OptionItem RandomVentSpawn;
         public static OptionItem RandomVentSpawnffa;
         public static OptionItem NoVent;
@@ -424,9 +426,14 @@ namespace BanMod
         public static IntegerOptionItem HotPotatoExplosionSeconds;
         public static IntegerOptionItem HotPotatoFirstDelaySeconds;
         public static StringOptionItem LobbyGameMode;
+        public static OptionItem TagName;
+        public static OptionItem TagGameMod;
         public static bool IsLoaded = false;
         private static bool _reOpenSettingsScheduled = false;
+        private static bool syncingFirstSeeker = false;
+        public static OptionItem AutoMuteForDiscord;
         public static bool IsZombieMode => GameMode != null && GameMode.Selected == GameModeType.ZombieMode;
+
         public static readonly GameModeType[] GameModeOrder =
         {
             GameModeType.Default,
@@ -437,13 +444,52 @@ namespace BanMod
             GameModeType.SnS,
             GameModeType.PnS,
             GameModeType.ZombieMode,
-            GameModeType.HotPotato,
-            GameModeType.FFA
+            GameModeType.RoomRush,
+            GameModeType.TargetRush,
+            GameModeType.DeathRun,
+            GameModeType.FFA,
+            GameModeType.FFATeam,
+            GameModeType.HotPotatoModded,
+            GameModeType.Assassin,
+            GameModeType.KillRace
         };
+        public static readonly GameModeType[] VanillaGameModeOrder =
+        {
+            GameModeType.Default,
+            GameModeType.BanMod,
+            GameModeType.KaitoRun,
+            GameModeType.TaskRun,
+            GameModeType.JBMode,
+            GameModeType.SnS,
+            GameModeType.PnS,
+            GameModeType.ZombieMode,
+            GameModeType.FFA,
+            GameModeType.FFATeam
+        };
+        public static void UpdateGameModesForServer()
+        {
+            if (GameMode == null)
+                return;
+
+            GameModeType[] modes =
+                BanModServerSelection.IsModded25
+                    ? GameModeOrder
+                    : VanillaGameModeOrder;
+
+            GameMode.SetGameModes(
+                modes,
+                true
+            );
+
+            FfaExternalBridge.SyncGameMode();
+
+            if (GameStates.isLobby)
+                ReOpenSettings();
+        }
         public static void Load()
         {
             if (IsLoaded) return;
-            LobbyGameMode = (StringOptionItem)StringOptionItem.Create("Lobby Game Mode", new[] { "Classic", "Hide N Seek" }, 0, OptionCategory.Lobby, false, false).SetColor(new Color32(255, 80, 80, 255));
+            LobbyGameMode = (StringOptionItem)StringOptionItem.Create("LobbyGameMode", new[] { "Classic", "Hide N Seek" }, 0, OptionCategory.Lobby, false, false).SetColor(new Color32(255, 80, 80, 255));
             LobbyGameMode.RegisterUpdateValueEvent((sender, args) =>
             {
                 if (!GameStates.isLobby)
@@ -467,7 +513,6 @@ namespace BanMod
                     );
                 }
             });
-            //MoreSeek = BooleanOptionItem.Create("MoreSeek", false, OptionCategory.Seeker, true).SetColor(new Color32(0, 153, 255, 255));
             NumSeekers = (IntegerOptionItem)IntegerOptionItem.Create("NumSeekers", new(1, 14, 1), 1, OptionCategory.Seeker, true).SetColor(new Color32(0, 153, 255, 255));
             SeekerSelections.Clear();
 
@@ -485,7 +530,63 @@ namespace BanMod
 
                 SeekerSelections.Add(opt);
             }
+            SeekerSelections[0].RegisterUpdateValueEvent((sender, args) =>
+            {
+                if (syncingFirstSeeker)
+                    return;
 
+                try
+                {
+                    if (AmongUsClient.Instance == null ||
+                        !AmongUsClient.Instance.AmHost)
+                        return;
+
+                    if (!GameStates.isHideNSeek)
+                        return;
+
+                    if (GameData.Instance == null)
+                        return;
+
+                    var hnsOptions =
+                        GameOptionsManager.Instance?
+                            .CurrentGameOptions?
+                            .Cast<HideNSeekGameOptionsV12>();
+
+                    if (hnsOptions == null)
+                        return;
+
+                    syncingFirstSeeker = true;
+
+                    string selectedName =
+                        ((StringOptionItem)sender).GetString();
+
+                    if (string.IsNullOrWhiteSpace(selectedName) ||
+                        selectedName == "Round-robin")
+                    {
+                        hnsOptions.ImpostorPlayerID = -1;
+                        return;
+                    }
+
+                    foreach (var player in GameData.Instance.AllPlayers)
+                    {
+                        if (player == null ||
+                            player.Disconnected)
+                            continue;
+
+                        if (player.PlayerName == selectedName)
+                        {
+                            hnsOptions.ImpostorPlayerID =
+                                player.PlayerId;
+
+                            break;
+                        }
+                    }
+                }
+                finally
+                {
+                    syncingFirstSeeker = false;
+                }
+            });
             void UpdateSeekerOptions()
             {
                 int current = NumSeekers.GetInt();
@@ -512,6 +613,7 @@ namespace BanMod
             );
 
             GameMode.SetColor(new Color32(255, 204, 0, 255));
+            UpdateGameModesForServer();
 
             GameMode.RegisterUpdateValueEvent((sender, args) =>
             {
@@ -533,9 +635,9 @@ namespace BanMod
             });
 
             RandomVentSpawnffa = BooleanOptionItem.Create("RandomVentSpawn", false, OptionCategory.FFA, true).SetColor(new Color32(0, 153, 255, 255));
-            NoVent = BooleanOptionItem.Create("BlockVent",false,OptionCategory.FFA,false).SetColor(new Color32(0, 153, 255, 255));
-            FfaVentMaxSeconds = (IntegerOptionItem)IntegerOptionItem.Create("FfaVentMaxSeconds",new(1, 30, 1),5,OptionCategory.FFA,true).SetColor(new Color32(0, 153, 255, 255));
-            FFAVentTeleportMode = (StringOptionItem)StringOptionItem.Create("FFAVentTeleportMode",new[] { "Always", "RandomEvery15Seconds", "Never" },0,OptionCategory.FFA,true,true).SetColor(new Color32(255, 204, 0, 255));
+            NoVent = BooleanOptionItem.Create("BlockVent", false, OptionCategory.FFA, false).SetColor(new Color32(0, 153, 255, 255));
+            FfaVentMaxSeconds = (IntegerOptionItem)IntegerOptionItem.Create("FfaVentMaxSeconds", new(1, 30, 1), 5, OptionCategory.FFA, true).SetColor(new Color32(0, 153, 255, 255));
+            FFAVentTeleportMode = (StringOptionItem)StringOptionItem.Create("FFAVentTeleportMode", new[] { "Always", "RandomEvery15Seconds", "Never" }, 0, OptionCategory.FFA, true, true).SetColor(new Color32(255, 204, 0, 255));
 
             void UpdateFfaVentOptions(bool noVent)
             {
@@ -562,37 +664,185 @@ namespace BanMod
             {
                 FfaExternalBridge.SyncAll();
             });
-            FfaTeamMode = (StringOptionItem)StringOptionItem.Create("FfaTeamMode", new[]{"Normal","Team"},0,OptionCategory.FFA,true,false).SetColor(new Color32(255, 80, 80, 255));
-            FfaTeamMode.RegisterUpdateValueEvent((sender, args) =>
+
+            FfaKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFA, true, false).SetColor(new Color32(255, 204, 0, 255));
+            FfaTeamKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFATEAM, true, false).SetColor(new Color32(255, 204, 0, 255));
+            KillRaceKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.KillRace, true, false).SetColor(new Color32(255, 204, 0, 255));
+            HotPotatoKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.HotPotato, true, false).SetColor(new Color32(255, 204, 0, 255));
+            AssassinKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.Assassin, true, false).SetColor(new Color32(255, 204, 0, 255));
+
+            FfaTeamCount = (StringOptionItem)StringOptionItem.Create("FfaTeamCount", new[] { "2 Team", "3 Team", "4 Team", "5 Team" }, 0, OptionCategory.FFATEAM, true, false ).SetColor(new Color32(255, 80, 80, 255));
+
+            HotPotatoModdedFirstDelaySeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoFirstDelaySeconds", new(0, 30, 1), 3, OptionCategory.HotPotato, true).SetColor(new Color32(255, 128, 0, 255));
+
+            HotPotatoModdedExplosionSeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoExplosionSeconds", new(5, 120, 5), 15, OptionCategory.HotPotato, true).SetColor(new Color32(255, 128, 0, 255));
+
+            KillRaceDurationSeconds = (IntegerOptionItem)IntegerOptionItem.Create("KillRaceDurationSeconds",new(30, 1800, 30),180,OptionCategory.KillRace, true).SetColor(new Color32(0, 153, 255, 255));
+
+            KillRaceRespawnSeconds = (IntegerOptionItem)IntegerOptionItem.Create("KillRaceRespawnSeconds", new(1, 15, 1), 3, OptionCategory.KillRace, true).SetColor(new Color32(0, 153, 255, 255));
+
+
+            void UpdateExternalFfaOptions()
             {
-                if (FfaHotPotatoMode.GetValue() == 1)
+                GameModeType selected =
+                    GameMode.Selected;
+
+                bool ffa =
+                    selected == GameModeType.FFA;
+
+                bool team =
+                    selected == GameModeType.FFATeam;
+
+                bool hpModded =
+                    selected == GameModeType.HotPotatoModded;
+
+                bool assassin =
+                    selected == GameModeType.Assassin;
+
+                bool killRace =
+                    selected == GameModeType.KillRace;
+
+                bool hotpotato =
+                    selected == GameModeType.HotPotatoModded;
+
+                FfaKillerRole.SetEnabled(
+                    ffa 
+                );
+
+                FfaTeamKillerRole.SetEnabled(
+                    team
+                );
+
+                AssassinKillerRole.SetEnabled(
+                    assassin
+                );
+
+                KillRaceKillerRole.SetEnabled(
+                    killRace
+                );
+
+                HotPotatoKillerRole.SetEnabled(
+                    hotpotato
+                );
+
+                FfaTeamCount.SetEnabled(
+                    team
+                );
+
+                HotPotatoModdedFirstDelaySeconds.SetEnabled(
+                    hpModded
+                );
+
+                HotPotatoModdedExplosionSeconds.SetEnabled(
+                    hpModded
+                );
+
+                KillRaceDurationSeconds.SetEnabled(
+                    killRace
+                );
+
+                KillRaceRespawnSeconds.SetEnabled(
+                    killRace
+                );
+            }
+            bool syncingKillerRole = false;
+
+            void SyncKillerRoles(StringOptionItem source)
+            {
+                if (syncingKillerRole)
+                    return;
+
+                syncingKillerRole = true;
+
+                try
                 {
-                    FfaHotPotatoMode.SetValue(0);
+                    int value = source.GetInt();
+
+                    StringOptionItem[] options =
+                    {
+                        FfaKillerRole,
+                        FfaTeamKillerRole,
+                        KillRaceKillerRole,
+                        HotPotatoKillerRole,
+                        AssassinKillerRole
+                    };
+
+                    foreach (var option in options)
+                    {
+                        if (option == null || option == source)
+                            continue;
+
+                        if (option.GetInt() != value)
+                            option.SetValue(value, false);
+                    }
+
+                    FfaExternalBridge.SyncAll(true);
                 }
-                FfaExternalBridge.SyncAll();
-            });
-            FfaTeamCount = (StringOptionItem)StringOptionItem.Create("FfaTeamCount",new[]{"2 Team","3 Team","4 Team","5 Team" },0,OptionCategory.FFA,true,false).SetParent(FfaTeamMode).SetColor(new Color32(255, 80, 80, 255));
-            FfaTeamCount.RegisterUpdateValueEvent((sender, args) =>
-            {
-                FfaExternalBridge.SyncAll();
-            });
-            FfaHotPotatoMode = (StringOptionItem)StringOptionItem.Create("HotPotato", new[] { "Off", "On" },0,OptionCategory.FFA,true,false).SetColor(new Color32(255, 128, 0, 255));
-            FfaHotPotatoMode.RegisterUpdateValueEvent((sender, args) =>
-            {
-                if (FfaTeamMode.GetValue() == 1)
+                finally
                 {
-                    FfaTeamMode.SetValue(0);
+                    syncingKillerRole = false;
                 }
-                FfaExternalBridge.SyncAll();
-            });
-            FfaHotPotatoFirstDelaySeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoFirstDelaySeconds", new(0, 30, 1), 3, OptionCategory.FFA, true).SetParent(FfaHotPotatoMode).SetColor(new Color32(255, 128, 0, 255));
-            FfaHotPotatoFirstDelaySeconds.RegisterUpdateValueEvent(
-                (sender, args) => FfaExternalBridge.SyncAll()
+            }
+
+            FfaKillerRole.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    SyncKillerRoles((StringOptionItem)sender)
             );
-            FfaHotPotatoExplosionSeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoExplosionSeconds", new(5, 120, 5),15,OptionCategory.FFA,true).SetParent(FfaHotPotatoMode).SetColor(new Color32(255, 128, 0, 255));
-            FfaHotPotatoExplosionSeconds.RegisterUpdateValueEvent(
-                (sender, args) => FfaExternalBridge.SyncAll()
+
+            FfaTeamKillerRole.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    SyncKillerRoles((StringOptionItem)sender)
             );
+
+            KillRaceKillerRole.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    SyncKillerRoles((StringOptionItem)sender)
+            );
+
+            HotPotatoKillerRole.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    SyncKillerRoles((StringOptionItem)sender)
+            );
+
+            AssassinKillerRole.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    SyncKillerRoles((StringOptionItem)sender)
+            );
+
+            FfaTeamCount.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    FfaExternalBridge.SyncAll(true)
+            );
+
+            HotPotatoModdedFirstDelaySeconds.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    FfaExternalBridge.SyncAll(true)
+            );
+
+            HotPotatoModdedExplosionSeconds.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    FfaExternalBridge.SyncAll(true)
+            );
+
+            KillRaceDurationSeconds.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    FfaExternalBridge.SyncAll(true)
+            );
+
+            KillRaceRespawnSeconds.RegisterUpdateValueEvent(
+                (sender, args) =>
+                    FfaExternalBridge.SyncAll(true)
+            );
+
+            GameMode.RegisterUpdateValueEvent(
+                (sender, args) =>
+                {
+                    UpdateExternalFfaOptions();
+                    FfaExternalBridge.SyncAll(true);
+                }
+            );
+
+            UpdateExternalFfaOptions();
 
 
             MisfiresToSuicideSns = (IntegerOptionItem)IntegerOptionItem.Create("SuicideAfterMisfiresAmount", new(1, 10, 1), 2, OptionCategory.SNS, false).SetColor(new Color32(0, 153, 255, 255));
@@ -607,23 +857,17 @@ namespace BanMod
             ZombieTouchesToInfect = (IntegerOptionItem)IntegerOptionItem.Create("ZombieTouchesToInfect",new(1, 10, 1),1,OptionCategory.Zombie,true).SetColor(new Color32(0, 153, 255, 255));
             ZombieTouchDurationSeconds = (FloatOptionItem)FloatOptionItem.Create("ZombieTouchDurationSeconds", new(0.5f, 10f, 0.5f),1f,OptionCategory.Zombie,true).SetColor(new Color32(0, 153, 255, 255));
 
-            HotPotatoFirstDelaySeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoFirstDelaySeconds", new(5, 180, 5), 30, OptionCategory.HotPotato, true).SetColor(new Color32(0, 153, 255, 255));
-            HotPotatoExplosionSeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoExplosionSeconds", new(5, 180, 5), 30, OptionCategory.HotPotato, true).SetColor(new Color32(0, 153, 255, 255));
-            //HotPotatoNextRoundDelaySeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoNextRoundDelaySeconds", new(0, 30, 1), 3, OptionCategory.HotPotato, true).SetColor(new Color32(0, 153, 255, 255));
-            //HotPotatoBlinkStartSeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoBlinkStartSeconds", new(1, 30, 1), 10, OptionCategory.HotPotato, true).SetColor(new Color32(0, 153, 255, 255));
-            //HotPotatoProtectionDurationSeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoProtectionDurationSeconds", new(5, 180, 5), 60, OptionCategory.HotPotato, true).SetColor(new Color32(0, 153, 255, 255));
-            //HotPotatoTimerResyncSeconds = (FloatOptionItem)FloatOptionItem.Create("HotPotatoTimerResyncSeconds", new(0.1f, 2f, 0.1f), 0.5f, OptionCategory.HotPotato, true).SetColor(new Color32(0, 153, 255, 255));
-
             nocountdown = BooleanOptionItem.Create("nocountdown", false, OptionCategory.Lobby, true).SetColor(new Color32(0, 153, 255, 255));
             ShareLobbyCode = BooleanOptionItem.Create("ShareLobbyCode", false, OptionCategory.Lobby, true).SetColor(new Color32(0, 153, 255, 255));
-            extendlobby = BooleanOptionItem.Create("Opt_ExtendLobby", false, OptionCategory.Lobby, true).SetColor(new Color32(0, 153, 255, 255));
             AutoRejoin = BooleanOptionItem.Create("AutoRejoin", false, OptionCategory.Lobby, true).SetColor(new Color32(0, 153, 255, 255));
             AutoStart = BooleanOptionItem.Create("AutoStart", false, OptionCategory.Lobby, true).SetColor(new Color32(0, 153, 255, 255));
             AutoStartTime = (IntegerOptionItem)IntegerOptionItem.Create("AutoStartTime", new(0, 600, 10), 60, OptionCategory.Lobby, true).SetParent(AutoStart).SetColor(new Color32(0, 153, 255, 255));
             AutoStartCount = (IntegerOptionItem)IntegerOptionItem.Create("AutoStartCount", new(1, 15, 1), 14, OptionCategory.Lobby, true).SetParent(AutoStart).SetColor(new Color32(0, 153, 255, 255));
             AutoStartDelay = (IntegerOptionItem)IntegerOptionItem.Create("AutoStarDelay", new(0, 60, 5), 30, OptionCategory.Lobby, true).SetParent(AutoStart).SetColor(new Color32(0, 153, 255, 255));
 
-            // GAMEPLAY
+            AutoMuteForDiscord = BooleanOptionItem.Create("AutoMuteForDiscord", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
+            TagName = BooleanOptionItem.Create("ModdedName", true, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
+            TagGameMod = BooleanOptionItem.Create("TagGameMod", true, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             DisableRole = BooleanOptionItem.Create("DisableRole", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             RandomVentSpawn = BooleanOptionItem.Create("RandomVentSpawn", false,OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
             randomMap = BooleanOptionItem.Create("Opt_RandomMap", false, OptionCategory.Gameplay, true).SetColor(new Color32(0, 153, 255, 255));
@@ -637,7 +881,7 @@ namespace BanMod
             GameTimerMinutes = (FloatOptionItem)FloatOptionItem.Create("GameTimerMinutes",new(1f, 60f, 0.5f),30f,OptionCategory.Gameplay,true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
             GameTimerMessage = BooleanOptionItem.Create("GameTimerMessage", false, OptionCategory.Gameplay, true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
             PauseGameTimerDuringMeetings = BooleanOptionItem.Create("PauseGameTimerDuringMeetings",true,OptionCategory.Gameplay,true).SetParent(EnableGameTimer).SetColor(new Color32(0, 153, 255, 255));
-            // MEETINGS
+
             NoKillMeeting = BooleanOptionItem.Create("NoKillMeeting", false, OptionCategory.Meetings, true).SetColor(new Color32(0, 153, 255, 255));
             DisableMeetingsAndReports = BooleanOptionItem.Create("Opt_DisableMeetingsAndReports", false, OptionCategory.Meetings, true).SetColor(new Color32(0, 153, 255, 255));
             revealVotes = BooleanOptionItem.Create("revealVotes", false, OptionCategory.Meetings, true).SetColor(new Color32(0, 153, 255, 255));
@@ -646,20 +890,18 @@ namespace BanMod
             AutoVoteTime = (IntegerOptionItem)IntegerOptionItem.Create("AutoVoteTime", new(0, 120, 10), 30, OptionCategory.Meetings, true).SetParent(AutoVote).SetColor(new Color32(0, 153, 255, 255));
             AutoVoteAction = (StringOptionItem)StringOptionItem.Create("AutoVoteAction", new[] { "Always", "OnlyAfk" }, 0, OptionCategory.Meetings, true).SetParent(AutoVote).SetColor(new Color32(0, 153, 255, 255));
 
-            // CHAT
             ChatLeft = BooleanOptionItem.Create("ChatLeft", false, OptionCategory.Chat, true).SetColor(new Color32(0, 153, 255, 255));
             TcommandforAll = BooleanOptionItem.Create("EnableTCommandForAll", false, OptionCategory.Chat, true).SetColor(new Color32(0, 153, 255, 255));
             sendwelcome = BooleanOptionItem.Create("SendWelcomeMessage", false, OptionCategory.Chat, true).SetColor(new Color32(0, 153, 255, 255));
             SendSummary = BooleanOptionItem.Create("SendSummary1", false, OptionCategory.Chat, true).SetColor(new Color32(0, 153, 255, 255));
             sendInfocomand = BooleanOptionItem.Create("SendCommandInfo", false, OptionCategory.Chat, true).SetColor(new Color32(0, 153, 255, 255));
 
-            // APPEARANCE
+
             AllowColorChangeAll = BooleanOptionItem.Create("AllowColorChangeAll", false, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
             AllowColorChangeModerator = BooleanOptionItem.Create("AllowColorChangeModerator", false, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
             buttonvisibile = BooleanOptionItem.Create("QuickMenusVisible", false, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
             CustomSkin = BooleanOptionItem.Create("CustomSkin", true, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
 
-            // PROTECTION
             Protection10Sec = BooleanOptionItem.Create("Protection10Sec", false, OptionCategory.Protection, true).SetColor(new Color32(0, 153, 255, 255));
             ProtectFirstHost = BooleanOptionItem.Create("ProtectFirstHost", false, OptionCategory.Protection, true).SetColor(new Color32(0, 153, 255, 255));
             ProtectFirstDead = BooleanOptionItem.Create("ProtectFirstDead", false, OptionCategory.Protection, true).SetColor(new Color32(0, 153, 255, 255));
@@ -1023,7 +1265,7 @@ namespace BanMod
                 if (namesArray == null || namesArray.Length <= 1)
                     return;
 
-                var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV11>();
+                var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV12>();
 
                 if (hnsOptions == null)
                     return;
@@ -1246,11 +1488,7 @@ public static class NumberOptionLimitPatch
     private static readonly HashSet<StringNames> LockedOptions = new()
     {
         StringNames.GameNumImpostors,
-        StringNames.GamePlayerSpeed,
-        StringNames.GameKillCooldown,
-        StringNames.ViperDissolveTime,
-        StringNames.CapacityLabel,
-        StringNames.ViperDissolveTime
+        StringNames.CapacityLabel
     };
 
     public static void Postfix(NumberOption __instance)
@@ -1258,8 +1496,12 @@ public static class NumberOptionLimitPatch
         if (__instance == null)
             return;
 
-        if (GameStates.isHideNSeek)
+        if (__instance.Title == StringNames.GameKillCooldown)
+        {
+            __instance.ValidRange = new FloatRange(0.001f, 180f);
+            __instance.Increment = 0.5f;
             return;
+        }
 
         if (__instance.Title == StringNames.ViperDissolveTime)
         {
@@ -1268,57 +1510,61 @@ public static class NumberOptionLimitPatch
             return;
         }
 
+        if (__instance.Title == StringNames.GamePlayerSpeed)
+        {
+            if (GameStates.isHideNSeek)
+            {
+                __instance.ValidRange = new FloatRange(0f, 999f);
+                __instance.Increment = 0.1f;
+            }
+            else
+            {
+                __instance.ValidRange = new FloatRange(0.50f, 3f);
+                __instance.Increment = 0.1f;
+            }
+            return;
+        }
+
+        if (__instance.Title == StringNames.GameDiscussTime)
+        {
+            __instance.ValidRange = new FloatRange(0f, 999f);
+            __instance.Increment = 5f;
+            return;
+        }
+
+        if (__instance.Title == StringNames.GameVotingTime)
+        {
+            __instance.ValidRange = new FloatRange(0f, 999f);
+            __instance.Increment = 5f;
+            return;
+        }
+
+        if (__instance.Title == StringNames.GameEmergencyCooldown)
+        {
+            __instance.ValidRange = new FloatRange(0f, 999f);
+            __instance.Increment = 1f;
+            return;
+        }
+
+        if (__instance.Title == StringNames.GameCrewLight)
+        {
+            __instance.ValidRange = new FloatRange(0f, 999f);
+            __instance.Increment = 0.05f;
+            return;
+        }
+
+        if (__instance.Title == StringNames.GameImpostorLight)
+        {
+            __instance.ValidRange = new FloatRange(0f, 999f);
+            __instance.Increment = 0.05f;
+            return;
+        }
         if (LockedOptions.Contains(__instance.Title))
             return;
 
         __instance.ValidRange = new FloatRange(0f, 999f);
-
     }
 }
-
-[HarmonyPatch(typeof(GameOptionsMenu), nameof(GameOptionsMenu.Initialize))]
-public static class GameOptionsMenuInitializePatch
-{
-    public static void Postfix(GameOptionsMenu __instance)
-    {
-        if (__instance == null)
-            return;
-
-        if (GameStates.isHideNSeek)
-            return;
-
-        foreach (var ob in __instance.Children)
-        {
-            var numOpt = ob.TryCast<NumberOption>();
-            if (numOpt == null) continue;
-
-            switch (ob.Title)
-            {
-                case StringNames.GameKillCooldown:
-                    numOpt.ValidRange = new FloatRange(0.001f, 180f);
-                    break;
-
-                case StringNames.GameNumImpostors:
-                    numOpt.ValidRange = new FloatRange(1f, 3f);
-                    break;
-
-                case StringNames.GamePlayerSpeed:
-                    numOpt.ValidRange = new FloatRange(0.50f, 3f);
-                    break;
-
-                case StringNames.ViperDissolveTime:
-                    numOpt.ValidRange = new FloatRange(1f, 180f);
-                    numOpt.Increment = 1f;
-                    break;
-
-                case StringNames.CapacityLabel:
-                    numOpt.ValidRange = new FloatRange(4f, 15f);
-                    break;
-            }
-        }
-    }
-}
-
 
 
 [HarmonyPatch(typeof(ActionButton), nameof(ActionButton.SetCoolDown))]

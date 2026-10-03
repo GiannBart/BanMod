@@ -17,7 +17,7 @@ namespace BanMod;
 
 public static class Translator
 {
-    public const string LANGUAGE_FOLDER_NAME = "Language";
+    public const string LANGUAGE_FOLDER_NAME = "./DATA/LANGUAGE";
     public static Dictionary<string, Dictionary<int, string>> translateMaps;
 
     public static void Initialize()
@@ -33,7 +33,6 @@ public static class Translator
             }
         }
 
-        TranslationAudit.RunStartupAudit();
     }
 
     public static void LoadLangs()

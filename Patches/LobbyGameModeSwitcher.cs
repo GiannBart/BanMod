@@ -1,6 +1,4 @@
 using AmongUs.GameOptions;
-using BepInEx.Unity.IL2CPP.Utils;
-using HarmonyLib;
 using InnerNet;
 using System.Collections;
 using UnityEngine;
@@ -10,8 +8,12 @@ namespace BanMod;
 public static class LobbyGameModeOptionPatch
 {
     private static bool switching = false;
+
     public static IEnumerator SwitchGameMode(GameModes target)
     {
+        if (switching)
+            yield break;
+
         switching = true;
 
         var client = AmongUsClient.Instance;
@@ -25,62 +27,80 @@ public static class LobbyGameModeOptionPatch
             yield break;
         }
 
-        Debug.Log($"[BanMod] Switching lobby mode -> {target}");
+        var oldManager = GameManager.Instance;
 
-        // 1. Cambia il set di opzioni vanilla
+        Debug.Log(
+            $"[BanMod] Switching lobby mode -> {target} | " +
+            $"OldManager={oldManager?.GetType().Name} | " +
+            $"OldNetId={oldManager?.NetId}"
+        );
+
         optionsManager.SwitchGameMode(target);
+        optionsManager.CurrentGameOptions = optionsManager.GameHostOptions;
 
-        // 2. Usa le Host Options della nuova modalità
-        optionsManager.CurrentGameOptions =
-            optionsManager.GameHostOptions;
-
-        // 3. Rimuove il vecchio GameManager
-        GameManager oldManager = GameManager.Instance;
+        Debug.Log(
+            $"[BanMod] Target options -> " +
+            $"{optionsManager.CurrentGameOptions?.GameMode}"
+        );
 
         if (oldManager != null)
         {
-            client.Despawn(oldManager);
+            Debug.Log(
+                $"[BanMod] Despawn old manager -> " +
+                $"{oldManager.GetType().Name} | NetId={oldManager.NetId}"
+            );
 
+            client.Despawn(oldManager);
             GameManager.DestroyInstance();
 
-            yield return null;
+            yield return new WaitForSecondsRealtime(0.20f);
         }
 
-        // 4. Crea il GameManager corretto
         GameManager newManager =
             GameManagerCreator.CreateGameManager(target);
 
         if (newManager == null)
         {
             Debug.LogError(
-                $"[BanMod] Impossibile creare GameManager: {target}"
+                $"[BanMod] Cannot create GameManager: {target}"
             );
 
             switching = false;
             yield break;
         }
 
-        // 5. Lo spawna nella STESSA lobby
+        Debug.Log(
+            $"[BanMod] Spawn new manager -> " +
+            $"{newManager.GetType().Name} | SpawnId={newManager.SpawnId}"
+        );
+
         client.Spawn(
             newManager,
             -2,
             SpawnFlags.None
         );
 
-        /*
-         * Aspetta che il nuovo GameManager sia realmente diventato
-         * GameManager.Instance.
-         *
-         * Non basta sempre un singolo yield return null con IL2CPP/network spawn.
-         */
-        for (int i = 0; i < 30; i++)
+        yield return new WaitForSecondsRealtime(0.20f);
+
+        for (int i = 0; i < 60; i++)
         {
-            if (GameManager.Instance != null)
+            var manager = GameManager.Instance;
+
+            if (manager != null)
             {
-                bool correctManager =
-                    target == GameModes.Normal
-                        ? GameManager.Instance is NormalGameManager
-                        : GameManager.Instance is HideAndSeekManager;
+                bool correctManager;
+
+                if (target == GameModes.Normal ||
+                    target == GameModes.NormalFools)
+                {
+                    correctManager =
+                        manager is NormalGameManager;
+                }
+                else
+                {
+                    correctManager =
+                        manager is HideAndSeekManager;
+                }
 
                 if (correctManager)
                     break;
@@ -89,18 +109,23 @@ public static class LobbyGameModeOptionPatch
             yield return null;
         }
 
-        // Sync vanilla
-        if (GameManager.Instance != null &&
-            GameManager.Instance.LogicOptions != null)
+        if (GameManager.Instance == null)
+        {
+            Debug.LogError(
+                $"[BanMod] GameManager missing after switch -> {target}"
+            );
+
+            switching = false;
+            yield break;
+        }
+
+        if (GameManager.Instance.LogicOptions != null)
         {
             GameManager.Instance.LogicOptions.SyncOptions();
         }
 
-        // Aspetta ancora qualche frame perché CurrentGameOptions / UI si assestino
-        yield return null;
         yield return null;
 
-        // Sync BanMod
         OptionItem.SyncAllOptions();
         FfaExternalBridge.SyncGameMode();
         FfaExternalBridge.SyncAll();
@@ -108,6 +133,7 @@ public static class LobbyGameModeOptionPatch
         Debug.Log(
             $"[BanMod] Lobby mode switched -> {target} | " +
             $"Manager={GameManager.Instance?.GetType().Name} | " +
+            $"NetId={GameManager.Instance?.NetId} | " +
             $"Options={GameOptionsManager.Instance.CurrentGameOptions?.GameMode}"
         );
 

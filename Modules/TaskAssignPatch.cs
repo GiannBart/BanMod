@@ -29,13 +29,7 @@ namespace BanMod
             PlayerControl pc = __instance.Object;
             if (pc == null) return true;
 
-            if (Options.GameMode.Selected == GameModeType.HotPotato &&
-                HotPotatoModeController.IsRunning)
-            {
-                taskTypeIds = new Il2CppStructArray<byte>(0);
-                return true;
-            }
-            if (Options.GameMode.Selected == GameModeType.FFA)
+            if (Options.GameMode.Selected == GameModeType.FFA || Options.GameMode.Selected == GameModeType.FFATeam || Options.GameMode.Selected == GameModeType.Assassin || Options.GameMode.Selected == GameModeType.HotPotatoModded)
             {
                 taskTypeIds = new Il2CppStructArray<byte>(0);
                 return true;

@@ -103,13 +103,11 @@ namespace BanMod
         {
             switch (panel)
             {
-                // Menu che possono aprirsi anche dal main menu.
                 case Panel.None:
                 case Panel.MusicPlayer:
                 case Panel.Keybinds:
                     return RequiredRefs.None;
 
-                // Menu che richiedono riferimenti validi.
                 case Panel.Host:
                 case Panel.Moderator:
                 case Panel.MsgMenu:
@@ -124,7 +122,6 @@ namespace BanMod
                            RequiredRefs.GameData |
                            RequiredRefs.Hud;
 
-                // Ogni nuovo menu viene protetto di default.
                 default:
                     return RequiredRefs.Client |
                            RequiredRefs.LocalPlayer |
@@ -241,7 +238,6 @@ namespace BanMod
             if (!isNullRef)
                 return false;
 
-            // Se il contesto non è pronto, chiudi ogni menu e blocca solo questa NullReference.
             if (!IsGameContextReady())
             {
                 if (Current != Panel.None)
@@ -250,7 +246,6 @@ namespace BanMod
                 return true;
             }
 
-            // Se un menu protetto è aperto e causa una NullReference, chiudilo.
             if (IsPanelProtected(Current))
             {
                 SetCurrent(Panel.None, true);

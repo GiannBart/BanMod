@@ -42,7 +42,7 @@ public static class Scientist
 
                     if (!player.Data.IsDead)
                     {
-                        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+                        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
                         {
                             Utils.RequestProxyMessage(messages, player.PlayerId);
                             MessageBlocker.UpdateLastMessageTime();
@@ -120,7 +120,7 @@ public static class Scientist
         if (messages.Count > 0)
         {
             string finalMessage = string.Join("\n", messages);
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
             {
                 Utils.RequestProxyMessage(finalMessage, targetPlayer.PlayerId);
                 MessageBlocker.UpdateLastMessageTime();
@@ -150,7 +150,7 @@ public static class Scientist
         string msg1 = string.Format(GetString("ScientistInfo"));
         byte scientistPlayerId = scientist.PlayerId;
 
-        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+        if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
             Utils.RequestProxyMessage(msg1, scientistPlayerId);
             MessageBlocker.UpdateLastMessageTime();

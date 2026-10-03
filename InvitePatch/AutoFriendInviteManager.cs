@@ -12,25 +12,14 @@ namespace BanMod
 {
     public static class AutoFriendInviteManager
     {
-        // New multi-list storage.
-        private const string SavePath = "BAN_DATA/INVITE/FriendLists.txt";
-
-        // Old single-list file. If found, it is imported into "Default".
-        private const string LegacySavePath = "BAN_DATA/INVITE/FriendsList.txt";
-
+        private const string SavePath = "DATA/INVITE/FriendLists.txt";
+        private const string LegacySavePath = "DATA/INVITE/FriendsList.txt";
         public const string DefaultListName = "Default";
         public const string AllFriendsListName = "All Friends";
-
         public static bool Enabled = false;
-
-        // Each custom list has its own PUID -> InviteEntry dictionary.
-        private static readonly Dictionary<string, Dictionary<string, InviteEntry>> Lists =
-            new Dictionary<string, Dictionary<string, InviteEntry>>(StringComparer.OrdinalIgnoreCase);
-
+        private static readonly Dictionary<string, Dictionary<string, InviteEntry>> Lists = new Dictionary<string, Dictionary<string, InviteEntry>>(StringComparer.OrdinalIgnoreCase);
         private static readonly List<InviteEntry> ActiveQueue = new List<InviteEntry>();
-
         private static string currentListName = DefaultListName;
-
         private static int queueIndex = 0;
         private static bool isWaitingForResponse = false;
         private static float waitStartTime = 0f;
@@ -50,24 +39,21 @@ namespace BanMod
             }
         }
 
-        // ------------------------------------------------------------
-        // LIST MANAGEMENT
-        // ------------------------------------------------------------
-
         public static void Load()
         {
             Lists.Clear();
 
-            // Always keep at least one editable list.
             Lists[DefaultListName] = new Dictionary<string, InviteEntry>();
 
-            // First run after upgrading: import the old single list.
             if (!File.Exists(SavePath))
             {
                 ImportLegacyList();
 
-                if (!Lists.ContainsKey(currentListName))
+                if (!string.Equals(currentListName, AllFriendsListName, StringComparison.OrdinalIgnoreCase) &&
+                    !Lists.ContainsKey(currentListName))
+                {
                     currentListName = DefaultListName;
+                }
 
                 return;
             }
@@ -113,8 +99,11 @@ namespace BanMod
                 Lists[activeList][entry.Puid] = entry;
             }
 
-            if (!Lists.ContainsKey(currentListName))
+            if (!string.Equals(currentListName, AllFriendsListName, StringComparison.OrdinalIgnoreCase) &&
+                !Lists.ContainsKey(currentListName))
+            {
                 currentListName = DefaultListName;
+            }
         }
 
         private static void ImportLegacyList()
@@ -144,7 +133,6 @@ namespace BanMod
             }
             catch
             {
-                // Keep the old file untouched if migration fails.
             }
         }
 
@@ -306,7 +294,6 @@ namespace BanMod
                 return false;
             }
 
-            // Keep Default so the old UI/API always has somewhere to save.
             if (string.Equals(listName, DefaultListName, StringComparison.OrdinalIgnoreCase))
             {
                 if (feedback)
@@ -342,7 +329,7 @@ namespace BanMod
             if (!Lists.ContainsKey(listName))
                 return new List<InviteEntry>();
 
-            return new List<InviteEntry>(Lists[listName].Values);
+            return FilterEntriesToOfficialFriends(Lists[listName].Values);
         }
 
         private static bool IsValidCustomListName(string name)
@@ -355,10 +342,6 @@ namespace BanMod
 
             return true;
         }
-
-        // ------------------------------------------------------------
-        // ENTRY MANAGEMENT
-        // ------------------------------------------------------------
 
         private static InviteEntry ParseLine(string line)
         {
@@ -391,8 +374,6 @@ namespace BanMod
         {
             return Safe(value).Trim();
         }
-
-        // Backwards-compatible: old UI gets entries from the currently selected custom list.
         public static List<InviteEntry> GetSelectedEntries()
         {
             Load();
@@ -403,7 +384,7 @@ namespace BanMod
             if (!Lists.ContainsKey(currentListName))
                 currentListName = DefaultListName;
 
-            return new List<InviteEntry>(Lists[currentListName].Values);
+            return FilterEntriesToOfficialFriends(Lists[currentListName].Values);
         }
 
         public static bool IsSelectedPuid(string puid)
@@ -433,8 +414,6 @@ namespace BanMod
 
             return Lists.ContainsKey(listName) && Lists[listName].ContainsKey(puid);
         }
-
-        // Backwards-compatible: adds to the currently selected editable list.
         public static void AddByPlayer(PlayerControl player, bool feedback)
         {
             string targetList = currentListName;
@@ -529,8 +508,6 @@ namespace BanMod
             if (feedback)
                 ShowChat("<color=#00ff00>Added to " + listName + ":</color> " + entry.GetLabel());
         }
-
-        // Backwards-compatible: removes from current list.
         public static void RemoveByPuid(string puid, bool feedback)
         {
             RemoveByPuidFromList(currentListName, puid, feedback);
@@ -564,21 +541,12 @@ namespace BanMod
             }
         }
 
-        // ------------------------------------------------------------
-        // UI ENTRY POINT
-        // ------------------------------------------------------------
-
         public static void OpenListMenu()
         {
             Load();
             AutoFriendInviteUi.OpenStatic();
         }
 
-        // ------------------------------------------------------------
-        // INVITE QUEUE
-        // ------------------------------------------------------------
-
-        // Backwards-compatible: invites current list.
         public static void StartAutoInvite()
         {
             StartInviteList(currentListName);
@@ -591,6 +559,12 @@ namespace BanMod
 
         public static void StartInviteList(string listName)
         {
+            if (string.Equals(listName, AllFriendsListName, StringComparison.OrdinalIgnoreCase))
+            {
+                StartInviteAllFriends();
+                return;
+            }
+
             if (!IsValidLobby())
             {
                 Enabled = false;
@@ -598,16 +572,7 @@ namespace BanMod
                 return;
             }
 
-            List<InviteEntry> entries;
-
-            if (string.Equals(listName, AllFriendsListName, StringComparison.OrdinalIgnoreCase))
-            {
-                entries = GetAllFriendEntries();
-            }
-            else
-            {
-                entries = GetEntries(listName);
-            }
+            List<InviteEntry> entries = GetEntries(listName);
 
             if (entries.Count == 0)
             {
@@ -617,9 +582,7 @@ namespace BanMod
             }
 
             ActiveQueue.Clear();
-
-            // Deduplicate the queue by PUID.
-            Dictionary<string, bool> added = new Dictionary<string, bool>();
+            HashSet<string> added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < entries.Count; i++)
             {
@@ -628,19 +591,78 @@ namespace BanMod
                 if (entry == null || string.IsNullOrWhiteSpace(entry.Puid))
                     continue;
 
-                if (added.ContainsKey(entry.Puid))
+                if (!added.Add(entry.Puid))
                     continue;
 
-                added[entry.Puid] = true;
                 ActiveQueue.Add(entry);
             }
 
             StartQueueProcess(listName);
         }
-
         public static void StartInviteAllFriends()
         {
-            StartInviteList(AllFriendsListName);
+            if (!IsValidLobby())
+            {
+                Enabled = false;
+                ShowChat("<color=#ff5555>Auto-invite is only available as host in an online lobby.</color>");
+                return;
+            }
+
+            if (!DestroyableSingleton<FriendsListManager>.InstanceExists)
+            {
+                Enabled = false;
+                ShowChat("<color=#ff5555>Friends list is not available yet.</color>");
+                return;
+            }
+
+            FriendsListManager manager = DestroyableSingleton<FriendsListManager>.Instance;
+
+            if (manager == null || manager.Friends == null)
+            {
+                Enabled = false;
+                ShowChat("<color=#ff5555>Friends list is not available yet.</color>");
+                return;
+            }
+
+            ActiveQueue.Clear();
+            HashSet<string> added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            for (int i = 0; i < manager.Friends.Count; i++)
+            {
+                ResponseFriends friend = manager.Friends[i];
+
+                if (friend == null || string.IsNullOrWhiteSpace(friend.FriendPuid))
+                    continue;
+
+                if (!added.Add(friend.FriendPuid))
+                    continue;
+
+                string cachedName = "";
+
+                try
+                {
+                    cachedName = AmongUs.Data.DataManager.Player.Friends.GetCachedName(friend.FriendPuid);
+                }
+                catch { }
+
+                ActiveQueue.Add(new InviteEntry
+                {
+                    Puid = friend.FriendPuid,
+                    FriendCode = friend.FriendCode,
+                    DisplayName = string.IsNullOrWhiteSpace(cachedName)
+                        ? friend.FriendCode
+                        : cachedName
+                });
+            }
+
+            if (ActiveQueue.Count == 0)
+            {
+                Enabled = false;
+                ShowChat("<color=#ff5555>No official friends were returned by the game.</color>");
+                return;
+            }
+
+            StartQueueProcess(AllFriendsListName);
         }
 
         public static void StopAutoInvite(bool feedback)
@@ -782,12 +804,7 @@ namespace BanMod
         {
             AdvanceQueue();
         }
-
-        // ------------------------------------------------------------
-        // FRIEND LOOKUPS / VIRTUAL "TUTTI" LIST
-        // ------------------------------------------------------------
-
-        private static List<InviteEntry> GetAllFriendEntries()
+        public static List<InviteEntry> GetAllFriendEntries()
         {
             List<InviteEntry> result = new List<InviteEntry>();
 
@@ -822,6 +839,66 @@ namespace BanMod
                         ? friend.FriendCode
                         : cachedName
                 });
+            }
+
+            return result;
+        }
+
+        private static bool TryGetOfficialFriendPuids(out HashSet<string> friendPuids)
+        {
+            friendPuids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!DestroyableSingleton<FriendsListManager>.InstanceExists)
+                return false;
+
+            FriendsListManager manager = DestroyableSingleton<FriendsListManager>.Instance;
+
+            if (manager == null || manager.Friends == null)
+                return false;
+
+            for (int i = 0; i < manager.Friends.Count; i++)
+            {
+                ResponseFriends friend = manager.Friends[i];
+
+                if (friend == null || string.IsNullOrWhiteSpace(friend.FriendPuid))
+                    continue;
+
+                friendPuids.Add(friend.FriendPuid);
+            }
+
+            return true;
+        }
+
+        private static List<InviteEntry> FilterEntriesToOfficialFriends(
+            ICollection<InviteEntry> source)
+        {
+            List<InviteEntry> result = new List<InviteEntry>();
+
+            if (source == null)
+                return result;
+
+            HashSet<string> friendPuids;
+
+            if (!TryGetOfficialFriendPuids(out friendPuids))
+            {
+                foreach (InviteEntry entry in source)
+                {
+                    if (entry != null && !string.IsNullOrWhiteSpace(entry.Puid))
+                        result.Add(entry);
+                }
+
+                return result;
+            }
+
+            foreach (InviteEntry entry in source)
+            {
+                if (entry == null || string.IsNullOrWhiteSpace(entry.Puid))
+                    continue;
+
+                if (!friendPuids.Contains(entry.Puid))
+                    continue;
+
+                result.Add(entry);
             }
 
             return result;

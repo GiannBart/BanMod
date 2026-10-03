@@ -69,8 +69,6 @@ namespace BanMod
             return string.Format(format, args);
         }
 
-        // Usa cifre Unicode a larghezza intera. Visivamente sono un font diverso
-        // e non vengono trattate come le normali cifre ASCII dalla chat.
         private static string NumberText(int value)
         {
             return ToAlternateDigits(
@@ -173,7 +171,6 @@ namespace BanMod
             if (!Options.Profiler.GetBool())
                 return;
 
-            // Solo l'host sceglie il ruolo e invia gli indizi privati.
             if (!AmongUsClient.Instance.AmHost)
                 return;
 
@@ -260,8 +257,6 @@ namespace BanMod
 
             int meetingHudId = meetingHud.GetInstanceID();
 
-            // ServerStart e Start possono arrivare molto vicini:
-            // la stessa riunione deve essere acquisita una sola volta.
             if (LastCapturedMeetingHudId == meetingHudId)
                 return;
 
@@ -299,7 +294,6 @@ namespace BanMod
 
         private static IEnumerator CoSendMeetingHint(MeetingHud meetingHud)
         {
-            // Attende che la chat del meeting sia visibile.
             yield return new WaitForSeconds(1.4f);
 
             HintCoroutineRunning = false;
@@ -311,7 +305,6 @@ namespace BanMod
                 yield break;
             }
 
-            // Se Start è arrivato prima di ServerStart, acquisisce qui.
             CaptureMeetingSnapshot(meetingHud);
 
             if (MeetingSequence == LastSentMeetingSequence)
@@ -394,8 +387,6 @@ namespace BanMod
             usedKeys.Add(hint.Key);
             LastHintKey = hint.Key;
 
-            // Se in precedenza la categoria risultava terminata, ma è
-            // comparso un nuovo indizio valido, consente una futura notifica.
             ExhaustedCategoriesNotified.Remove(
                 GetExhaustedCategoryKey(
                     target.PlayerId,
@@ -557,7 +548,6 @@ namespace BanMod
                     impostorId,
                     strength);
 
-            // Non ripete a ogni meeting lo stesso avviso di categoria finita.
             if (!ExhaustedCategoriesNotified.Add(exhaustedKey))
                 return;
 
@@ -1056,7 +1046,6 @@ namespace BanMod
             }
             catch
             {
-                // Ignora se la modalità forced impostor non è inizializzata.
             }
 
             try
@@ -1071,7 +1060,6 @@ namespace BanMod
             }
             catch
             {
-                // Fallback tramite Role.IsImpostor.
             }
 
             object role = ReadMember(player.Data, "Role", "role");
@@ -1296,7 +1284,6 @@ namespace BanMod
                 }
                 catch
                 {
-                    // Prova il campo.
                 }
 
                 try
@@ -1309,7 +1296,6 @@ namespace BanMod
                 }
                 catch
                 {
-                    // Prova il nome successivo.
                 }
             }
 

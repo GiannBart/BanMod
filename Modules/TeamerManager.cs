@@ -13,7 +13,7 @@ namespace BanMod
 {
     public static class TeamerManager
     {
-        private const string TeamerListPath = "./BAN_DATA/DENIED/Teamer.txt";
+        private const string TeamerListPath = "./DATA/DENIED/Teamer.txt";
 
         private static readonly HttpClient httpClient = new HttpClient();
 
@@ -41,7 +41,7 @@ namespace BanMod
         {
             try
             {
-                Directory.CreateDirectory("BAN_DATA/DENIED");
+                Directory.CreateDirectory("DATA/DENIED");
 
                 if (!File.Exists(TeamerListPath))
                     File.Create(TeamerListPath).Close();
@@ -369,7 +369,7 @@ namespace BanMod
         {
             try
             {
-                Directory.CreateDirectory("BAN_DATA/DENIED");
+                Directory.CreateDirectory("DATA/DENIED");
 
                 List<TeamerRecord> snapshot;
                 lock (cacheLock)

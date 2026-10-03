@@ -15,7 +15,7 @@ namespace BanMod
     [HarmonyPatch(typeof(FindAGameManager))]
     internal static class BanModFindAGameActiveLobbyPatch
     {
-        private const int MAX_DISPLAYED_LOBBIES = 20;
+        private const int MAX_DISPLAYED_LOBBIES = 25;
         private const float DEFAULT_ROW_SPACING = 0.75f;
         private const string BanModLabelName = "BanModMergedLabel";
 
@@ -97,7 +97,6 @@ namespace BanMod
                 box.size = new Vector2(100f, 100f);
                 scroller.ClickMask = box;
 
-                // Normalize every existing row into one unique slot.
                 for (int i = 0; i < originalContainers.Count; i++)
                 {
                     GameContainer container = originalContainers[i];
@@ -884,7 +883,6 @@ namespace BanMod
             try
             {
                 manager.matchesFoundText.text = count.ToString();
-                manager.TotalText.text = count.ToString();
             }
             catch { }
         }

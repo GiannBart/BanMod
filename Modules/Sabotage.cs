@@ -1,4 +1,5 @@
 //credits and licenses in the resources folder
+using AmongUs.GameOptions;
 using BanMod;
 using HarmonyLib;
 using Hazel;
@@ -191,6 +192,21 @@ public static class ShipStatus_FixedUpdate_Patch
             FixAllSabotages(__instance);
             return true;
         }
+        if (gameMode == GameModeType.RoomRush)
+        {
+            FixAllSabotages(__instance);
+            return true;
+        }
+        if (gameMode == GameModeType.TargetRush)
+        {
+            FixAllSabotages(__instance);
+            return true;
+        }
+        if (gameMode == GameModeType.DeathRun)
+        {
+            FixAllSabotages(__instance);
+            return true;
+        }
         if (Options.DisableReactorSabotage.GetBool())
             FixSabotage(__instance, SystemTypes.Reactor);
 
@@ -261,7 +277,7 @@ public static class ShipStatus_FixedUpdate_Patch
         }
     }
 
-    private static void FixAllSabotages(ShipStatus shipStatus)
+    public static void FixAllSabotages(ShipStatus shipStatus)
     {
         if (!Utils.AnySabotageIsActive()) return;
 
@@ -297,6 +313,18 @@ public static class BlockCloseDoorsPatch
         {
             return false;
         }
+        if (gameMode1 == GameModeType.RoomRush)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.TargetRush)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.DeathRun)
+        {
+            return false;
+        }
         return true;
         
     }
@@ -310,16 +338,20 @@ class Patch_MushroomMixupBlock
         {
             return false;
         }
-
+        if (player.Data.IsDead && player.Data.Role.IsImpostor && Options.DisableDeadImpostorSabotage.GetBool())
+        {
+            return false;
+        }
         return true; 
     }
 }
-[HarmonyPatch(
-    typeof(SabotageSystemType),
-    nameof(SabotageSystemType.UpdateSystem))]
-public static class DeadImpostorSabotageBlock_Patch
+
+[HarmonyPatch(typeof(SabotageSystemType), nameof(SabotageSystemType.UpdateSystem))]
+public static class SabotageSystemType_UpdateSystem_Patch1
 {
-    public static bool Prefix(PlayerControl player)
+    private static readonly HashSet<byte> ForcedCrewmateGhosts1 = new HashSet<byte>();
+
+    public static bool Prefix(PlayerControl player, MessageReader msgReader)
     {
         if (!AmongUsClient.Instance.AmHost)
             return true;
@@ -327,14 +359,64 @@ public static class DeadImpostorSabotageBlock_Patch
         if (Options.GameMode.GetValue(GameModeType.JBMode))
             return true;
 
+        if (player == null || player.Data == null || player.Data.Role == null)
+            return false;
+
         if (!Options.DisableDeadImpostorSabotage.GetBool())
             return true;
 
-        if (player?.Data?.Role == null)
-            return true;
+        if (player.Data.IsDead && player.Data.Role.IsImpostor)
+        {
+            if (msgReader != null && msgReader.BytesRemaining > 0)
+                msgReader.ReadByte();
 
-        return !(player.Data.IsDead &&
-                 player.Data.Role.IsImpostor);
+            ForcedCrewmateGhosts1.Add(player.PlayerId);
+
+            player.RpcSetRole(RoleTypes.CrewmateGhost);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void RestoreImpostorGhosts()
+    {
+        if (!AmongUsClient.Instance.AmHost)
+            return;
+
+        foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+        {
+            if (pc == null || pc.Data == null)
+                continue;
+
+            if (!ForcedCrewmateGhosts1.Contains(pc.PlayerId))
+                continue;
+
+            pc.RpcSetRole(RoleTypes.ImpostorGhost);
+        }
+    }
+
+    public static void Clear()
+    {
+        ForcedCrewmateGhosts1.Clear();
+    }
+}
+[HarmonyPatch(typeof(LogicGameFlowNormal), nameof(LogicGameFlowNormal.CheckEndCriteria))]
+public static class LogicGameFlowNormal_CheckEndCriteria_Patch1
+{
+    public static void Prefix()
+    {
+        if (Options.GameMode.GetValue(GameModeType.JBMode))
+            return;
+
+        if (!AmongUsClient.Instance.AmHost)
+            return;
+
+        if (!Options.DisableDeadImpostorSabotage.GetBool())
+            return;
+
+        SabotageSystemType_UpdateSystem_Patch1.RestoreImpostorGhosts();
     }
 }
 [HarmonyPatch(typeof(SwitchSystem), nameof(SwitchSystem.UpdateSystem))]

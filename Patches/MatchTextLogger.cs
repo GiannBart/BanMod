@@ -364,9 +364,7 @@ public static class MatchTextLogger
             }
         }
 
-        // Among Us 2026.8.18 no longer requires DidVote to be reliable here.
-        // VotedForId is the authoritative state: special sentinel values mean
-        // the player has not cast a valid vote yet.
+
         if (!voterArea)
             return;
 
@@ -820,9 +818,6 @@ public static class MatchTextLogger
 
             currentMeeting.AlivePlayers.Remove(disconnectedId);
 
-            // Among Us clears every active vote whose target disconnects.
-            // Keep the action in the chronological log, mark it invalid,
-            // and allow each affected voter to cast a replacement vote.
             foreach (VoteEntry vote in currentMeeting.Votes)
             {
                 if (vote.Invalidated || vote.VotedForId != disconnectedId)
@@ -1663,7 +1658,7 @@ public static class MatchTextLogger
 
     private static string GetLogDirectory()
     {
-        const string MatchPath = "./BAN_DATA/LOG/";
+        const string MatchPath = "./DATA/LOG/";
         return Path.Combine(MatchPath, "BanMod Match Logs");
     }
 
@@ -1751,31 +1746,7 @@ internal static class MatchTextLoggerMeetingStartPatch
     }
 }
 
-//[HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.CastVote))]
-//internal static class MatchTextLoggerVotePatch
-//{
-//    [HarmonyPostfix]
-//    private static void Postfix(MeetingHud __instance)
-//    {
-//        if (!BanMod.EnableMatchLog.Value ||
-//            __instance == null ||
-//            __instance.playerStates == null)
-//        {
-//            return;
-//        }
 
-//        foreach (var voteArea in __instance.playerStates)
-//        {
-//            if (!voteArea || !voteArea.DidVote)
-//                continue;
-
-//            MatchTextLogger.RecordVote(
-//                __instance,
-//                voteArea.PlayerId.Value
-//            );
-//        }
-//    }
-//}
 [HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.Update))]
 internal static class MatchTextLoggerMeetingVotePollPatch
 {
@@ -1789,9 +1760,6 @@ internal static class MatchTextLoggerMeetingVotePollPatch
             return;
         }
 
-        // Among Us 2026.8.18 keeps the authoritative vote target in
-        // PlayerVoteArea.VotedForId. Polling the host's MeetingHud makes the
-        // logger independent from SetVote/DidVote timing changes.
         foreach (var voteArea in __instance.playerStates)
         {
             if (!voteArea)

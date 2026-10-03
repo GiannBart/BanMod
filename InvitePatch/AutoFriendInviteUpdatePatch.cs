@@ -1,8 +1,7 @@
-using BanMod;
+// credits and licenses in the resources folder
 using HarmonyLib;
 using System;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace BanMod
 {
@@ -11,16 +10,13 @@ namespace BanMod
     {
         public static void Postfix()
         {
-
             try
             {
-                if (GameStates.isLobby)
-                {
-                    AutoFriendInviteManager.Update();
-                }
+                AutoFriendInviteManager.Update();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Debug.LogError("[AutoFriendInvite] Update failed: " + ex);
             }
         }
     }

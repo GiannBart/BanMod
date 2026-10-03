@@ -55,25 +55,24 @@ namespace BanMod
 
         private static readonly OptionCategory[] CategoryOrder =
         {
-            // GENERAL
-            // GENERAL
             OptionCategory.Lobby,
             OptionCategory.Chat,
             OptionCategory.Appearance,
             OptionCategory.Protection,
 
-            // GAME MODES
             OptionCategory.GameMode,
             OptionCategory.SNS,
             OptionCategory.PNS,
             OptionCategory.HotPotato,
             OptionCategory.Zombie,
             OptionCategory.FFA,
+            OptionCategory.FFATEAM,
+            OptionCategory.KillRace,
+            OptionCategory.Assassin,
             OptionCategory.Seeker,
             OptionCategory.Gameplay,
             OptionCategory.Meetings,
 
-            // MODERATION
             OptionCategory.Levels,
             OptionCategory.Blocklist,
             OptionCategory.Cheat,
@@ -84,7 +83,6 @@ namespace BanMod
             OptionCategory.Spamlist,
             OptionCategory.Wordlist,
 
-            // ROLES
             OptionCategory.Impostor,
             OptionCategory.Engineer,
             OptionCategory.Watcher,
@@ -96,13 +94,11 @@ namespace BanMod
             OptionCategory.Judge,
             OptionCategory.Immortal,
 
-            // TASKS
             OptionCategory.Task,
             OptionCategory.Common,
             OptionCategory.Short,
             OptionCategory.Long,
 
-            // SABOTAGES
             OptionCategory.SabotageOption,
             OptionCategory.Sabotage
         };
@@ -740,11 +736,15 @@ namespace BanMod
                 return false;
             }
 
-            if (option.Category == OptionCategory.SNS && !IsSnSMode())
+            if (option.Category == OptionCategory.Assassin && !IsAssassinMode())
             {
                 return false;
             }
 
+            if (option.Category == OptionCategory.SNS && !IsSnSMode())
+            {
+                return false;
+            }
 
             if (option.Category == OptionCategory.PNS && !IsPnSMode())
             {
@@ -757,6 +757,15 @@ namespace BanMod
                 return false;
             }
 
+            if (option.Category == OptionCategory.FFATEAM && !IsFFATEAMMode())
+            {
+                return false;
+            }
+
+            if (option.Category == OptionCategory.KillRace && !IsKillRaceMode())
+            {
+                return false;
+            }
 
             return true;
         }
@@ -824,7 +833,56 @@ namespace BanMod
                 return false;
             }
         }
+        private static bool IsAssassinMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.Assassin);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
+        private static bool IsRoomRushMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.RoomRush);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
+        private static bool IsTargetRushMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.TargetRush);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        private static bool IsDeathRunMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.DeathRun);
+            }
+            catch
+            {
+                return false;
+            }
+        }
         private static bool IsZombieMode()
         {
             try
@@ -843,7 +901,7 @@ namespace BanMod
             try
             {
                 return Options.GameMode != null &&
-                       Options.GameMode.GetValue(GameModeType.HotPotato);
+                       Options.GameMode.GetValue(GameModeType.HotPotatoModded);
             }
             catch
             {
@@ -870,6 +928,31 @@ namespace BanMod
             {
                 return Options.GameMode != null &&
                        Options.GameMode.GetValue(GameModeType.FFA);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool IsFFATEAMMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.FFATeam);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        private static bool IsKillRaceMode()
+        {
+            try
+            {
+                return Options.GameMode != null &&
+                       Options.GameMode.GetValue(GameModeType.KillRace);
             }
             catch
             {

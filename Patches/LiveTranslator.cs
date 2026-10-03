@@ -1,3 +1,4 @@
+// credits and licenses in the resources folder
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP;
@@ -41,7 +42,7 @@ namespace BanMod
         private static ConfigEntry<string> OpenAIApiKey;
         private static ConfigEntry<string> OpenAIModel;
 
-        private const string TranslateListPath = "./TRANSLATE_DATA/Translate/translate.txt";
+        private const string TranslateListPath = "./DATA/LANGUAGE/Translate/translate.txt";
 
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(9) };
         private static readonly object CacheLock = new object();
@@ -123,14 +124,13 @@ namespace BanMod
             GameAwareTranslations = config.Bind("LiveTranslator", "GameAwareTranslations", true, "Use Among Us/game-aware slang corrections for better chat translations.");
             TranslateWhenChatClosed = config.Bind("LiveTranslator", "TranslateWhenChatClosed", true, "If true, incoming messages are translated even when the chat is closed. If false, only while chat is open.");
 
-            // Default richiesto: ricevuti AUTO -> lingua impostata su Among Us, invio lingua Among Us -> lingua rilevata dall'ultimo messaggio ricevuto.
             ReadFromLang = config.Bind("LiveTranslator", "ReadFromLang", "auto", "Source language for received messages. Default: auto detect.");
             ReadToLang = config.Bind("LiveTranslator", "ReadToLang", "among", "Target language for received messages. Default: Among Us UI language.");
             SendFromLang = config.Bind("LiveTranslator", "SendFromLang", "among", "Source language for messages you write. Default: Among Us UI language.");
             SendToLang = config.Bind("LiveTranslator", "SendToLang", "auto", "Target language for messages you send. Default: last detected incoming language.");
             OutgoingTranslatePrefix = config.Bind("LiveTranslator", "OutgoingTranslatePrefix", "-", "Prefix required to translate sent messages when OutgoingRequiresPrefix is true. Example: -ciao");
 
-            Provider = config.Bind("LiveTranslator", "Provider", "GoogleTranslate", "Translation provider: GoogleTranslate, Gemini or OpenAI.");
+            Provider = config.Bind("LiveTranslator", "Provider", "GoogleWeb", "Translation provider: GoogleWeb, GoogleTranslate, Gemini or OpenAI.");
             GoogleTranslateApiKey = config.Bind("LiveTranslator", "GoogleTranslateApiKey", string.Empty, "Google Cloud Translation Basic v2 API key.");
             GeminiApiKey = config.Bind("LiveTranslator", "GeminiApiKey", string.Empty, "Google Gemini API key.");
             GeminiModel = config.Bind("LiveTranslator", "GeminiModel", "gemini-3.5-flash", "Gemini model used for translation.");
@@ -140,7 +140,7 @@ namespace BanMod
             string configuredProvider = Provider == null ? string.Empty : Provider.Value;
             if (!IsNormalProvider(configuredProvider))
             {
-                configuredProvider = "GoogleTranslate";
+                configuredProvider = "GoogleWeb";
                 if (Provider != null) Provider.Value = configuredProvider;
             }
 
@@ -182,7 +182,6 @@ namespace BanMod
                 if (name.StartsWith("de", StringComparison.OrdinalIgnoreCase)) return "de";
                 if (name.StartsWith("en", StringComparison.OrdinalIgnoreCase)) return "en";
 
-                // Menu text currently has complete translations only for the languages above.
                 return "en";
             }
             catch
@@ -201,22 +200,25 @@ namespace BanMod
         }
         private static bool IsNormalProvider(string provider)
         {
-            return string.Equals(provider, "GoogleTranslate", StringComparison.OrdinalIgnoreCase)
+            return string.Equals(provider, "GoogleWeb", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(provider, "GoogleTranslate", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(provider, "Gemini", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(provider, "OpenAI", StringComparison.OrdinalIgnoreCase);
         }
 
         public static string GetProvider()
         {
-            string p = SafeValue(Provider, "GoogleTranslate");
-            return IsNormalProvider(p) ? p : "GoogleTranslate";
+            string p = SafeValue(Provider, "GoogleWeb");
+            return IsNormalProvider(p) ? p : "GoogleWeb";
         }
 
         public static string GetProviderDisplay()
         {
             string provider = GetProvider();
+            if (string.Equals(provider, "GoogleWeb", StringComparison.OrdinalIgnoreCase))
+                return "Google Translate (no API key)";
             if (string.Equals(provider, "GoogleTranslate", StringComparison.OrdinalIgnoreCase))
-                return "Google Translate";
+                return "Google Cloud";
             if (string.Equals(provider, "Gemini", StringComparison.OrdinalIgnoreCase))
                 return "Gemini";
             return "OpenAI";
@@ -362,7 +364,7 @@ namespace BanMod
                 if (ShowOriginalIncoming != null) ShowOriginalIncoming.Value = true;
                 if (GameAwareTranslations != null) GameAwareTranslations.Value = true;
                 if (TranslateWhenChatClosed != null) TranslateWhenChatClosed.Value = true;
-                if (Provider != null) Provider.Value = "GoogleTranslate";
+                if (Provider != null) Provider.Value = "GoogleWeb";
                 if (ReadFromLang != null) ReadFromLang.Value = "auto";
                 if (ReadToLang != null) ReadToLang.Value = "among";
                 if (SendFromLang != null) SendFromLang.Value = "among";
@@ -460,7 +462,7 @@ namespace BanMod
         public static void SetProvider(string provider)
         {
             if (!IsNormalProvider(provider))
-                provider = "GoogleTranslate";
+                provider = "GoogleWeb";
 
             if (Provider != null)
                 Provider.Value = provider;
@@ -472,12 +474,14 @@ namespace BanMod
         public static void CycleProvider()
         {
             string current = GetProvider();
-            if (string.Equals(current, "GoogleTranslate", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(current, "GoogleWeb", StringComparison.OrdinalIgnoreCase))
+                SetProvider("GoogleTranslate");
+            else if (string.Equals(current, "GoogleTranslate", StringComparison.OrdinalIgnoreCase))
                 SetProvider("Gemini");
             else if (string.Equals(current, "Gemini", StringComparison.OrdinalIgnoreCase))
                 SetProvider("OpenAI");
             else
-                SetProvider("GoogleTranslate");
+                SetProvider("GoogleWeb");
         }
 
         public static bool CanUseTranslateNow()
@@ -488,6 +492,8 @@ namespace BanMod
         private static bool CanUseCurrentRemoteProvider()
         {
             string provider = GetProvider();
+            if (string.Equals(provider, "GoogleWeb", StringComparison.OrdinalIgnoreCase))
+                return true;
             if (string.Equals(provider, "GoogleTranslate", StringComparison.OrdinalIgnoreCase))
                 return !string.IsNullOrWhiteSpace(GetGoogleTranslateApiKey());
             if (string.Equals(provider, "Gemini", StringComparison.OrdinalIgnoreCase))
@@ -507,7 +513,7 @@ namespace BanMod
             if (TranslateOutgoing != null) TranslateOutgoing.Value = true;
             if (OutgoingRequiresPrefix != null) OutgoingRequiresPrefix.Value = false;
             if (GameAwareTranslations != null) GameAwareTranslations.Value = true;
-            SetProvider("GoogleTranslate");
+            SetProvider("GoogleWeb");
             ClearCache();
             ShowStatusPublic("Default preset restored.");
         }
@@ -523,7 +529,7 @@ namespace BanMod
             {
                 string directory = Path.GetDirectoryName(TranslateListPath);
                 if (string.IsNullOrWhiteSpace(directory))
-                    directory = "./TRANSLATE_DATA/Translate";
+                    directory = "./DATA/LANGUAGE/Translate";
                 Directory.CreateDirectory(directory);
             }
             catch (Exception ex)
@@ -593,7 +599,7 @@ namespace BanMod
             EnsureLocalTranslationDirectory();
             string directory = Path.GetDirectoryName(TranslateListPath);
             if (string.IsNullOrWhiteSpace(directory))
-                directory = "./TRANSLATE_DATA/Translate";
+                directory = "./DATA/LANGUAGE/Translate";
 
             string pair = MakeLocalPairKey(sourceLang, targetLang);
             pair = Regex.Replace(pair, @"[^a-z0-9_\-]", "_", RegexOptions.IgnoreCase);
@@ -833,9 +839,6 @@ namespace BanMod
             string translation,
             bool manual)
         {
-            // Local persistence is reserved for translations explicitly saved
-            // by the user from the editor. Automatic/provider translations
-            // must live only in the in-memory cache for the current session.
             if (!manual)
                 return false;
 
@@ -955,7 +958,7 @@ namespace BanMod
         {
             string directory = Path.GetDirectoryName(TranslateListPath);
             return string.IsNullOrWhiteSpace(directory)
-                ? "./TRANSLATE_DATA/Translate"
+                ? "./DATA/LANGUAGE/Translate"
                 : directory;
         }
 
@@ -1054,7 +1057,6 @@ namespace BanMod
                 string original = CleanChatText(chatText);
                 if (string.IsNullOrWhiteSpace(original)) return;
 
-                // Aggiorna sempre l'ultima lingua rilevata, anche se poi non traduci perché la chat è chiusa.
                 string localDetected = InferLikelySourceLang(original);
                 if (!string.IsNullOrWhiteSpace(localDetected)) LastIncomingDetectedLang = localDetected;
 
@@ -1100,8 +1102,6 @@ namespace BanMod
                 string original = CleanChatText(chatText);
                 if (string.IsNullOrWhiteSpace(original)) return;
 
-                // Nessun prefisso richiesto: se il generale è ON, l'invio viene tradotto sempre.
-                // Se la traduzione non parte, almeno il testo resta pulito e senza simboli pericolosi.
                 chatText = CleanOutgoingChatText(original, original);
 
                 string from = ResolveSourceLangForRequest(GetSendFromLang(), GetAmongUserLangCode());
@@ -1119,12 +1119,137 @@ namespace BanMod
                 translated = CleanOutgoingChatText(translated, original);
                 if (string.IsNullOrWhiteSpace(translated)) return;
 
-                // IMPORTANT: outgoing RPC must contain ONLY the safe translated message.
                 chatText = translated;
             }
             catch (Exception ex)
             {
                 try { Debug.LogWarning("[LiveTranslator] outgoing translation failed: " + ex.Message); } catch { }
+            }
+        }
+
+        public static string TranslateExternalIncomingForRead(
+            string text,
+            bool forceWhenDisabled = false)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            if (!forceWhenDisabled && !GetEnabled())
+                return string.Empty;
+
+            try
+            {
+                string original = CleanChatText(text);
+                if (string.IsNullOrWhiteSpace(original))
+                    return string.Empty;
+
+                string localDetected = InferLikelySourceLang(original);
+                if (!string.IsNullOrWhiteSpace(localDetected))
+                    LastIncomingDetectedLang = localDetected;
+
+                string from = ResolveSourceLangForRequest(GetReadFromLang(), "auto");
+                string to = ResolveTargetLangForRequest(GetReadToLang(), GetAmongUserLangCode());
+
+                if (SameLang(from, to))
+                    return string.Empty;
+
+                if (string.Equals(from, "auto", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(localDetected) &&
+                    SameLang(localDetected, to))
+                {
+                    return string.Empty;
+                }
+
+                LastResponseDetectedSourceLang = string.Empty;
+                string translated = TranslateBlocking(original, from, to);
+                string detected = NormalizeLang(LastResponseDetectedSourceLang, string.Empty);
+
+                if (!string.IsNullOrWhiteSpace(detected))
+                {
+                    LastIncomingDetectedLang = detected;
+                    if (SameLang(detected, to))
+                        return string.Empty;
+                }
+
+                translated = CleanTranslatedText(translated);
+                if (string.IsNullOrWhiteSpace(translated))
+                    return string.Empty;
+
+                if (string.Equals(translated, original, StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+
+                return translated;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Debug.LogWarning(
+                        "[LiveTranslator] external incoming translation failed: " + ex.Message);
+                }
+                catch { }
+
+                return string.Empty;
+            }
+        }
+
+        public static string TranslateExternalSelectedForRead(string text)
+        {
+            return TranslateExternalIncomingForRead(text, true);
+        }
+
+        public static string TranslateExternalOutgoingForSend(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text ?? string.Empty;
+
+            if (!GetEnabled())
+                return text.Trim();
+
+            try
+            {
+                string original = CleanChatText(text);
+                if (string.IsNullOrWhiteSpace(original))
+                    return text.Trim();
+
+                string from = ResolveSourceLangForRequest(
+                    GetSendFromLang(),
+                    GetAmongUserLangCode());
+
+                string to = ResolveTargetLangForRequest(
+                    GetSendToLang(),
+                    GetAutoReplyTargetLang());
+
+                if (SameLang(from, to))
+                    return original;
+
+                string localDetected = InferLikelySourceLang(original);
+                if (!string.IsNullOrWhiteSpace(localDetected) && SameLang(localDetected, to))
+                    return original;
+
+                LastResponseDetectedSourceLang = string.Empty;
+                string translated = TranslateBlocking(original, from, to);
+                string detected = NormalizeLang(LastResponseDetectedSourceLang, string.Empty);
+
+                if (!string.IsNullOrWhiteSpace(detected) && SameLang(detected, to))
+                    return original;
+
+                translated = CleanTranslatedText(translated);
+                if (string.IsNullOrWhiteSpace(translated))
+                    return original;
+
+                return translated;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Debug.LogWarning(
+                        "[LiveTranslator] external outgoing translation failed: " + ex.Message);
+                }
+                catch { }
+
+                return text.Trim();
             }
         }
 
@@ -1199,8 +1324,6 @@ namespace BanMod
 
             if (!string.IsNullOrWhiteSpace(result))
             {
-                // Automatic translations are cached only in memory.
-                // They are intentionally not persisted to local translation files.
                 lock (CacheLock)
                 {
                     if (Cache.Count > 500) Cache.Clear();
@@ -1453,6 +1576,9 @@ namespace BanMod
         {
             string provider = GetProvider();
 
+            if (string.Equals(provider, "GoogleWeb", StringComparison.OrdinalIgnoreCase))
+                return await TranslateWithGoogleWeb(text, sourceLang, targetLang).ConfigureAwait(false);
+
             if (string.Equals(provider, "GoogleTranslate", StringComparison.OrdinalIgnoreCase))
                 return await TranslateWithGoogleTranslate(text, sourceLang, targetLang).ConfigureAwait(false);
 
@@ -1460,6 +1586,275 @@ namespace BanMod
                 return await TranslateWithGemini(text, sourceLang, targetLang).ConfigureAwait(false);
 
             return await TranslateWithOpenAI(text, sourceLang, targetLang).ConfigureAwait(false);
+        }
+
+        private static async Task<string> TranslateWithGoogleWeb(
+            string text,
+            string sourceLang,
+            string targetLang)
+        {
+            try
+            {
+                string source = ResolveSourceLangForRequest(sourceLang, "auto");
+                string target = ResolveTargetLangForRequest(targetLang, GetAmongUserLangCode());
+
+                string url =
+                    "https://translate.googleapis.com/translate_a/single"
+                    + "?client=gtx"
+                    + "&dt=t"
+                    + "&sl=" + Uri.EscapeDataString(source)
+                    + "&tl=" + Uri.EscapeDataString(target)
+                    + "&q=" + Uri.EscapeDataString(text);
+
+                using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url))
+                {
+                    request.Headers.TryAddWithoutValidation(
+                        "User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+
+                    using (HttpResponseMessage response =
+                        await Http.SendAsync(request).ConfigureAwait(false))
+                    {
+                        string json =
+                            await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                        if (!response.IsSuccessStatusCode)
+                            return string.Empty;
+
+                        string translated = ParseGoogleWebResponse(json);
+
+                        string detected = ExtractGoogleWebDetectedLanguage(json);
+                        if (string.Equals(source, "auto", StringComparison.OrdinalIgnoreCase) &&
+                            !string.IsNullOrWhiteSpace(detected))
+                        {
+                            LastResponseDetectedSourceLang =
+                                NormalizeLang(detected, string.Empty);
+                        }
+
+                        return translated;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Debug.LogWarning(
+                        "[LiveTranslator] GoogleWeb translation failed: " + ex.Message);
+                }
+                catch { }
+
+                return string.Empty;
+            }
+        }
+
+        private static string ParseGoogleWebResponse(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return string.Empty;
+
+            try
+            {
+                int outerStart = json.IndexOf("[[[", StringComparison.Ordinal);
+                if (outerStart < 0)
+                    return string.Empty;
+
+                int i = outerStart + 2;
+                StringBuilder result = new StringBuilder();
+
+                while (i < json.Length)
+                {
+                    while (i < json.Length &&
+                           (json[i] == '[' || json[i] == ',' || char.IsWhiteSpace(json[i])))
+                    {
+                        i++;
+                    }
+
+                    if (i >= json.Length || json[i] == ']')
+                        break;
+
+                    if (json[i] != '"')
+                        break;
+
+                    string part;
+                    int next;
+                    if (!TryReadJsonString(json, i, out part, out next))
+                        break;
+
+                    result.Append(part);
+                    i = next;
+
+                    bool inString = false;
+                    bool escaped = false;
+                    int depth = 0;
+
+                    for (; i < json.Length; i++)
+                    {
+                        char c = json[i];
+
+                        if (inString)
+                        {
+                            if (escaped)
+                            {
+                                escaped = false;
+                            }
+                            else if (c == '\\')
+                            {
+                                escaped = true;
+                            }
+                            else if (c == '"')
+                            {
+                                inString = false;
+                            }
+
+                            continue;
+                        }
+
+                        if (c == '"')
+                        {
+                            inString = true;
+                            continue;
+                        }
+
+                        if (c == '[')
+                        {
+                            depth++;
+                            continue;
+                        }
+
+                        if (c == ']')
+                        {
+                            if (depth == 0)
+                            {
+                                i++;
+                                break;
+                            }
+
+                            depth--;
+                        }
+                    }
+
+                    while (i < json.Length && char.IsWhiteSpace(json[i]))
+                        i++;
+
+                    if (i < json.Length && json[i] == ',')
+                    {
+                        i++;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                return WebUtility.HtmlDecode(result.ToString());
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static string ExtractGoogleWebDetectedLanguage(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return string.Empty;
+
+            try
+            {
+                Match m = Regex.Match(
+                    json,
+                    @"\]\]\s*,\s*null\s*,\s*""(?<lang>[A-Za-z\-]+)""",
+                    RegexOptions.IgnoreCase);
+
+                if (!m.Success)
+                    return string.Empty;
+
+                return m.Groups["lang"].Value;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static bool TryReadJsonString(
+            string json,
+            int quoteIndex,
+            out string value,
+            out int nextIndex)
+        {
+            value = string.Empty;
+            nextIndex = quoteIndex;
+
+            if (string.IsNullOrEmpty(json) ||
+                quoteIndex < 0 ||
+                quoteIndex >= json.Length ||
+                json[quoteIndex] != '"')
+            {
+                return false;
+            }
+
+            StringBuilder sb = new StringBuilder();
+
+            for (int i = quoteIndex + 1; i < json.Length; i++)
+            {
+                char c = json[i];
+
+                if (c == '"')
+                {
+                    value = sb.ToString();
+                    nextIndex = i + 1;
+                    return true;
+                }
+
+                if (c != '\\')
+                {
+                    sb.Append(c);
+                    continue;
+                }
+
+                if (++i >= json.Length)
+                    return false;
+
+                char e = json[i];
+                switch (e)
+                {
+                    case '"': sb.Append('"'); break;
+                    case '\\': sb.Append('\\'); break;
+                    case '/': sb.Append('/'); break;
+                    case 'b': sb.Append('\b'); break;
+                    case 'f': sb.Append('\f'); break;
+                    case 'n': sb.Append('\n'); break;
+                    case 'r': sb.Append('\r'); break;
+                    case 't': sb.Append('\t'); break;
+
+                    case 'u':
+                        if (i + 4 >= json.Length)
+                            return false;
+
+                        string hex = json.Substring(i + 1, 4);
+                        int code;
+
+                        if (!int.TryParse(
+                            hex,
+                            NumberStyles.HexNumber,
+                            CultureInfo.InvariantCulture,
+                            out code))
+                        {
+                            return false;
+                        }
+
+                        sb.Append((char)code);
+                        i += 4;
+                        break;
+
+                    default:
+                        sb.Append(e);
+                        break;
+                }
+            }
+
+            return false;
         }
 
         private static async Task<string> TranslateWithGoogleTranslate(
@@ -1681,7 +2076,6 @@ namespace BanMod
             if (string.IsNullOrWhiteSpace(json))
                 return string.Empty;
 
-            // Responses API REST output: output[].content[] where type = output_text and text contains the answer.
             Match match = Regex.Match(
                 json,
                 @"""type""\s*:\s*""output_text""[\s\S]*?""text""\s*:\s*""((?:\\.|[^""\\])*)""",
@@ -1691,7 +2085,6 @@ namespace BanMod
             if (match.Success && match.Groups.Count > 1)
                 return UnescapeJsonString(match.Groups[1].Value);
 
-            // Compatibility fallback for APIs that expose a direct output_text string.
             match = Regex.Match(
                 json,
                 @"""output_text""\s*:\s*""((?:\\.|[^""\\])*)""",
@@ -1908,7 +2301,6 @@ namespace BanMod
 
             try
             {
-                // AI responses should not return "source > translation", but if they do, keep only the last translated part.
                 string[] separators = new string[] { "→", "⇒", "➜", "➔", "➡", "=>", "->", " > " };
                 foreach (string sep in separators)
                 {
@@ -1924,10 +2316,8 @@ namespace BanMod
                     }
                 }
 
-                // Remove common labels accidentally returned by AI.
                 t = Regex.Replace(t, "^(translation|translated|traduzione|tradotto|output|result|risultato|italian|italiano|english|inglese|chinese|cinese|russian|russo|japanese|giapponese|korean|coreano|arabic|arabo)\\s*[:：-]\\s*", string.Empty, RegexOptions.IgnoreCase).Trim();
 
-                // If multiple lines are returned, prefer the last non-label line.
                 string[] lines = t.Replace("\r", "").Split('\n');
                 for (int i = lines.Length - 1; i >= 0; i--)
                 {
@@ -1967,7 +2357,6 @@ namespace BanMod
                 UnicodeCategory cat = char.GetUnicodeCategory(ch);
                 if (cat == UnicodeCategory.Control || cat == UnicodeCategory.Format || cat == UnicodeCategory.PrivateUse || cat == UnicodeCategory.Surrogate) continue;
 
-                // Remove arrows, emoji-like symbols and math/technical symbols that Among Us chat can reject.
                 if ((ch >= '\u2190' && ch <= '\u21FF') || (ch >= '\u2700' && ch <= '\u27BF') || (ch >= '\u2900' && ch <= '\u297F') || (ch >= '\u2B00' && ch <= '\u2BFF')) continue;
                 if (cat == UnicodeCategory.OtherSymbol || cat == UnicodeCategory.MathSymbol || cat == UnicodeCategory.ModifierSymbol) continue;
 
@@ -2073,8 +2462,7 @@ namespace BanMod
         {
             if (string.IsNullOrEmpty(text)) return string.Empty;
             string t = text.Trim();
-            // Rimuove suffissi/hash esadecimali da 32 caratteri, anche se attaccati alla parola precedente.
-            // Esempio: "italiano0aea2f5ef36731b02422e218d5add801" -> "italiano".
+
             try
             {
                 string old;
@@ -2345,7 +2733,6 @@ namespace BanMod
                 }
             }
 
-            // Default English.
             switch (key)
             {
                 case "title": return "LiveTranslator";
@@ -2416,6 +2803,7 @@ namespace BanMod
             {
                 LiveTranslator.TryTranslateIncomingForDisplay(sourcePlayer, ref chatText);
             }
+
         }
 
         [HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.RpcSendChat))]
@@ -2474,9 +2862,6 @@ namespace BanMod
         private LiveTranslator.LocalTranslationEntry[] editorResults =
             new LiveTranslator.LocalTranslationEntry[0];
 
-        // Manual input avoids Unity IMGUI TextField/TextEditor, which can fail
-        // in IL2CPP when an unstripped TextEditor method is unavailable.
-        // Types 0..2 are provider keys; 10..12 are editor fields.
         private bool apiKeyInputFocused;
         private int apiKeyInputType = -1;
         private string apiKeyInputBuffer = string.Empty;
@@ -2504,7 +2889,6 @@ namespace BanMod
         {
             try
             {
-                // Handle the custom API-key field before resetting input axes.
                 HandleApiKeyInput();
 
                 bool ctrl =
@@ -2772,8 +3156,6 @@ namespace BanMod
             boxStyle = new GUIStyle(GUI.skin.box);
             boxStyle.normal.textColor = Color.white;
 
-            // Visual style for the custom manual-input field. This is drawn as a button/box
-            // and never invokes GUI.TextField/GUILayout.TextField or UnityEngine.TextEditor.
             inputStyle = new GUIStyle(GUI.skin.box);
             inputStyle.fontSize = 15;
             inputStyle.alignment = TextAnchor.MiddleLeft;
@@ -2816,8 +3198,6 @@ namespace BanMod
             GUILayout.Label(LiveTranslator.T("title"), titleStyle, GUILayout.Height(36f));
             GUILayout.Space(8f);
 
-            // Main panel is short: no ScrollView here, otherwise GUILayout stretches it
-            // and leaves a huge empty gap between Default and Close.
             GUILayout.BeginVertical();
 
             GUILayout.BeginVertical(boxStyle);
@@ -2860,6 +3240,13 @@ namespace BanMod
                     "OpenAI API Key",
                     LiveTranslator.GetOpenAIApiKey(),
                     0);
+            }
+            else if (string.Equals(provider, "GoogleWeb", StringComparison.OrdinalIgnoreCase))
+            {
+                GUILayout.Label(
+                    "No API key required",
+                    labelStyle,
+                    GUILayout.Height(24f));
             }
             else if (string.Equals(provider, "GoogleTranslate", StringComparison.OrdinalIgnoreCase))
             {
@@ -2937,8 +3324,6 @@ namespace BanMod
 
             GUILayout.BeginHorizontal();
 
-            // This looks and behaves like an editable field, but input is captured manually
-            // in Update() via Input.inputString. No Unity TextEditor is used.
             if (GUILayout.Button(
                 displayValue,
                 inputStyle,
@@ -3411,3 +3796,4 @@ namespace BanMod
     }
 
 }
+

@@ -12,7 +12,7 @@ namespace BanMod
 {
     public static class CheaterManager
     {
-        private const string CheaterListPath = "./BAN_DATA/DENIED/Cheater.txt";
+        private const string CheaterListPath = "./DATA/DENIED/Cheater.txt";
 
         private static readonly HttpClient httpClient = new HttpClient();
 
@@ -40,7 +40,7 @@ namespace BanMod
         {
             try
             {
-                Directory.CreateDirectory("BAN_DATA/DENIED");
+                Directory.CreateDirectory("DATA/DENIED");
 
                 if (!File.Exists(CheaterListPath))
                     File.Create(CheaterListPath).Close();
@@ -368,7 +368,7 @@ namespace BanMod
         {
             try
             {
-                Directory.CreateDirectory("BAN_DATA/DENIED");
+                Directory.CreateDirectory("DATA/DENIED");
 
                 List<CheaterRecord> snapshot;
                 lock (cacheLock)

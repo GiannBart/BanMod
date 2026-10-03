@@ -1,7 +1,12 @@
-using System;
+
 using HarmonyLib;
 using InnerNet;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using TMPro;
 using UnityEngine;
+using static BanMod.Utils;
 
 namespace BanMod
 {
@@ -14,8 +19,9 @@ namespace BanMod
 
     public static class BanModServerSelection
     {
-        public static BanModServerMode Mode = BanModServerMode.None;
+        public static BanModServerMode Mode = BanModServerMode.Vanilla;
         public static bool VanillaAcknowledged = false;
+        public static bool VanillaCreateBypassOnce = false;
 
         public static bool IsModded25 =>
             Mode == BanModServerMode.Modded25;
@@ -28,8 +34,68 @@ namespace BanMod
 
         public static void Reset()
         {
-            Mode = BanModServerMode.None;
+            Mode = BanModServerMode.Vanilla;
             VanillaAcknowledged = false;
+            VanillaCreateBypassOnce = false;
+        }
+
+        public static bool ConsumeVanillaCreateBypass()
+        {
+            if (!VanillaCreateBypassOnce)
+                return false;
+
+            VanillaCreateBypassOnce = false;
+            return true;
+        }
+        private const string VanillaAcceptedKey = "BanMod_VanillaAcceptedAt";
+
+        public static bool HasAcceptedVanillaThisWeek()
+        {
+            string saved = PlayerPrefs.GetString(VanillaAcceptedKey, "");
+
+            if (string.IsNullOrEmpty(saved))
+                return false;
+
+            if (!long.TryParse(saved, out long ticks))
+                return false;
+
+            DateTime acceptedAt = new DateTime(ticks, DateTimeKind.Utc);
+
+            return DateTime.UtcNow - acceptedAt < TimeSpan.FromDays(7);
+        }
+        public static DateTime? GetVanillaAcceptanceExpiry()
+        {
+            string saved = PlayerPrefs.GetString(
+                VanillaAcceptedKey,
+                ""
+            );
+
+            if (string.IsNullOrEmpty(saved))
+                return null;
+
+            if (!long.TryParse(saved, out long ticks))
+                return null;
+
+            DateTime acceptedAt =
+                new DateTime(
+                    ticks,
+                    DateTimeKind.Utc
+                );
+
+            return acceptedAt
+                .AddDays(7)
+                .ToLocalTime();
+        }
+        public static void SaveVanillaAcceptance()
+        {
+            PlayerPrefs.SetString(
+                VanillaAcceptedKey,
+                DateTime.UtcNow.Ticks.ToString()
+            );
+
+            PlayerPrefs.Save();
+
+            VanillaAcknowledged = true;
         }
     }
 
@@ -171,10 +237,6 @@ namespace BanMod
             }
             catch (Exception ex)
             {
-                BMLogger.LogWarning(
-                    "[BanMod Server] Could not detect Among Us language: " +
-                    ex.Message
-                );
             }
 
             return "english";
@@ -209,9 +271,9 @@ namespace BanMod
                 SelectDescription =
                     "Choose the lobby mode before creating this lobby.",
                 ModdedDescription =
-                    "Host a lobby with gameplay changes.",
+                    "Use this server to add roles and modify the gameplay.",
                 VanillaDescription =
-                    "Host a lobby without gameplay changes.",
+                    "Use this server if you only use anti-cheat and visual modifications.",
                 ModdedButton =
                     "MODDED +25\nRECOMMENDED",
                 VanillaButton =
@@ -240,9 +302,9 @@ namespace BanMod
                 SelectDescription =
                     "Scegli la modalità della lobby prima di crearla.",
                 ModdedDescription =
-                    "Ospita una lobby con modifiche al gameplay.",
+                    "Usa questo server per aggiungere ruoli e modificare il gameplay.",
                 VanillaDescription =
-                    "Ospita una lobby senza modifiche al gameplay.",
+                    "Usa questo server se usi solo anti-cheat e modifiche visuali.",
                 ModdedButton =
                     "MODDED +25\nCONSIGLIATO",
                 VanillaButton =
@@ -271,9 +333,9 @@ namespace BanMod
                 SelectDescription =
                     "Choisissez le mode du salon avant de le créer.",
                 ModdedDescription =
-                    "Hébergez un salon avec des modifications du gameplay.",
+                    "Utilisez ce serveur pour ajouter des rôles et modifier le gameplay.",
                 VanillaDescription =
-                    "Hébergez un salon sans modifications du gameplay.",
+                    "Utilisez ce serveur si vous utilisez uniquement un anti-triche et des modifications visuelles.",
                 ModdedButton =
                     "MODDED +25\nRECOMMANDÉ",
                 VanillaButton =
@@ -302,9 +364,9 @@ namespace BanMod
                 SelectDescription =
                     "Wähle den Lobby-Modus, bevor du diese Lobby erstellst.",
                 ModdedDescription =
-                    "Hoste eine Lobby mit Gameplay-Änderungen.",
+                    "Verwende diesen Server, um Rollen hinzuzufügen und das Gameplay zu verändern.",
                 VanillaDescription =
-                    "Hoste eine Lobby ohne Gameplay-Änderungen.",
+                    "Verwende diesen Server, wenn du nur Anti-Cheat und visuelle Änderungen nutzt.",
                 ModdedButton =
                     "MODDED +25\nEMPFOHLEN",
                 VanillaButton =
@@ -333,9 +395,9 @@ namespace BanMod
                 SelectDescription =
                     "Elige el modo de la sala antes de crearla.",
                 ModdedDescription =
-                    "Organiza una sala con modificaciones del gameplay.",
+                    "Usa este servidor para añadir roles y modificar el gameplay.",
                 VanillaDescription =
-                    "Organiza una sala sin modificaciones del gameplay.",
+                    "Usa este servidor si solo utilizas anti-cheat y modificaciones visuales.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
                 VanillaButton =
@@ -364,9 +426,9 @@ namespace BanMod
                 SelectDescription =
                     "Elige el modo de la sala antes de crearla.",
                 ModdedDescription =
-                    "Crea una sala con modificaciones del gameplay.",
+                    "Usa este servidor para añadir roles y modificar el gameplay.",
                 VanillaDescription =
-                    "Crea una sala sin modificaciones del gameplay.",
+                    "Usa este servidor si solo usas anti-cheat y modificaciones visuales.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
                 VanillaButton =
@@ -395,9 +457,9 @@ namespace BanMod
                 SelectDescription =
                     "Escolha o modo da sala antes de criá-la.",
                 ModdedDescription =
-                    "Hospede uma sala com alterações no gameplay.",
+                    "Use este servidor para adicionar funções e modificar o gameplay.",
                 VanillaDescription =
-                    "Hospede uma sala sem alterações no gameplay.",
+                    "Use este servidor se você utiliza apenas anti-cheat e modificações visuais.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
                 VanillaButton =
@@ -426,9 +488,9 @@ namespace BanMod
                 SelectDescription =
                     "Escolhe o modo da sala antes de a criares.",
                 ModdedDescription =
-                    "Aloja uma sala com alterações ao gameplay.",
+                    "Usa este servidor para adicionar funções e modificar o gameplay.",
                 VanillaDescription =
-                    "Aloja uma sala sem alterações ao gameplay.",
+                    "Usa este servidor se utilizares apenas anti-cheat e modificações visuais.",
                 ModdedButton =
                     "MODDED +25\nRECOMENDADO",
                 VanillaButton =
@@ -457,9 +519,9 @@ namespace BanMod
                 SelectDescription =
                     "Kies de lobbymodus voordat je deze lobby maakt.",
                 ModdedDescription =
-                    "Host een lobby met gameplaywijzigingen.",
+                    "Gebruik deze server om rollen toe te voegen en de gameplay aan te passen.",
                 VanillaDescription =
-                    "Host een lobby zonder gameplaywijzigingen.",
+                    "Gebruik deze server als je alleen anti-cheat en visuele aanpassingen gebruikt.",
                 ModdedButton =
                     "MODDED +25\nAANBEVOLEN",
                 VanillaButton =
@@ -488,9 +550,9 @@ namespace BanMod
                 SelectDescription =
                     "Выберите режим лобби перед его созданием.",
                 ModdedDescription =
-                    "Создайте лобби с изменениями игрового процесса.",
+                    "Используйте этот сервер, чтобы добавлять роли и изменять игровой процесс.",
                 VanillaDescription =
-                    "Создайте лобби без изменений игрового процесса.",
+                    "Используйте этот сервер, если вы применяете только античит и визуальные изменения.",
                 ModdedButton =
                     "MODDED +25\nРЕКОМЕНДУЕТСЯ",
                 VanillaButton =
@@ -519,9 +581,9 @@ namespace BanMod
                 SelectDescription =
                     "ロビーを作成する前にモードを選択してください。",
                 ModdedDescription =
-                    "ゲームプレイを変更するロビーをホストします。",
+                    "役職を追加したりゲームプレイを変更したりする場合は、このサーバーを使用してください。",
                 VanillaDescription =
-                    "ゲームプレイを変更しないロビーをホストします。",
+                    "アンチチートと見た目の変更だけを使用する場合は、このサーバーを使用してください。",
                 ModdedButton =
                     "MODDED +25\n推奨",
                 VanillaButton =
@@ -550,9 +612,9 @@ namespace BanMod
                 SelectDescription =
                     "로비를 만들기 전에 로비 모드를 선택하세요.",
                 ModdedDescription =
-                    "게임플레이가 변경된 로비를 호스트합니다.",
+                    "역할을 추가하고 게임플레이를 변경하려면 이 서버를 사용하세요.",
                 VanillaDescription =
-                    "게임플레이가 변경되지 않은 로비를 호스트합니다.",
+                    "안티치트와 시각적 변경만 사용하는 경우 이 서버를 사용하세요.",
                 ModdedButton =
                     "MODDED +25\n권장",
                 VanillaButton =
@@ -581,9 +643,9 @@ namespace BanMod
                 SelectDescription =
                     "创建大厅前请选择大厅模式。",
                 ModdedDescription =
-                    "创建一个包含游戏玩法修改的大厅。",
+                    "使用此服务器来添加角色并修改游戏玩法。",
                 VanillaDescription =
-                    "创建一个不修改游戏玩法的大厅。",
+                    "如果你只使用反作弊和视觉修改，请使用此服务器。",
                 ModdedButton =
                     "MODDED +25\n推荐",
                 VanillaButton =
@@ -612,9 +674,9 @@ namespace BanMod
                 SelectDescription =
                     "建立大廳前請選擇大廳模式。",
                 ModdedDescription =
-                    "建立一個包含遊戲玩法修改的大廳。",
+                    "使用此伺服器來新增角色並修改遊戲玩法。",
                 VanillaDescription =
-                    "建立一個不修改遊戲玩法的大廳。",
+                    "如果你只使用反作弊和視覺修改，請使用此伺服器。",
                 ModdedButton =
                     "MODDED +25\n推薦",
                 VanillaButton =
@@ -643,9 +705,9 @@ namespace BanMod
                 SelectDescription =
                     "Piliin ang lobby mode bago gawin ang lobby.",
                 ModdedDescription =
-                    "Mag-host ng lobby na may gameplay changes.",
+                    "Gamitin ang server na ito para magdagdag ng mga role at baguhin ang gameplay.",
                 VanillaDescription =
-                    "Mag-host ng lobby na walang gameplay changes.",
+                    "Gamitin ang server na ito kung anti-cheat at visual modifications lang ang ginagamit mo.",
                 ModdedButton =
                     "MODDED +25\nINIREREKOMENDA",
                 VanillaButton =
@@ -664,6 +726,7 @@ namespace BanMod
                     "HINDI AKO SUMASANG-AYON"
             };
         }
+
     }
 
     public class ServerSelectionMenu : MonoBehaviour
@@ -679,17 +742,30 @@ namespace BanMod
         private float createScreenOpenTime = -1f;
 
         private Rect windowRect;
+        private Vector2 warningScroll = Vector2.zero;
 
-        private readonly Vector2 normalWindowSize =
-            new Vector2(850f, 600f);
+        private CreateGameOptions pendingCreateGame = null;
 
-        private readonly Vector2 warningWindowSize =
-            new Vector2(950f, 720f);
-
+        private GUIStyle windowStyle;
         private GUIStyle titleStyle;
+        private GUIStyle headerStyle;
         private GUIStyle textStyle;
+        private GUIStyle mutedStyle;
         private GUIStyle buttonStyle;
+        private GUIStyle sectionStyle;
         private GUIStyle warningStyle;
+
+        private Texture2D roundedWindowTexture;
+        private Texture2D roundedPanelTexture;
+        private Texture2D roundedButtonTexture;
+
+        private int lastScreenWidth;
+        private int lastScreenHeight;
+
+        private const float NormalWindowWidth = 760f;
+        private const float NormalWindowHeight = 620f;
+        private const float WarningWindowWidth = 860f;
+        private const float WarningWindowHeight = 720f;
 
         public ServerSelectionMenu(IntPtr ptr) : base(ptr)
         {
@@ -698,6 +774,16 @@ namespace BanMod
         void Awake()
         {
             Instance = this;
+            lastScreenWidth = Screen.width;
+            lastScreenHeight = Screen.height;
+        }
+
+        void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+
+            DestroyResources();
         }
 
         void Update()
@@ -706,6 +792,16 @@ namespace BanMod
             {
                 CloseMenu();
                 return;
+            }
+
+            if (Screen.width != lastScreenWidth ||
+                Screen.height != lastScreenHeight)
+            {
+                lastScreenWidth = Screen.width;
+                lastScreenHeight = Screen.height;
+
+                if (showMenu)
+                    CenterWindow();
             }
 
             bool createScreenOpen = false;
@@ -731,11 +827,9 @@ namespace BanMod
 
                 createScreenOpenTime = Time.time;
 
-                BanModServerSelection.Reset();
+                BanModServerSelection.VanillaAcknowledged = false;
+                BanModServerSelection.VanillaCreateBypassOnce = false;
 
-                BMLogger.LogInfo(
-                    "[BanMod Server] Create Game screen opened."
-                );
             }
 
             if (!createScreenOpen && wasCreateScreenOpen)
@@ -747,15 +841,17 @@ namespace BanMod
 
                 CloseMenu();
 
-                BMLogger.LogInfo(
-                    "[BanMod Server] Create Game screen closed. Selected mode preserved for the current lobby."
-                );
+                BanModCreateGameServerSettingPatch
+                    .CloseModeDropdown();
+
 
                 return;
             }
 
             if (!createScreenOpen)
                 return;
+
+            BanModCreateGameServerSettingPatch.Refresh();
 
             if (selectionShownForCurrentScreen)
                 return;
@@ -768,25 +864,76 @@ namespace BanMod
 
             selectionShownForCurrentScreen = true;
 
-            OpenMenu();
+            try
+            {
+                GameObject createScreen =
+                    GameObject.Find("CreateGameScreen");
+
+                if (createScreen == null)
+                {
+                    return;
+                }
+
+                CreateGameOptions options =
+                    createScreen.GetComponent<CreateGameOptions>();
+
+                if (options == null)
+                {
+                    options =
+                        createScreen.GetComponentInChildren<CreateGameOptions>(
+                            true
+                        );
+                }
+
+                if (options == null)
+                {
+                    return;
+                }
+
+
+                BanModCreateGameServerSettingPatch.EnsureFor(
+                    options
+                );
+            }
+            catch (Exception ex)
+            {
+            }
         }
 
         public void OpenMenu()
         {
             showVanillaWarning = false;
+            warningScroll = Vector2.zero;
+            pendingCreateGame = null;
             showMenu = true;
 
             CenterWindow();
 
-            BMLogger.LogInfo(
-                "[BanMod Server] Server selection menu opened."
-            );
+        }
+
+        public void OpenVanillaCreateWarning(
+            CreateGameOptions createGameOptions)
+        {
+            if (createGameOptions == null)
+                return;
+
+            pendingCreateGame =
+                createGameOptions;
+
+            showVanillaWarning = true;
+            warningScroll = Vector2.zero;
+            showMenu = true;
+
+            CenterWindow();
+
         }
 
         public void CloseMenu()
         {
             showMenu = false;
             showVanillaWarning = false;
+            warningScroll = Vector2.zero;
+            pendingCreateGame = null;
         }
 
         public bool IsOpen()
@@ -796,76 +943,290 @@ namespace BanMod
 
         private void CenterWindow()
         {
-            Vector2 size =
-                showVanillaWarning
-                    ? warningWindowSize
-                    : normalWindowSize;
+            float targetWidth = showVanillaWarning
+                ? WarningWindowWidth
+                : NormalWindowWidth;
 
-            windowRect =
-                new Rect(
-                    Screen.width / 2f - size.x / 2f,
-                    Screen.height / 2f - size.y / 2f,
-                    size.x,
-                    size.y
-                );
+            float targetHeight = showVanillaWarning
+                ? WarningWindowHeight
+                : NormalWindowHeight;
+
+            float width = Mathf.Min(
+                targetWidth,
+                Mathf.Max(500f, Screen.width - 30f)
+            );
+
+            float height = Mathf.Min(
+                targetHeight,
+                Mathf.Max(420f, Screen.height - 30f)
+            );
+
+            windowRect = new Rect(
+                (Screen.width - width) * 0.5f,
+                (Screen.height - height) * 0.5f,
+                width,
+                height
+            );
+        }
+
+        private void DestroyResources()
+        {
+            DestroyTexture(ref roundedWindowTexture);
+            DestroyTexture(ref roundedPanelTexture);
+            DestroyTexture(ref roundedButtonTexture);
+
+            windowStyle = null;
+            titleStyle = null;
+            headerStyle = null;
+            textStyle = null;
+            mutedStyle = null;
+            buttonStyle = null;
+            sectionStyle = null;
+            warningStyle = null;
+        }
+
+        private void DestroyTexture(ref Texture2D texture)
+        {
+            if (texture == null)
+                return;
+
+            try
+            {
+                UnityEngine.Object.Destroy(texture);
+            }
+            catch
+            {
+            }
+
+            texture = null;
         }
 
         private void EnsureStyles()
         {
-            if (titleStyle != null)
-                return;
-
-            titleStyle =
-                new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 28,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    wordWrap = true
-                };
-
-            titleStyle.normal.textColor =
-                Color.white;
-
-            textStyle =
-                new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 20,
-                    alignment = TextAnchor.UpperLeft,
-                    wordWrap = true
-                };
-
-            textStyle.normal.textColor =
-                Color.white;
-
-            warningStyle =
-                new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 20,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.UpperLeft,
-                    wordWrap = true
-                };
-
-            warningStyle.normal.textColor =
-                new Color(
-                    1f,
-                    0.65f,
-                    0.20f,
-                    1f
+            if (roundedWindowTexture == null)
+            {
+                roundedWindowTexture = CreateRoundedTexture(
+                    64,
+                    18,
+                    new Color(0.055f, 0.06f, 0.075f, 0.985f)
                 );
 
-            buttonStyle =
-                new GUIStyle(GUI.skin.button)
+                roundedPanelTexture = CreateRoundedTexture(
+                    48,
+                    14,
+                    new Color(0.095f, 0.105f, 0.13f, 0.98f)
+                );
+
+                roundedButtonTexture = CreateRoundedTexture(
+                    40,
+                    12,
+                    Color.white
+                );
+            }
+
+            if (windowStyle == null)
+            {
+                windowStyle = new GUIStyle(GUI.skin.window);
+                windowStyle.normal.background = roundedWindowTexture;
+                windowStyle.onNormal.background = roundedWindowTexture;
+                windowStyle.active.background = roundedWindowTexture;
+                windowStyle.focused.background = roundedWindowTexture;
+                windowStyle.normal.textColor = Color.white;
+                windowStyle.border = new RectOffset
                 {
-                    fontSize = 21,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    wordWrap = true
+                    left = 18,
+                    right = 18,
+                    top = 18,
+                    bottom = 18
+                };
+                windowStyle.padding = new RectOffset
+                {
+                    left = 14,
+                    right = 14,
+                    top = 14,
+                    bottom = 14
+                };
+            }
+
+            if (titleStyle == null)
+            {
+                titleStyle = new GUIStyle(GUI.skin.label);
+                titleStyle.fontSize = 27;
+                titleStyle.fontStyle = FontStyle.Bold;
+                titleStyle.alignment = TextAnchor.MiddleLeft;
+                titleStyle.wordWrap = true;
+                titleStyle.normal.textColor = new Color(0.35f, 0.82f, 1f, 1f);
+            }
+
+            if (headerStyle == null)
+            {
+                headerStyle = new GUIStyle(GUI.skin.label);
+                headerStyle.fontSize = 19;
+                headerStyle.fontStyle = FontStyle.Bold;
+                headerStyle.alignment = TextAnchor.MiddleLeft;
+                headerStyle.wordWrap = true;
+                headerStyle.normal.textColor =
+                    new Color(0.93f, 0.95f, 1f, 1f);
+            }
+
+            if (textStyle == null)
+            {
+                textStyle = new GUIStyle(GUI.skin.label);
+                textStyle.fontSize = 16;
+                textStyle.alignment = TextAnchor.UpperLeft;
+                textStyle.wordWrap = true;
+                textStyle.normal.textColor =
+                    new Color(0.88f, 0.94f, 1f, 1f);
+            }
+
+            if (mutedStyle == null)
+            {
+                mutedStyle = new GUIStyle(textStyle);
+                mutedStyle.fontSize = 14;
+                mutedStyle.normal.textColor =
+                    new Color(0.68f, 0.76f, 0.86f, 1f);
+            }
+
+            if (warningStyle == null)
+            {
+                warningStyle = new GUIStyle(textStyle);
+                warningStyle.fontSize = 16;
+                warningStyle.fontStyle = FontStyle.Bold;
+                warningStyle.normal.textColor =
+                    new Color(1f, 0.74f, 0.22f, 1f);
+            }
+
+            if (buttonStyle == null)
+            {
+                buttonStyle = new GUIStyle(GUI.skin.button);
+                buttonStyle.fontSize = 17;
+                buttonStyle.fontStyle = FontStyle.Bold;
+                buttonStyle.alignment = TextAnchor.MiddleCenter;
+                buttonStyle.wordWrap = true;
+
+                buttonStyle.normal.background = roundedButtonTexture;
+                buttonStyle.hover.background = roundedButtonTexture;
+                buttonStyle.active.background = roundedButtonTexture;
+                buttonStyle.focused.background = roundedButtonTexture;
+                buttonStyle.onNormal.background = roundedButtonTexture;
+                buttonStyle.onHover.background = roundedButtonTexture;
+                buttonStyle.onActive.background = roundedButtonTexture;
+                buttonStyle.onFocused.background = roundedButtonTexture;
+
+                buttonStyle.normal.textColor = Color.white;
+                buttonStyle.hover.textColor = Color.white;
+                buttonStyle.active.textColor = Color.white;
+                buttonStyle.focused.textColor = Color.white;
+
+                buttonStyle.border = new RectOffset
+                {
+                    left = 12,
+                    right = 12,
+                    top = 12,
+                    bottom = 12
                 };
 
-            buttonStyle.normal.textColor =
-                Color.white;
+                buttonStyle.padding = new RectOffset
+                {
+                    left = 12,
+                    right = 12,
+                    top = 6,
+                    bottom = 6
+                };
+            }
+
+            if (sectionStyle == null)
+            {
+                sectionStyle = new GUIStyle(GUI.skin.box);
+                sectionStyle.normal.background = roundedPanelTexture;
+                sectionStyle.normal.textColor = Color.white;
+                sectionStyle.border = new RectOffset
+                {
+                    left = 14,
+                    right = 14,
+                    top = 14,
+                    bottom = 14
+                };
+                sectionStyle.padding = new RectOffset
+                {
+                    left = 12,
+                    right = 12,
+                    top = 12,
+                    bottom = 12
+                };
+            }
+        }
+
+        private Texture2D CreateRoundedTexture(
+            int size,
+            int radius,
+            Color color)
+        {
+            Texture2D texture =
+                new Texture2D(
+                    size,
+                    size,
+                    TextureFormat.RGBA32,
+                    false
+                );
+
+            texture.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+
+            Color32[] pixels = new Color32[size * size];
+            Color32 fill = color;
+
+            float r = Mathf.Max(1f, radius);
+            float leftCenter = r - 0.5f;
+            float rightCenter = size - r - 0.5f;
+            float bottomCenter = r - 0.5f;
+            float topCenter = size - r - 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float cx = x;
+                    float cy = y;
+
+                    if (x < radius)
+                        cx = leftCenter;
+                    else if (x >= size - radius)
+                        cx = rightCenter;
+
+                    if (y < radius)
+                        cy = bottomCenter;
+                    else if (y >= size - radius)
+                        cy = topCenter;
+
+                    float dx = x - cx;
+                    float dy = y - cy;
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    float alphaFactor = 1f;
+
+                    bool inCorner =
+                        (x < radius || x >= size - radius) &&
+                        (y < radius || y >= size - radius);
+
+                    if (inCorner)
+                        alphaFactor =
+                            Mathf.Clamp01(r + 0.5f - distance);
+
+                    Color32 pixel = fill;
+                    pixel.a =
+                        (byte)Mathf.RoundToInt(
+                            fill.a * alphaFactor
+                        );
+
+                    pixels[y * size + x] = pixel;
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+            return texture;
         }
 
         void OnGUI()
@@ -876,41 +1237,51 @@ namespace BanMod
             if (BanMod.IsBanModDisabled)
                 return;
 
-            if (Event.current.isMouse)
-            {
-                Event.current.Use();
-            }
-
             EnsureStyles();
 
-            GUI.backgroundColor =
-                Color.black;
+            Color oldColor = GUI.color;
+            Color oldBackground = GUI.backgroundColor;
+            Color oldContent = GUI.contentColor;
+            int oldDepth = GUI.depth;
 
-            if (showVanillaWarning)
+            try
             {
-                windowRect =
-                    GUI.Window(
+                GUI.depth = -1000;
+                GUI.color = Color.white;
+                GUI.backgroundColor = Color.white;
+                GUI.contentColor = Color.white;
+
+                if (showVanillaWarning)
+                {
+                    windowRect = GUI.Window(
                         42101,
                         windowRect,
                         (GUI.WindowFunction)DrawVanillaWarning,
                         "",
-                        BanModUiStyles.BlackWindow
+                        windowStyle
                     );
-            }
-            else
-            {
-                windowRect =
-                    GUI.Window(
+                }
+                else
+                {
+                    windowRect = GUI.Window(
                         42100,
                         windowRect,
                         (GUI.WindowFunction)DrawServerSelection,
                         "",
-                        BanModUiStyles.BlackWindow
+                        windowStyle
                     );
+                }
             }
-
-            GUI.backgroundColor =
-                Color.white;
+            catch (Exception ex)
+            {
+            }
+            finally
+            {
+                GUI.color = oldColor;
+                GUI.backgroundColor = oldBackground;
+                GUI.contentColor = oldContent;
+                GUI.depth = oldDepth;
+            }
         }
 
         private void DrawServerSelection(int id)
@@ -918,42 +1289,75 @@ namespace BanMod
             BanModServerTexts t =
                 BanModServerLocalization.Get();
 
-            GUILayout.Space(10);
+            float width = windowRect.width;
+            float height = windowRect.height;
 
-            GUILayout.Label(
+            GUI.Label(
+                new Rect(20f, 10f, width - 40f, 42f),
                 t.SelectTitle,
                 titleStyle
             );
 
-            GUILayout.Space(20);
+            Rect body = new Rect(
+                18f,
+                64f,
+                width - 36f,
+                height - 82f
+            );
 
-            GUILayout.Label(
+            GUI.Label(
+                new Rect(body.x + 4f, body.y, body.width - 8f, 48f),
                 t.SelectDescription,
-                textStyle
+                mutedStyle
             );
 
-            GUILayout.Space(15);
+            float footerHeight = 64f;
+            float cardsTop = body.y + 56f;
+            float cardsBottom = body.y + body.height - footerHeight;
+            float gap = 12f;
+            float cardHeight = (cardsBottom - cardsTop - gap) * 0.5f;
 
-            GUILayout.Label(
+            Rect moddedCard = new Rect(
+                body.x,
+                cardsTop,
+                body.width,
+                cardHeight
+            );
+
+            Rect vanillaCard = new Rect(
+                body.x,
+                cardsTop + cardHeight + gap,
+                body.width,
+                cardHeight
+            );
+
+            DrawPanel(moddedCard);
+            DrawPanel(vanillaCard);
+
+            GUIStyle moddedHeaderStyle = new GUIStyle(headerStyle);
+            moddedHeaderStyle.normal.textColor =
+                new Color(0.38f, 1f, 0.62f, 1f);
+
+            GUI.Label(
+                new Rect(
+                    moddedCard.x + 18f,
+                    moddedCard.y + 16f,
+                    moddedCard.width - 36f,
+                    56f
+                ),
                 t.ModdedDescription,
-                textStyle
+                moddedHeaderStyle
             );
 
-            GUILayout.Space(20);
-
-            GUI.backgroundColor =
-                new Color(
-                    0.05f,
-                    0.55f,
-                    0.12f,
-                    1f
-                );
-
-            if (GUILayout.Button(
+            if (DrawTintedButton(
+                new Rect(
+                    moddedCard.x + 18f,
+                    moddedCard.y + moddedCard.height - 72f,
+                    moddedCard.width - 36f,
+                    54f
+                ),
                 t.ModdedButton,
-                buttonStyle,
-                GUILayout.Height(90f)
-            ))
+                new Color(0.12f, 0.58f, 0.34f, 1f)))
             {
                 BanModServerSelection.Mode =
                     BanModServerMode.Modded25;
@@ -961,63 +1365,69 @@ namespace BanMod
                 BanModServerSelection.VanillaAcknowledged =
                     false;
 
-                BMLogger.LogInfo(
-                    "[BanMod Server] MODDED +25 selected."
-                );
+                BanModCreateGameServerSettingPatch.Refresh();
+
 
                 CloseMenu();
             }
 
-            GUILayout.Space(20);
+            GUIStyle vanillaHeaderStyle = new GUIStyle(headerStyle);
+            vanillaHeaderStyle.normal.textColor =
+                new Color(1f, 0.72f, 0.30f, 1f);
 
-            GUI.backgroundColor =
-                new Color(
-                    0.75f,
-                    0.38f,
-                    0.05f,
-                    1f
-                );
-
-            GUILayout.Label(
+            GUI.Label(
+                new Rect(
+                    vanillaCard.x + 18f,
+                    vanillaCard.y + 16f,
+                    vanillaCard.width - 36f,
+                    56f
+                ),
                 t.VanillaDescription,
-                textStyle
+                vanillaHeaderStyle
             );
 
-            GUILayout.Space(20);
-
-            if (GUILayout.Button(
+            if (DrawTintedButton(
+                new Rect(
+                    vanillaCard.x + 18f,
+                    vanillaCard.y + vanillaCard.height - 72f,
+                    vanillaCard.width - 36f,
+                    54f
+                ),
                 t.VanillaButton,
-                buttonStyle,
-                GUILayout.Height(90f)
-            ))
+                new Color(0.76f, 0.42f, 0.12f, 1f)))
             {
                 BanModServerSelection.Mode =
-                    BanModServerMode.None;
+                    BanModServerMode.Vanilla;
 
                 BanModServerSelection.VanillaAcknowledged =
                     false;
 
-                showVanillaWarning =
-                    true;
+                BanModCreateGameServerSettingPatch.Refresh();
 
-                CenterWindow();
 
-                BMLogger.LogWarning(
-                    "[BanMod Server] VANILLA selected. Awaiting acknowledgement."
-                );
+                CloseMenu();
             }
 
-            GUILayout.Space(25);
+            GUIStyle footerStyle = new GUIStyle(warningStyle);
+            footerStyle.alignment = TextAnchor.MiddleCenter;
+            footerStyle.fontSize = 14;
+            footerStyle.normal.textColor =
+                new Color(1f, 0.82f, 0.38f, 1f);
 
-            GUI.backgroundColor =
-                Color.white;
-
-            GUILayout.Label(
+            GUI.Label(
+                new Rect(
+                    body.x + 10f,
+                    body.y + body.height - 54f,
+                    body.width - 20f,
+                    46f
+                ),
                 t.PrivateFooter,
-                warningStyle
+                footerStyle
             );
 
-            GUI.DragWindow();
+            GUI.DragWindow(
+                new Rect(0f, 0f, width, 50f)
+            );
         }
 
         private void DrawVanillaWarning(int id)
@@ -1025,91 +1435,2127 @@ namespace BanMod
             BanModServerTexts t =
                 BanModServerLocalization.Get();
 
-            GUILayout.Space(10);
+            float width = windowRect.width;
+            float height = windowRect.height;
 
-            GUILayout.Label(
+            GUI.Label(
+                new Rect(20f, 10f, width - 40f, 42f),
                 t.VanillaTitle,
                 titleStyle
             );
 
-            GUILayout.Space(15);
+            Rect body = new Rect(
+                18f,
+                64f,
+                width - 36f,
+                height - 82f
+            );
 
-            GUILayout.Label(
+            float footerHeight = 68f;
+
+            Rect warningPanel = new Rect(
+                body.x,
+                body.y,
+                body.width,
+                body.height - footerHeight - 12f
+            );
+
+            DrawPanel(warningPanel);
+
+            GUI.Label(
+                new Rect(
+                    warningPanel.x + 18f,
+                    warningPanel.y + 14f,
+                    warningPanel.width - 36f,
+                    36f
+                ),
                 t.VanillaIntro,
                 warningStyle
             );
 
-            GUILayout.Space(15);
+            Rect scrollArea = new Rect(
+                warningPanel.x + 14f,
+                warningPanel.y + 56f,
+                warningPanel.width - 28f,
+                warningPanel.height - 70f
+            );
 
-            GUILayout.Label(
+            float textWidth = Mathf.Max(100f, scrollArea.width - 24f);
+            float contentHeight = Mathf.Max(
+                scrollArea.height,
+                textStyle.CalcHeight(
+                    new GUIContent(t.VanillaWarning),
+                    textWidth
+                ) + 18f
+            );
+
+            Rect contentRect = new Rect(
+                0f,
+                0f,
+                textWidth,
+                contentHeight
+            );
+
+            warningScroll = GUI.BeginScrollView(
+                scrollArea,
+                warningScroll,
+                contentRect
+            );
+
+            GUI.Label(
+                new Rect(
+                    4f,
+                    4f,
+                    textWidth - 8f,
+                    contentHeight - 8f
+                ),
                 t.VanillaWarning,
                 textStyle
             );
 
-            GUILayout.Space(10);
+            GUI.EndScrollView();
 
-            GUI.backgroundColor =
-                new Color(
-                    0.05f,
-                    0.50f,
-                    0.12f,
-                    1f
-                );
+            Rect footer = new Rect(
+                body.x,
+                body.y + body.height - footerHeight,
+                body.width,
+                footerHeight
+            );
 
-            if (GUILayout.Button(
+            float half = (footer.width - 10f) * 0.5f;
+
+            if (DrawTintedButton(
+                new Rect(
+                    footer.x,
+                    footer.y + 8f,
+                    half,
+                    48f
+                ),
                 t.ConfirmButton,
-                buttonStyle,
-                GUILayout.Height(75f)
-            ))
+                new Color(0.12f, 0.58f, 0.34f, 1f)))
             {
+                CreateGameOptions createGame =
+                    pendingCreateGame;
+
                 BanModServerSelection.Mode =
                     BanModServerMode.Vanilla;
 
-                BanModServerSelection.VanillaAcknowledged =
+                BanModServerSelection.SaveVanillaAcceptance();
+
+                BanModServerSelection.VanillaCreateBypassOnce =
                     true;
 
-                BMLogger.LogWarning(
-                    "[BanMod Server] Vanilla warning accepted. Vanilla mode selected."
-                );
+                BanModCreateGameServerSettingPatch.Refresh();
+
 
                 CloseMenu();
+
+                ResumeCreateGame(
+                    createGame
+                );
             }
 
-            GUILayout.Space(10);
-
-            GUI.backgroundColor =
-                new Color(
-                    0.30f,
-                    0.30f,
-                    0.30f,
-                    1f
-                );
-
-            if (GUILayout.Button(
+            if (DrawTintedButton(
+                new Rect(
+                    footer.x + half + 10f,
+                    footer.y + 8f,
+                    half,
+                    48f
+                ),
                 t.BackButton,
-                buttonStyle,
-                GUILayout.Height(55f)
-            ))
+                new Color(0.18f, 0.19f, 0.23f, 1f)))
             {
+                CreateGameOptions createGame =
+                    pendingCreateGame;
+
                 BanModServerSelection.Mode =
                     BanModServerMode.Modded25;
 
                 BanModServerSelection.VanillaAcknowledged =
                     false;
 
-                BMLogger.LogWarning(
-                    "[BanMod Server] Vanilla warning declined. Falling back to MODDED +25."
-                );
+                BanModServerSelection.VanillaCreateBypassOnce =
+                    false;
+
+                BanModCreateGameServerSettingPatch.Refresh();
+
 
                 CloseMenu();
+
+                ResumeCreateGame(
+                    createGame
+                );
             }
 
-            GUI.backgroundColor =
-                Color.white;
+            GUI.DragWindow(
+                new Rect(0f, 0f, width, 50f)
+            );
+        }
 
-            GUI.DragWindow();
+        private void ResumeCreateGame(
+            CreateGameOptions createGame)
+        {
+            if (createGame == null)
+            {
+                return;
+            }
+
+            try
+            {
+                createGame.Confirm();
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        private bool DrawTintedButton(
+            Rect rect,
+            string text,
+            Color color)
+        {
+            Color oldBackground = GUI.backgroundColor;
+            GUI.backgroundColor = color;
+
+            bool clicked = GUI.Button(
+                rect,
+                text,
+                buttonStyle
+            );
+
+            GUI.backgroundColor = oldBackground;
+            return clicked;
+        }
+
+        private void DrawPanel(Rect rect)
+        {
+            Color oldBackground = GUI.backgroundColor;
+            GUI.backgroundColor = Color.white;
+
+            GUI.Box(
+                rect,
+                GUIContent.none,
+                sectionStyle
+            );
+
+            GUI.backgroundColor = oldBackground;
         }
     }
+
+    [HarmonyPatch(typeof(CreateGameOptions), nameof(CreateGameOptions.Show))]
+    public static class BanModCreateGameServerSettingPatch
+    {
+        private static CreateGameOptions currentCreateScreen;
+
+        private static GameObject modeRowRoot;
+
+        private static GameObject serverLabelRoot;
+
+        private static PassiveButton vanillaButton;
+        private static PassiveButton moddedButton;
+
+        private static TMP_Text serverHoverDescriptionText;
+        private static string serverHoverOriginalText = "";
+        private static bool serverHoverTextCaptured = false;
+
+        private const float YOffset = 0.72f;
+        private const float ExtendedScrollMax = 4.0f;
+
+        [HarmonyPostfix]
+        public static void Postfix(
+            CreateGameOptions __instance)
+        {
+
+            EnsureFor(
+                __instance
+            );
+        }
+
+        public static void EnsureFor(
+            CreateGameOptions createScreen)
+        {
+            if (createScreen == null)
+            {
+                return;
+            }
+
+            if (BanMod.IsBanModDisabled)
+                return;
+
+            if (BanModServerSelection.Mode ==
+                BanModServerMode.None)
+            {
+                BanModServerSelection.Mode =
+                    BanModServerMode.Modded25;
+            }
+
+            try
+            {
+                bool screenChanged =
+                    currentCreateScreen != null &&
+                    currentCreateScreen != createScreen;
+
+                currentCreateScreen =
+                    createScreen;
+
+                if (screenChanged)
+                {
+                    DestroyServerUi();
+                }
+
+                ExtendScroll(
+                    createScreen
+                );
+
+                if (!IsAlive(modeRowRoot) ||
+                    vanillaButton == null ||
+                    moddedButton == null)
+                {
+                    DestroyServerUi();
+
+
+                    BuildServerRow(
+                        createScreen
+                    );
+                }
+                else
+                {
+                    SetRowActive(
+                        true
+                    );
+                }
+
+                Refresh();
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        private static void BuildServerRow(
+            CreateGameOptions createScreen)
+        {
+            GameObject regionButton =
+                TryGetRuntimeMember<GameObject>(
+                    createScreen,
+                    "serverButton"
+                );
+
+            if (regionButton == null)
+            {
+                regionButton =
+                    FindRegionButtonFromHierarchy(
+                        createScreen
+                    );
+            }
+
+            if (regionButton == null)
+            {
+
+                LogUsefulButtons(
+                    createScreen
+                );
+
+                return;
+            }
+
+
+            List<PassiveButton> originalModeButtons =
+                TryGetRuntimePassiveButtonCollection(
+                    createScreen,
+                    "modeButtons"
+                );
+
+            if (originalModeButtons.Count < 2)
+            {
+                originalModeButtons =
+                    FindModeButtonsFromHierarchy(
+                        createScreen
+                    );
+            }
+
+            if (originalModeButtons.Count < 2)
+            {
+
+                LogUsefulButtons(
+                    createScreen
+                );
+
+                return;
+            }
+
+            PassiveButton originalLeft =
+                originalModeButtons[0];
+
+            PassiveButton originalRight =
+                originalModeButtons[1];
+
+            if (originalLeft == null ||
+                originalRight == null)
+            {
+
+                return;
+            }
+
+            serverHoverDescriptionText =
+                FindServerHoverDescriptionText(
+                    createScreen,
+                    originalLeft,
+                    originalRight
+                );
+
+            if (serverHoverDescriptionText != null)
+            {
+                serverHoverOriginalText =
+                    serverHoverDescriptionText.text ?? "";
+
+                serverHoverTextCaptured =
+                    true;
+
+            }
+            else
+            {
+                serverHoverOriginalText = "";
+                serverHoverTextCaptured = false;
+
+            }
+
+            Transform buttonParent =
+                originalLeft.transform.parent;
+
+            if (buttonParent == null)
+            {
+
+                return;
+            }
+
+            Transform regionParent =
+                regionButton.transform.parent;
+
+            if (regionParent == null)
+                return;
+
+            Vector3 regionTargetLocal =
+                regionButton.transform.localPosition;
+
+            regionTargetLocal.y -=
+                YOffset;
+
+            Vector3 targetWorld =
+                regionParent.TransformPoint(
+                    regionTargetLocal
+                );
+
+            float targetYInModeParent =
+                buttonParent.InverseTransformPoint(
+                    targetWorld
+                ).y;
+
+            modeRowRoot =
+                new GameObject(
+                    "BanModServerChoiceRow"
+                );
+
+            modeRowRoot.transform.SetParent(
+                buttonParent,
+                false
+            );
+
+            modeRowRoot.transform.localPosition =
+                Vector3.zero;
+
+            modeRowRoot.transform.localRotation =
+                Quaternion.identity;
+
+            modeRowRoot.transform.localScale =
+                Vector3.one;
+
+            GameObject vanillaObject =
+                CloneModeButton(
+                    originalLeft,
+                    modeRowRoot.transform,
+                    targetYInModeParent,
+                    "BanModServerVanilla",
+                    "Vanilla",
+                    true,
+                    SelectVanilla
+                );
+
+            GameObject moddedObject =
+                CloneModeButton(
+                    originalRight,
+                    modeRowRoot.transform,
+                    targetYInModeParent,
+                    "BanModServerModded",
+                    "Modded",
+                    false,
+                    SelectModded
+                );
+
+            if (!IsAlive(vanillaObject) ||
+                !IsAlive(moddedObject))
+            {
+
+                DestroyServerUi();
+                return;
+            }
+
+            vanillaButton =
+                vanillaObject.GetComponent<PassiveButton>();
+
+            if (vanillaButton == null)
+            {
+                vanillaButton =
+                    vanillaObject
+                        .GetComponentInChildren<PassiveButton>(
+                            true
+                        );
+            }
+
+            moddedButton =
+                moddedObject.GetComponent<PassiveButton>();
+
+            if (moddedButton == null)
+            {
+                moddedButton =
+                    moddedObject
+                        .GetComponentInChildren<PassiveButton>(
+                            true
+                        );
+            }
+
+            if (vanillaButton == null ||
+                moddedButton == null)
+            {
+
+                DestroyServerUi();
+                return;
+            }
+
+            serverLabelRoot =
+                CloneServerLabel(
+                    createScreen,
+                    regionButton
+                );
+
+            modeRowRoot.SetActive(
+                true
+            );
+
+            Refresh();
+
+        }
+
+        private static GameObject CloneModeButton(
+            PassiveButton original,
+            Transform newParent,
+            float targetY,
+            string objectName,
+            string displayText,
+            bool isVanilla,
+            Action onClick)
+        {
+            if (original == null ||
+                newParent == null)
+                return null;
+
+            GameObject clone =
+                UnityEngine.Object.Instantiate(
+                    original.gameObject,
+                    newParent
+                );
+
+            clone.name =
+                objectName;
+
+            clone.SetActive(
+                true
+            );
+
+            Vector3 local =
+                original.transform.localPosition;
+
+            local.y =
+                targetY;
+
+            clone.transform.localPosition =
+                local;
+
+            clone.transform.localRotation =
+                original.transform.localRotation;
+
+            clone.transform.localScale =
+                original.transform.localScale;
+
+            DisableLocalizationComponents(
+                clone
+            );
+
+            TMP_Text[] texts =
+                clone.GetComponentsInChildren<TMP_Text>(
+                    true
+                );
+
+            if (texts != null)
+            {
+                for (int i = 0;
+                     i < texts.Length;
+                     i++)
+                {
+                    TMP_Text tmp =
+                        texts[i];
+
+                    if (tmp == null)
+                        continue;
+
+                    tmp.text =
+                        displayText;
+                }
+            }
+
+            PassiveButton[] buttons =
+                clone.GetComponentsInChildren<PassiveButton>(
+                    true
+                );
+
+            if (buttons == null ||
+                buttons.Length == 0)
+            {
+                UnityEngine.Object.Destroy(
+                    clone
+                );
+
+                return null;
+            }
+
+            for (int i = 0;
+                 i < buttons.Length;
+                 i++)
+            {
+                PassiveButton button =
+                    buttons[i];
+
+                if (button == null)
+                    continue;
+
+                try
+                {
+                    button.OnClick =
+                        new UnityEngine.UI.Button.ButtonClickedEvent();
+
+                    button.OnClick.AddListener(
+                        onClick
+                    );
+
+                    BindServerHoverEvents(
+                        button,
+                        isVanilla
+                    );
+                }
+                catch (Exception ex)
+                {
+                }
+            }
+
+            return clone;
+        }
+
+        private static void BindServerHoverEvents(
+            PassiveButton button,
+            bool isVanilla)
+        {
+            if (button == null)
+                return;
+
+            try
+            {
+
+
+                button.OnMouseOver =
+                    new UnityEngine.Events.UnityEvent();
+
+                button.OnMouseOut =
+                    new UnityEngine.Events.UnityEvent();
+
+                button.OnMouseOver.AddListener(
+                    (UnityEngine.Events.UnityAction)(() =>
+                    {
+                        ShowServerHoverDescription(
+                            isVanilla
+                        );
+                    })
+                );
+
+                button.OnMouseOut.AddListener(
+                    (UnityEngine.Events.UnityAction)(() =>
+                    {
+                        RestoreServerHoverDescription();
+                    })
+                );
+
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        private static void ShowServerHoverDescription(
+            bool isVanilla)
+        {
+            if (serverHoverDescriptionText == null)
+                return;
+
+            try
+            {
+
+
+                serverHoverOriginalText =
+                    serverHoverDescriptionText.text ?? "";
+
+                serverHoverTextCaptured =
+                    true;
+
+                BanModServerTexts texts =
+                    BanModServerLocalization.Get();
+
+                serverHoverDescriptionText.text =
+                    isVanilla
+                        ? texts.VanillaDescription
+                        : texts.ModdedDescription;
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        private static void RestoreServerHoverDescription()
+        {
+            if (serverHoverDescriptionText == null ||
+                !serverHoverTextCaptured)
+                return;
+
+            try
+            {
+                serverHoverDescriptionText.text =
+                    serverHoverOriginalText;
+            }
+            catch
+            {
+            }
+        }
+
+        private static TMP_Text FindServerHoverDescriptionText(
+            CreateGameOptions createScreen,
+            PassiveButton originalLeft,
+            PassiveButton originalRight)
+        {
+            if (createScreen == null)
+                return null;
+
+
+            TMP_Text detected =
+                DetectDescriptionTextFromOriginalHover(
+                    createScreen,
+                    originalLeft
+                );
+
+            if (detected == null)
+            {
+                detected =
+                    DetectDescriptionTextFromOriginalHover(
+                        createScreen,
+                        originalRight
+                    );
+            }
+
+            if (detected != null)
+            {
+
+                return detected;
+            }
+
+
+            return FindServerHoverDescriptionTextFallback(
+                createScreen,
+                originalLeft,
+                originalRight
+            );
+        }
+
+        private static TMP_Text DetectDescriptionTextFromOriginalHover(
+            CreateGameOptions createScreen,
+            PassiveButton originalButton)
+        {
+            if (createScreen == null ||
+                originalButton == null)
+                return null;
+
+            TMP_Text[] allTexts =
+                createScreen.GetComponentsInChildren<TMP_Text>(
+                    true
+                );
+
+            if (allTexts == null ||
+                allTexts.Length == 0)
+                return null;
+
+            string[] before =
+                new string[allTexts.Length];
+
+            for (int i = 0; i < allTexts.Length; i++)
+            {
+                TMP_Text text =
+                    allTexts[i];
+
+                before[i] =
+                    text != null
+                        ? (text.text ?? "")
+                        : "";
+            }
+
+            try
+            {
+                if (originalButton.OnMouseOver == null)
+                    return null;
+
+                originalButton.OnMouseOver.Invoke();
+
+                TMP_Text best = null;
+                float bestScore = float.MaxValue;
+
+                Vector3 buttonLocal =
+                    createScreen.transform.InverseTransformPoint(
+                        originalButton.transform.position
+                    );
+
+                for (int i = 0; i < allTexts.Length; i++)
+                {
+                    TMP_Text candidate =
+                        allTexts[i];
+
+                    if (candidate == null)
+                        continue;
+
+                    if (candidate.transform.IsChildOf(
+                            originalButton.transform
+                        ))
+                    {
+                        continue;
+                    }
+
+                    string oldValue =
+                        before[i] ?? "";
+
+                    string newValue =
+                        candidate.text ?? "";
+
+                    if (oldValue == newValue)
+                        continue;
+
+
+                    if (newValue.Length < 8 &&
+                        oldValue.Length < 8)
+                        continue;
+
+                    string hierarchy =
+                        BuildHierarchyName(
+                            candidate.transform,
+                            createScreen.transform
+                        );
+
+                    Vector3 local =
+                        createScreen.transform.InverseTransformPoint(
+                            candidate.transform.position
+                        );
+
+                    float score = 0f;
+
+
+                    if (local.y > buttonLocal.y)
+                        score -= 3000f;
+                    else
+                        score += 3000f;
+
+                    score +=
+                        Mathf.Abs(local.x - buttonLocal.x) * 30f;
+
+                    score +=
+                        Mathf.Abs(local.y - buttonLocal.y) * 80f;
+
+                    if (ContainsIgnoreCase(hierarchy, "desc") ||
+                        ContainsIgnoreCase(hierarchy, "description"))
+                    {
+                        score -= 1200f;
+                    }
+
+                    if (ContainsIgnoreCase(hierarchy, "chat"))
+                        score += 8000f;
+
+                    if (ContainsIgnoreCase(hierarchy, "title") ||
+                        ContainsIgnoreCase(hierarchy, "label"))
+                    {
+                        score += 1000f;
+                    }
+
+                    if (oldValue.Length >= 15)
+                        score -= 300f;
+
+                    if (newValue.Length >= 15)
+                        score -= 300f;
+
+
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
+                        best = candidate;
+                    }
+                }
+
+                return best;
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
+            finally
+            {
+                try
+                {
+                    if (originalButton.OnMouseOut != null)
+                        originalButton.OnMouseOut.Invoke();
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        private static TMP_Text FindServerHoverDescriptionTextFallback(
+            CreateGameOptions createScreen,
+            PassiveButton originalLeft,
+            PassiveButton originalRight)
+        {
+            if (createScreen == null)
+                return null;
+
+            string[] runtimeNames =
+            {
+                "modeDescriptionText",
+                "gameModeDescriptionText",
+                "gameTypeDescriptionText",
+                "descriptionText",
+                "modeDescription",
+                "gameModeDescription",
+                "gameTypeDescription"
+            };
+
+            for (int i = 0;
+                 i < runtimeNames.Length;
+                 i++)
+            {
+                TMP_Text runtimeText =
+                    TryGetRuntimeMember<TMP_Text>(
+                        createScreen,
+                        runtimeNames[i]
+                    );
+
+                if (runtimeText != null)
+                    return runtimeText;
+            }
+
+            TMP_Text[] allTexts =
+                createScreen.GetComponentsInChildren<TMP_Text>(
+                    true
+                );
+
+            if (allTexts == null ||
+                allTexts.Length == 0)
+                return null;
+
+            Vector3 leftLocal =
+                createScreen.transform.InverseTransformPoint(
+                    originalLeft.transform.position
+                );
+
+            Vector3 rightLocal =
+                createScreen.transform.InverseTransformPoint(
+                    originalRight.transform.position
+                );
+
+            float buttonCenterX =
+                (leftLocal.x + rightLocal.x) * 0.5f;
+
+            float buttonY =
+                (leftLocal.y + rightLocal.y) * 0.5f;
+
+            TMP_Text best = null;
+            float bestScore = float.MaxValue;
+
+            for (int i = 0;
+                 i < allTexts.Length;
+                 i++)
+            {
+                TMP_Text candidate =
+                    allTexts[i];
+
+                if (candidate == null)
+                    continue;
+
+                if ((originalLeft != null &&
+                     candidate.transform.IsChildOf(
+                         originalLeft.transform
+                     )) ||
+                    (originalRight != null &&
+                     candidate.transform.IsChildOf(
+                         originalRight.transform
+                     )))
+                {
+                    continue;
+                }
+
+                string value =
+                    candidate.text ?? "";
+
+                if (string.IsNullOrWhiteSpace(value))
+                    continue;
+
+                if (value.Length < 8)
+                    continue;
+
+                string hierarchy =
+                    BuildHierarchyName(
+                        candidate.transform,
+                        createScreen.transform
+                    );
+
+
+                if (ContainsIgnoreCase(hierarchy, "chat"))
+                    continue;
+
+                Vector3 local =
+                    createScreen.transform.InverseTransformPoint(
+                        candidate.transform.position
+                    );
+
+                float xDistance =
+                    Mathf.Abs(
+                        local.x - buttonCenterX
+                    );
+
+                float yDistance =
+                    Mathf.Abs(
+                        local.y - buttonY
+                    );
+
+                float score =
+                    yDistance * 1000f +
+                    xDistance * 100f;
+
+                if (ContainsIgnoreCase(hierarchy, "description") ||
+                    ContainsIgnoreCase(hierarchy, "desc"))
+                {
+                    score -= 5000f;
+                }
+
+                if (ContainsIgnoreCase(hierarchy, "mode") ||
+                    ContainsIgnoreCase(hierarchy, "game"))
+                {
+                    score -= 500f;
+                }
+
+                if (ContainsIgnoreCase(hierarchy, "title") ||
+                    ContainsIgnoreCase(hierarchy, "label"))
+                {
+                    score += 1200f;
+                }
+
+                if (local.y > buttonY)
+                    score -= 300f;
+                else
+                    score += 800f;
+
+                if (value.Length >= 20)
+                    score -= 250f;
+
+                if (value.Length > 180)
+                    score += 1200f;
+
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = candidate;
+                }
+            }
+
+            return best;
+        }
+
+        private static void DisableLocalizationComponents(
+            GameObject root)
+        {
+            if (!IsAlive(root))
+                return;
+
+            Component[] components =
+                root.GetComponentsInChildren<Component>(
+                    true
+                );
+
+            if (components == null)
+                return;
+
+            for (int i = 0;
+                 i < components.Length;
+                 i++)
+            {
+                Component component =
+                    components[i];
+
+                if (component == null)
+                    continue;
+
+                string typeName =
+                    component.GetType().Name ?? "";
+
+                if (typeName != "TextTranslatorTMP" &&
+                    typeName != "PlatformTextTranslationTMP")
+                {
+                    continue;
+                }
+
+                try
+                {
+                    Behaviour behaviour =
+                        component as Behaviour;
+
+                    if (behaviour != null)
+                        behaviour.enabled = false;
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    UnityEngine.Object.Destroy(
+                        component
+                    );
+                }
+                catch
+                {
+                }
+
+            }
+        }
+
+        private static void ForceChoiceButtonText(
+            PassiveButton button,
+            string textValue)
+        {
+            if (button == null)
+                return;
+
+            GameObject root =
+                button.gameObject;
+
+            if (!IsAlive(root))
+                return;
+
+            TMP_Text[] texts =
+                root.GetComponentsInChildren<TMP_Text>(
+                    true
+                );
+
+            if (texts == null)
+                return;
+
+            for (int i = 0;
+                 i < texts.Length;
+                 i++)
+            {
+                TMP_Text text =
+                    texts[i];
+
+                if (text != null)
+                    text.text =
+                        textValue;
+            }
+        }
+
+        private static void SelectVanilla()
+        {
+            BanModServerSelection.Mode =
+                BanModServerMode.Vanilla;
+
+            BanModServerSelection.VanillaAcknowledged =
+                false;
+
+            BanModServerSelection.VanillaCreateBypassOnce =
+                false;
+
+            Options.UpdateGameModesForServer();
+
+
+            Refresh();
+        }
+
+        private static void SelectModded()
+        {
+            BanModServerSelection.Mode =
+                BanModServerMode.Modded25;
+
+            BanModServerSelection.VanillaAcknowledged =
+                false;
+
+            BanModServerSelection.VanillaCreateBypassOnce =
+                false;
+
+            Options.UpdateGameModesForServer();
+
+            Refresh();
+        }
+
+        public static void Refresh()
+        {
+            if (BanModServerSelection.Mode ==
+                BanModServerMode.None)
+            {
+                BanModServerSelection.Mode =
+                    BanModServerMode.Modded25;
+            }
+
+            if (vanillaButton != null)
+            {
+                try
+                {
+                    vanillaButton.SelectButton(
+                        BanModServerSelection.IsVanilla
+                    );
+                }
+                catch
+                {
+                }
+            }
+
+            if (moddedButton != null)
+            {
+                try
+                {
+                    moddedButton.SelectButton(
+                        !BanModServerSelection.IsVanilla
+                    );
+                }
+                catch
+                {
+                }
+            }
+
+            ForceChoiceButtonText(
+                vanillaButton,
+                "Vanilla"
+            );
+
+            ForceChoiceButtonText(
+                moddedButton,
+                "Modded"
+            );
+
+            ForceServerLabel();
+        }
+
+        public static void CloseModeDropdown()
+        {
+            SetRowActive(
+                true
+            );
+        }
+
+        private static void SetRowActive(
+            bool active)
+        {
+            if (IsAlive(modeRowRoot))
+                modeRowRoot.SetActive(active);
+
+            if (IsAlive(serverLabelRoot))
+                serverLabelRoot.SetActive(active);
+        }
+
+        private static void DestroyServerUi()
+        {
+            if (IsAlive(modeRowRoot))
+            {
+                try
+                {
+                    UnityEngine.Object.Destroy(
+                        modeRowRoot
+                    );
+                }
+                catch
+                {
+                }
+            }
+
+            if (IsAlive(serverLabelRoot))
+            {
+                try
+                {
+                    UnityEngine.Object.Destroy(
+                        serverLabelRoot
+                    );
+                }
+                catch
+                {
+                }
+            }
+
+            modeRowRoot =
+                null;
+
+            serverLabelRoot =
+                null;
+
+            vanillaButton =
+                null;
+
+            moddedButton =
+                null;
+
+            serverHoverDescriptionText =
+                null;
+
+            serverHoverOriginalText =
+                "";
+
+            serverHoverTextCaptured =
+                false;
+        }
+
+        private static GameObject CloneServerLabel(
+            CreateGameOptions createScreen,
+            GameObject regionButton)
+        {
+            if (createScreen == null ||
+                regionButton == null)
+                return null;
+
+            TMP_Text[] allTexts =
+                createScreen.GetComponentsInChildren<TMP_Text>(
+                    true
+                );
+
+            if (allTexts == null ||
+                allTexts.Length == 0)
+                return null;
+
+            Vector3 regionLocal =
+                createScreen.transform.InverseTransformPoint(
+                    regionButton.transform.position
+                );
+
+            TMP_Text best =
+                null;
+
+            float bestScore =
+                float.MaxValue;
+
+            for (int i = 0;
+                 i < allTexts.Length;
+                 i++)
+            {
+                TMP_Text candidate =
+                    allTexts[i];
+
+                if (candidate == null)
+                    continue;
+
+                if (candidate.transform ==
+                    regionButton.transform ||
+                    candidate.transform.IsChildOf(
+                        regionButton.transform))
+                {
+                    continue;
+                }
+
+                string value =
+                    candidate.text ?? "";
+
+                if (string.IsNullOrEmpty(value) ||
+                    value.Length > 40)
+                    continue;
+
+                Vector3 local =
+                    createScreen.transform
+                        .InverseTransformPoint(
+                            candidate.transform.position
+                        );
+
+                float yDistance =
+                    Mathf.Abs(
+                        local.y - regionLocal.y
+                    );
+
+                float xDistance =
+                    Mathf.Abs(
+                        local.x - regionLocal.x
+                    );
+
+                float score =
+                    yDistance * 1000f +
+                    xDistance;
+
+
+                if (local.x < regionLocal.x)
+                    score -= 50f;
+                else
+                    score += 400f;
+
+                string hierarchy =
+                    BuildHierarchyName(
+                        candidate.transform,
+                        createScreen.transform
+                    );
+
+                if (ContainsIgnoreCase(value, "region") ||
+                    ContainsIgnoreCase(value, "regione") ||
+                    ContainsIgnoreCase(value, "région") ||
+                    ContainsIgnoreCase(value, "región") ||
+                    ContainsIgnoreCase(hierarchy, "region"))
+                {
+                    score -= 5000f;
+                }
+
+                if (score < bestScore)
+                {
+                    bestScore =
+                        score;
+
+                    best =
+                        candidate;
+                }
+            }
+
+            if (best == null)
+            {
+
+                return null;
+            }
+
+            Transform labelRoot =
+                FindLabelBlockRoot(
+                    best.transform,
+                    createScreen.transform,
+                    regionButton.transform
+                );
+
+            if (labelRoot == null ||
+                labelRoot.parent == null)
+                return null;
+
+            GameObject clone =
+                UnityEngine.Object.Instantiate(
+                    labelRoot.gameObject,
+                    labelRoot.parent
+                );
+
+            clone.name =
+                "BanModServerLabel";
+
+            Vector3 pos =
+                labelRoot.localPosition;
+
+            pos.y -=
+                YOffset;
+
+            clone.transform.localPosition =
+                pos;
+
+            clone.transform.localRotation =
+                labelRoot.localRotation;
+
+            clone.transform.localScale =
+                labelRoot.localScale;
+
+            clone.SetActive(
+                true
+            );
+
+            TMP_Text[] clonedTexts =
+                clone.GetComponentsInChildren<TMP_Text>(
+                    true
+                );
+
+            if (clonedTexts != null)
+            {
+                for (int i = 0;
+                     i < clonedTexts.Length;
+                     i++)
+                {
+                    TMP_Text label =
+                        clonedTexts[i];
+
+                    if (label != null)
+                        label.text =
+                            "SERVER";
+                }
+            }
+
+
+            return clone;
+        }
+
+        private static Transform FindLabelBlockRoot(
+            Transform labelText,
+            Transform screenRoot,
+            Transform regionButton)
+        {
+            if (labelText == null)
+                return null;
+
+            Transform best =
+                labelText;
+
+            Transform current =
+                labelText.parent;
+
+            int guard =
+                0;
+
+            while (current != null &&
+                   current != screenRoot &&
+                   guard < 3)
+            {
+                if (regionButton != null &&
+                    (current == regionButton ||
+                     regionButton.IsChildOf(current)))
+                {
+                    break;
+                }
+
+                try
+                {
+                    PassiveButton[] buttons =
+                        current.GetComponentsInChildren<PassiveButton>(
+                            true
+                        );
+
+                    TMP_Text[] texts =
+                        current.GetComponentsInChildren<TMP_Text>(
+                            true
+                        );
+
+                    int buttonCount =
+                        buttons == null
+                            ? 0
+                            : buttons.Length;
+
+                    int textCount =
+                        texts == null
+                            ? 0
+                            : texts.Length;
+
+                    if (buttonCount == 0 &&
+                        textCount <= 3)
+                    {
+                        best =
+                            current;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                catch
+                {
+                    break;
+                }
+
+                current =
+                    current.parent;
+
+                guard++;
+            }
+
+            return best;
+        }
+
+        private static void ForceServerLabel()
+        {
+            if (!IsAlive(serverLabelRoot))
+                return;
+
+            TMP_Text[] texts =
+                serverLabelRoot.GetComponentsInChildren<TMP_Text>(
+                    true
+                );
+
+            if (texts == null)
+                return;
+
+            for (int i = 0;
+                 i < texts.Length;
+                 i++)
+            {
+                if (texts[i] != null)
+                    texts[i].text =
+                        "SERVER";
+            }
+        }
+
+        private static void ExtendScroll(
+            CreateGameOptions createScreen)
+        {
+            Scroller runtimeScroller =
+                TryGetRuntimeMember<Scroller>(
+                    createScreen,
+                    "scrollBar"
+                );
+
+            if (runtimeScroller != null)
+            {
+                try
+                {
+                    runtimeScroller.SetYBoundsMax(
+                        ExtendedScrollMax
+                    );
+                }
+                catch
+                {
+                }
+
+                return;
+            }
+
+            Scroller[] scrollers =
+                createScreen.GetComponentsInChildren<Scroller>(
+                    true
+                );
+
+            if (scrollers == null)
+                return;
+
+            for (int i = 0;
+                 i < scrollers.Length;
+                 i++)
+            {
+                Scroller scroller =
+                    scrollers[i];
+
+                if (scroller == null)
+                    continue;
+
+                try
+                {
+                    scroller.SetYBoundsMax(
+                        ExtendedScrollMax
+                    );
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        private static T TryGetRuntimeMember<T>(
+            object instance,
+            string name)
+            where T : class
+        {
+            object value =
+                TryGetRuntimeMemberObject(
+                    instance,
+                    name
+                );
+
+            return value as T;
+        }
+
+        private static object TryGetRuntimeMemberObject(
+            object instance,
+            string name)
+        {
+            if (instance == null ||
+                string.IsNullOrEmpty(name))
+                return null;
+
+            Type type =
+                instance.GetType();
+
+            const System.Reflection.BindingFlags flags =
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic;
+
+            try
+            {
+                System.Reflection.FieldInfo field =
+                    type.GetField(
+                        name,
+                        flags
+                    );
+
+                if (field != null)
+                {
+                    return field.GetValue(
+                        instance
+                    );
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                System.Reflection.PropertyInfo property =
+                    type.GetProperty(
+                        name,
+                        flags
+                    );
+
+                if (property != null &&
+                    property.GetIndexParameters().Length == 0)
+                {
+                    return property.GetValue(
+                        instance,
+                        null
+                    );
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
+
+        private static List<PassiveButton>
+            TryGetRuntimePassiveButtonCollection(
+                object instance,
+                string name)
+        {
+            List<PassiveButton> result =
+                new List<PassiveButton>();
+
+            object value =
+                TryGetRuntimeMemberObject(
+                    instance,
+                    name
+                );
+
+            if (value == null)
+                return result;
+
+            PassiveButton single =
+                value as PassiveButton;
+
+            if (single != null)
+            {
+                result.Add(
+                    single
+                );
+
+                return result;
+            }
+
+            System.Collections.IEnumerable enumerable =
+                value as System.Collections.IEnumerable;
+
+            if (enumerable != null)
+            {
+                try
+                {
+                    foreach (object item in enumerable)
+                    {
+                        PassiveButton button =
+                            item as PassiveButton;
+
+                        if (button != null &&
+                            !result.Contains(button))
+                        {
+                            result.Add(
+                                button
+                            );
+                        }
+                    }
+                }
+                catch
+                {
+                }
+
+                if (result.Count > 0)
+                    return result;
+            }
+
+            try
+            {
+                Type collectionType =
+                    value.GetType();
+
+                System.Reflection.PropertyInfo lengthProperty =
+                    collectionType.GetProperty(
+                        "Length"
+                    );
+
+                System.Reflection.PropertyInfo itemProperty =
+                    collectionType.GetProperty(
+                        "Item"
+                    );
+
+                if (lengthProperty != null &&
+                    itemProperty != null)
+                {
+                    int length =
+                        Convert.ToInt32(
+                            lengthProperty.GetValue(
+                                value,
+                                null
+                            )
+                        );
+
+                    for (int i = 0;
+                         i < length;
+                         i++)
+                    {
+                        object item =
+                            itemProperty.GetValue(
+                                value,
+                                new object[] { i }
+                            );
+
+                        PassiveButton button =
+                            item as PassiveButton;
+
+                        if (button != null &&
+                            !result.Contains(button))
+                        {
+                            result.Add(
+                                button
+                            );
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return result;
+        }
+
+        private static GameObject FindRegionButtonFromHierarchy(
+            CreateGameOptions createScreen)
+        {
+            PassiveButton[] buttons =
+                createScreen.GetComponentsInChildren<PassiveButton>(
+                    true
+                );
+
+            if (buttons == null)
+                return null;
+
+            PassiveButton best =
+                null;
+
+            float bestScore =
+                float.MaxValue;
+
+            for (int i = 0;
+                 i < buttons.Length;
+                 i++)
+            {
+                PassiveButton button =
+                    buttons[i];
+
+                if (button == null)
+                    continue;
+
+                string hierarchy =
+                    BuildHierarchyName(
+                        button.transform,
+                        createScreen.transform
+                    );
+
+                float score =
+                    1000f;
+
+                if (ContainsIgnoreCase(
+                        hierarchy,
+                        "serverbox"))
+                {
+                    score -=
+                        900f;
+                }
+
+                if (ContainsIgnoreCase(
+                        hierarchy,
+                        "server"))
+                {
+                    score -=
+                        500f;
+                }
+
+                if (ContainsIgnoreCase(
+                        hierarchy,
+                        "region"))
+                {
+                    score -=
+                        400f;
+                }
+
+                if (score < bestScore)
+                {
+                    bestScore =
+                        score;
+
+                    best =
+                        button;
+                }
+            }
+
+            return best != null
+                ? best.gameObject
+                : null;
+        }
+
+        private static List<PassiveButton>
+            FindModeButtonsFromHierarchy(
+                CreateGameOptions createScreen)
+        {
+            List<PassiveButton> result =
+                new List<PassiveButton>();
+
+            PassiveButton[] buttons =
+                createScreen.GetComponentsInChildren<PassiveButton>(
+                    true
+                );
+
+            if (buttons == null)
+                return result;
+
+            PassiveButton classic =
+                null;
+
+            PassiveButton hide =
+                null;
+
+            for (int i = 0;
+                 i < buttons.Length;
+                 i++)
+            {
+                PassiveButton button =
+                    buttons[i];
+
+                if (button == null)
+                    continue;
+
+                string hierarchy =
+                    BuildHierarchyName(
+                        button.transform,
+                        createScreen.transform
+                    );
+
+                string name =
+                    button.gameObject.name ?? "";
+
+                if (classic == null &&
+                    (ContainsIgnoreCase(name, "classic") ||
+                     ContainsIgnoreCase(hierarchy, "classic")))
+                {
+                    classic =
+                        button;
+                }
+
+                if (hide == null &&
+                    (ContainsIgnoreCase(name, "hide") ||
+                     ContainsIgnoreCase(name, "seek") ||
+                     ContainsIgnoreCase(hierarchy, "hide") ||
+                     ContainsIgnoreCase(hierarchy, "seek")))
+                {
+                    hide =
+                        button;
+                }
+            }
+
+            if (classic != null)
+                result.Add(classic);
+
+            if (hide != null &&
+                hide != classic)
+            {
+                result.Add(hide);
+            }
+
+            return result;
+        }
+
+        private static string BuildHierarchyName(
+            Transform current,
+            Transform stopAt)
+        {
+            if (current == null)
+                return "";
+
+            string path =
+                current.name ?? "";
+
+            Transform parent =
+                current.parent;
+
+            int guard =
+                0;
+
+            while (parent != null &&
+                   parent != stopAt &&
+                   guard < 16)
+            {
+                path =
+                    (parent.name ?? "") +
+                    "/" +
+                    path;
+
+                parent =
+                    parent.parent;
+
+                guard++;
+            }
+
+            return path;
+        }
+
+        private static bool ContainsIgnoreCase(
+            string value,
+            string search)
+        {
+            if (string.IsNullOrEmpty(value) ||
+                string.IsNullOrEmpty(search))
+                return false;
+
+            return value.IndexOf(
+                search,
+                StringComparison.OrdinalIgnoreCase
+            ) >= 0;
+        }
+
+        private static bool IsAlive(
+            UnityEngine.Object obj)
+        {
+            try
+            {
+                return obj != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void LogUsefulButtons(
+            CreateGameOptions createScreen)
+        {
+            if (createScreen == null)
+                return;
+
+            try
+            {
+                PassiveButton[] buttons =
+                    createScreen.GetComponentsInChildren<PassiveButton>(
+                        true
+                    );
+
+                if (buttons == null)
+                    return;
+
+                for (int i = 0;
+                     i < buttons.Length;
+                     i++)
+                {
+                    PassiveButton button =
+                        buttons[i];
+
+                    if (button == null)
+                        continue;
+
+                }
+            }
+            catch
+            {
+            }
+        }
+
+    }
+
+    [HarmonyPatch(
+        typeof(CreateGameOptions),
+        nameof(CreateGameOptions.Confirm)
+    )]
+    public static class BanModCreateGameConfirmPatch
+    {
+        [HarmonyPrefix]
+        public static bool Prefix(
+            CreateGameOptions __instance)
+        {
+            if (BanMod.IsBanModDisabled)
+                return true;
+
+            if (!BanModServerSelection.IsVanilla)
+                return true;
+
+            if (BanModServerSelection.ConsumeVanillaCreateBypass())
+            {
+
+                return true;
+            }
+
+            if (BanModServerSelection.HasAcceptedVanillaThisWeek())
+            {
+                BanModServerSelection.VanillaAcknowledged =
+                    true;
+
+                DateTime? expiresAt =
+                    BanModServerSelection
+                        .GetVanillaAcceptanceExpiry();
+
+                if (expiresAt.HasValue)
+                {
+                    string nextDate =
+                        expiresAt.Value.ToString(
+                            "MMMM d, yyyy",
+                            CultureInfo.InvariantCulture
+                        );
+
+                    MainMenuInfo.Show(
+                        $"Already accepted - Next request: {nextDate}"
+                    );
+                }
+                else
+                {
+                    MainMenuInfo.Show(
+                        "Already accepted."
+                    );
+                }
+
+
+                return true;
+            }
+
+            if (ServerSelectionMenu.Instance == null)
+            {
+
+                return false;
+            }
+
+
+            ServerSelectionMenu.Instance
+                .OpenVanillaCreateWarning(
+                    __instance
+                );
+
+            return false;
+        }
+
+    }
+
 
     [HarmonyPatch(
         typeof(Constants),
@@ -1127,13 +3573,6 @@ namespace BanMod
 
             __result += 25;
 
-            BMLogger.LogInfo(
-                "[BanMod Server] Protocol version: " +
-                original +
-                " -> " +
-                __result +
-                " (+25 Modded Flag)"
-            );
         }
     }
     [HarmonyPatch(
@@ -1148,10 +3587,6 @@ namespace BanMod
                 return true;
 
             __result = true;
-
-            BMLogger.LogInfo(
-                "[BanMod Server] Constants.IsVersionModded = TRUE (+25 mode)."
-            );
 
             return false;
         }

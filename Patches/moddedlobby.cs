@@ -56,7 +56,8 @@ namespace BanMod
             var options = listing.Options;
             if (options != null)
             {
-                if (options.NumImpostors > VANILLA_MAX_IMPOSTORS ||
+                if (GameStates.isHideNSeek) return (false, "");
+                else if (options.NumImpostors > VANILLA_MAX_IMPOSTORS ||
                     listing.MaxPlayers > VANILLA_MAX_PLAYERS ||
                     options.GetFloat(FloatOptionNames.PlayerSpeedMod) > VANILLA_MAX_SPEED ||
                     options.GetFloat(FloatOptionNames.KillCooldown) < VANILLA_MIN_KILL_CD)
@@ -813,8 +814,6 @@ namespace BanMod
                 if (currentManager.matchesFoundText != null)
                     currentManager.matchesFoundText.text = value;
 
-                if (currentManager.TotalText != null)
-                    currentManager.TotalText.text = value;
             }
             catch { }
         }

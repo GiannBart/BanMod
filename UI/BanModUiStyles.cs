@@ -5,8 +5,6 @@ namespace BanMod
 {
     public static class BanModUiStyles
     {
-        // Visual-only shared theme. No menu behaviour lives in this class.
-        // Palette and radii mirror the modern Auto Friend Invite UI.
 
         public static readonly Color WindowColor = new Color(0.055f, 0.06f, 0.075f, 0.985f);
         public static readonly Color PanelColor = new Color(0.095f, 0.105f, 0.13f, 0.98f);
@@ -221,8 +219,6 @@ namespace BanMod
                 );
         }
 
-        // Rounded white sprite for UnityEngine.UI.Image based panels/buttons.
-        // Intended strictly as a visual background; callers keep their own events/layout.
         public static Sprite RoundedSprite
         {
             get
@@ -335,7 +331,6 @@ namespace BanMod
             }
         }
 
-        // White rounded base intended for code that already uses GUI.backgroundColor.
         public static GUIStyle TintableButton
         {
             get

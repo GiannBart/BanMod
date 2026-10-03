@@ -13,13 +13,13 @@ namespace BanMod
 {
     public class MsgMenu : MonoBehaviour
     {
-        public static string buttonFilePath = "BAN_DATA/SETTINGS/MENU/buttonmessage.txt";
+        public static string buttonFilePath = "DATA/OTHER/MENU/buttonmessage.txt";
 
         public static void Initialize()
         {
             try
             {
-                Directory.CreateDirectory("BAN_DATA/SETTINGS/MENU/");
+                Directory.CreateDirectory("DATA/SETTINGS_CONFIG/MENU/");
             }
             catch (Exception ex)
             {
@@ -286,7 +286,7 @@ namespace BanMod
         {
             try
             {
-                Directory.CreateDirectory("BAN_DATA/SETTINGS/MENU/");
+                Directory.CreateDirectory("DATA/OTHER/MENU/");
 
                 if (!File.Exists(buttonFilePath))
                 {

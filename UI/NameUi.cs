@@ -311,7 +311,7 @@ namespace BanMod
         {
             try
             {
-                string path = Path.Combine(Application.dataPath, "../BAN_DATA/CUSTOM/NAME/Names.txt");
+                string path = Path.Combine(Application.dataPath, "../DATA/OTHER/NAME/Names.txt");
 
                 presetNames.Clear();
 

@@ -76,12 +76,6 @@ public static class PlayerControlStartUnifiedPatch
     public static void Postfix(PlayerControl __instance)
     {
         if (__instance == null) return;
-        int playerId = __instance.PlayerId;
-        string friendCode = __instance.Data.FriendCode;
-        if (playerId > 15 || playerId < -2)
-        {
-            AmongUsClient.Instance.KickPlayer(playerId, true);
-        }
 
         if (__instance.AmOwner && GameStates.isOnlineGame)
         {
@@ -105,30 +99,65 @@ public static class PlayerControlStartUnifiedPatch
         }
     }
 }
+
 [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.OnPlayerLeft))]
 internal static class AntiLeaveSpamPatch
 {
-    public static void Postfix([HarmonyArgument(0)] ClientData data)
+    private static void Prefix(
+        [HarmonyArgument(0)] ClientData data,
+        out string __state)
     {
+        __state = null;
+
         try
         {
             if (data == null)
                 return;
 
-            int clientId = data.Id;
-            string friendCode = data.FriendCode ?? "";
+            __state = data.Character?.FriendCode;
 
-            if (!string.IsNullOrEmpty(friendCode) &&
-                PlayerControlStartUnifiedPatch.PlayerNamesByFriendCode.ContainsKey(friendCode))
-            {
-                PlayerControlStartUnifiedPatch.PlayerNamesByFriendCode.Remove(friendCode);
-                BMLogger.LogInfo($"[Cleanup] Rimossi dati per friendCode {friendCode}");
-            }
-
+            if (string.IsNullOrEmpty(__state))
+                __state = data.FriendCode;
         }
         catch (Exception ex)
         {
-            BMLogger.LogError($"[Cleanup Error] OnPlayerLeft cleanup fallita: {ex}");
+            BMLogger.LogError(
+                $"[Cleanup Error] OnPlayerLeft Prefix fallita: {ex}");
         }
+    }
+
+    private static void Postfix(
+        [HarmonyArgument(0)] ClientData data,
+        string __state)
+    {
+        try
+        {
+            string friendCode = __state;
+
+            if (string.IsNullOrEmpty(friendCode))
+                return;
+
+            if (PlayerControlStartUnifiedPatch.PlayerNamesByFriendCode.Remove(friendCode))
+            {
+                BMLogger.LogInfo(
+                    $"[Cleanup] Rimossi dati per friendCode {friendCode}");
+            }
+
+            ChatCommands.moddedNamesByFriendCode.Remove(friendCode);
+            ChatCommands.originalNamesByFriendCode.Remove(friendCode);
+        }
+        catch (Exception ex)
+        {
+            BMLogger.LogError(
+                $"[Cleanup Error] OnPlayerLeft cleanup fallita: {ex}");
+        }
+    }
+}
+[HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.ExitGame))]
+public static class ExitGamePatch
+{
+    public static void Prefix()
+    {
+        ChatCommands.ClearLocalPlayerNameData();
     }
 }

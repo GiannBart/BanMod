@@ -1,3 +1,4 @@
+// credits and licenses in the resources folder
 using Assets.InnerNet;
 using HarmonyLib;
 using System;
@@ -617,7 +618,6 @@ namespace BanMod
             {
             }
 
-            // Safe fallback only if the game controller cannot expose its language.
             try
             {
                 string systemToken = Application.systemLanguage.ToString();
@@ -690,7 +690,6 @@ namespace BanMod
                     return mapped;
             }
 
-            // Last fallback: inspect any field/property whose name mentions language.
             try
             {
                 PropertyInfo[] properties = type.GetProperties(flags);
@@ -809,7 +808,6 @@ namespace BanMod
 
             string t = token.Trim().ToLowerInvariant();
 
-            // Chinese variants must be checked before generic language names.
             if (t.Contains("schinese") ||
                 t.Contains("simplified") ||
                 t.Contains("chinesesimplified") ||
@@ -910,7 +908,6 @@ namespace BanMod
             ListDetails,
             AddChoice,
             AddFriends,
-            AddNonFriends,
             PlayerActions,
             MovePlayer
         }
@@ -927,7 +924,6 @@ namespace BanMod
         private string renameListName = "";
         private string renameSourceList = "";
 
-        // 0 = closed, 1 = create, 2 = rename
         private int nameDialogMode = 0;
         private string nameDialogBuffer = "";
         private const int MaxListNameLength = 32;
@@ -1048,7 +1044,6 @@ namespace BanMod
             }
             catch
             {
-                // Physical keyboard is optional. The on-screen keyboard still works.
             }
         }
 
@@ -1568,10 +1563,6 @@ namespace BanMod
                     DrawAvailablePlayersPage(body, true);
                     break;
 
-                case UiPage.AddNonFriends:
-                    DrawAvailablePlayersPage(body, false);
-                    break;
-
                 case UiPage.PlayerActions:
                     DrawPlayerActionsPage(body);
                     break;
@@ -1614,9 +1605,6 @@ namespace BanMod
 
                 case UiPage.AddFriends:
                     return T("friends");
-
-                case UiPage.AddNonFriends:
-                    return T("non_friends");
 
                 case UiPage.PlayerActions:
                     return string.IsNullOrWhiteSpace(selectedPlayerName)
@@ -1913,7 +1901,7 @@ namespace BanMod
                     T("add_player"),
                     new Color(0.12f, 0.58f, 0.34f, 1f)))
                 {
-                    OpenPage(UiPage.AddChoice);
+                    OpenPage(UiPage.AddFriends);
                 }
 
                 float third = (body.width - 20f) / 3f;
@@ -1978,9 +1966,7 @@ namespace BanMod
         private void DrawAddChoicePage(Rect body)
         {
             float buttonHeight = 72f;
-            float gap = 18f;
-            float totalHeight = buttonHeight * 2f + gap;
-            float startY = body.y + (body.height - totalHeight) * 0.5f - 28f;
+            float startY = body.y + (body.height - buttonHeight) * 0.5f - 28f;
 
             GUIStyle info = new GUIStyle(mutedLabelStyle);
             info.alignment = TextAnchor.MiddleCenter;
@@ -2000,14 +1986,6 @@ namespace BanMod
             }
 
             if (DrawTintedButton(
-                new Rect(body.x + 50f, startY + buttonHeight + gap, body.width - 100f, buttonHeight),
-                T("non_friends"),
-                new Color(0.35f, 0.28f, 0.62f, 1f)))
-            {
-                OpenPage(UiPage.AddNonFriends);
-            }
-
-            if (DrawTintedButton(
                 new Rect(body.x, body.y + body.height - 44f, body.width, 44f),
                 T("back"),
                 new Color(0.18f, 0.19f, 0.23f, 1f)))
@@ -2019,8 +1997,7 @@ namespace BanMod
         [HideFromIl2Cpp]
         private void DrawAvailablePlayersPage(Rect body, bool friendsOnly)
         {
-            List<PlayerControl> players =
-                GetAvailableLobbyPlayers(friendsOnly);
+            List<AutoFriendInviteManager.InviteEntry> friends = GetAvailableOfficialFriends();
 
             float footerHeight = 54f;
             Rect listArea = new Rect(
@@ -2033,7 +2010,7 @@ namespace BanMod
             float rowHeight = 52f;
             float contentHeight = Mathf.Max(
                 listArea.height,
-                12f + Mathf.Max(1, players.Count) * (rowHeight + 8f)
+                12f + Mathf.Max(1, friends.Count) * (rowHeight + 8f)
             );
 
             Rect content = new Rect(
@@ -2049,42 +2026,47 @@ namespace BanMod
                 content
             );
 
-            if (players.Count == 0)
+            if (friends.Count == 0)
             {
                 DrawEmptyState(
                     new Rect(4f, 6f, content.width - 8f, 120f),
-                    T("no_player_available"),
-                    friendsOnly
-                        ? T("no_available_friends")
-                        : T("no_available_nonfriends")
+                    T("no_friends"),
+                    T("no_friends_hint")
                 );
             }
             else
             {
-                for (int i = 0; i < players.Count; i++)
+                for (int i = 0; i < friends.Count; i++)
                 {
-                    PlayerControl player = players[i];
+                    AutoFriendInviteManager.InviteEntry entry = friends[i];
 
-                    if (player == null)
+                    if (entry == null || string.IsNullOrWhiteSpace(entry.Puid))
                         continue;
 
-                    string playerName = GetPlayerName(player);
+                    string friendName = GetEntryName(entry);
 
                     if (DrawTintedButton(
                         new Rect(4f, 8f + i * (rowHeight + 8f), content.width - 8f, rowHeight),
-                        playerName,
-                        friendsOnly
-                            ? new Color(0.12f, 0.40f, 0.70f, 1f)
-                            : new Color(0.30f, 0.25f, 0.52f, 1f)))
+                        friendName,
+                        new Color(0.12f, 0.40f, 0.70f, 1f)))
                     {
                         try
                         {
-                            AutoFriendInviteManager.AddByPlayer(player, true);
+                            AutoFriendInviteManager.AddEntryToList(
+                                GetCurrentListSafe(),
+                                new AutoFriendInviteManager.InviteEntry
+                                {
+                                    Puid = entry.Puid,
+                                    FriendCode = entry.FriendCode,
+                                    DisplayName = entry.DisplayName
+                                },
+                                true
+                            );
                         }
                         catch (Exception ex)
                         {
                             Debug.LogError(
-                                "[AutoFriendInviteUi] Add player failed: " + ex
+                                "[AutoFriendInviteUi] Add friend failed: " + ex
                             );
                         }
                     }
@@ -2103,8 +2085,46 @@ namespace BanMod
                 T("back"),
                 new Color(0.18f, 0.19f, 0.23f, 1f)))
             {
-                OpenPage(UiPage.AddChoice);
+                OpenPage(UiPage.ListDetails);
             }
+        }
+
+        [HideFromIl2Cpp]
+        private List<AutoFriendInviteManager.InviteEntry> GetAvailableOfficialFriends()
+        {
+            List<AutoFriendInviteManager.InviteEntry> result =
+                new List<AutoFriendInviteManager.InviteEntry>();
+
+            try
+            {
+                HashSet<string> assigned = GetAssignedCustomListPuids();
+                List<AutoFriendInviteManager.InviteEntry> allFriends =
+                    AutoFriendInviteManager.GetAllFriendEntries();
+
+                if (allFriends == null)
+                    return result;
+
+                for (int i = 0; i < allFriends.Count; i++)
+                {
+                    AutoFriendInviteManager.InviteEntry entry = allFriends[i];
+
+                    if (entry == null || string.IsNullOrWhiteSpace(entry.Puid))
+                        continue;
+
+                    if (assigned.Contains(entry.Puid))
+                        continue;
+
+                    result.Add(entry);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(
+                    "[AutoFriendInviteUi] GetAvailableOfficialFriends failed: " + ex
+                );
+            }
+
+            return result;
         }
 
         [HideFromIl2Cpp]
@@ -2490,7 +2510,6 @@ namespace BanMod
                 }
                 catch
                 {
-                    // Best-effort restore if the destination add fails.
                     AutoFriendInviteManager.AddEntryToList(
                         sourceList,
                         entry,
@@ -3103,8 +3122,6 @@ namespace BanMod
                     if (string.IsNullOrWhiteSpace(puid))
                         continue;
 
-                    // No IsFriend() filter:
-                    // friends AND non-friends are selectable.
                     result.Add(player);
                 }
             }

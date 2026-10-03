@@ -21,7 +21,6 @@ namespace BanMod
         private bool selectingPlayer = false;
         private bool selectingColor = false;
 
-        // Per le azioni RPC non usiamo più stringhe/commandi chat.
         private ModeratorAction pendingPlayerAction;
         private ModeratorAction pendingColorAction;
 
@@ -131,9 +130,6 @@ namespace BanMod
 
             menuItems.Add(new MenuItem { Label = GetString("Mod_Header_Players"), Type = ItemType.Header });
 
-            // Mantengo la schermata di selezione colore originale:
-            // il colore viene usato SOLO per individuare il player,
-            // poi all'host viene inviato il PlayerId reale.
             menuItems.Add(new MenuItem
             {
                 Label = GetString("KickPlayerAction"),
@@ -148,8 +144,6 @@ namespace BanMod
                 OnClick = () => StartColorSelection(ModeratorAction.Ban)
             });
 
-            // L'azione colore del nuovo sistema lavora sul player selezionato
-            // e usa la stessa RandomFreeColor già prevista da ModeratorAuthority.
             menuItems.Add(new MenuItem
             {
                 Label = GetString("Mod_Btn_Color"),
@@ -157,7 +151,6 @@ namespace BanMod
                 OnClick = () => StartPlayerSelection(ModeratorAction.RandomFreeColor)
             });
 
-            // Funzioni locali originali: restano invariate e non passano dalla chat.
             menuItems.Add(new MenuItem
             {
                 Label = "Copy_Outfit",
@@ -314,8 +307,6 @@ namespace BanMod
 
                         if (GUILayout.Button(label, buttonStyle, GUILayout.Width(btnWidth), GUILayout.Height(ButtonHeight)))
                         {
-                            // La selezione per colore rimane identica lato UI,
-                            // ma NON viene più scritto "/kick red" o "/ban blue" in chat.
                             PlayerControl target = null;
 
                             foreach (var p in PlayerControl.AllPlayerControls)

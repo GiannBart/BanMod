@@ -13,7 +13,7 @@ namespace BanMod
         private Rect windowRect;
         private Vector2 windowSize = new Vector2(750, 600);
         private Vector2 scrollPosition = Vector2.zero;
-        private static string configPath = "BAN_DATA/SETTINGS/keybinds_config.txt";
+        private static string configPath = "DATA/SETTINGS_CONFIG/keybinds_config.txt";
 
         public static KeyCode K1 = KeyCode.Alpha1, K2 = KeyCode.Alpha2,
             K3 = KeyCode.Alpha3, K4 = KeyCode.Alpha4, K5 = KeyCode.Alpha5,

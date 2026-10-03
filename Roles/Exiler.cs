@@ -102,7 +102,7 @@ namespace BanMod
 
             string msg = string.Format(GetString("ExilerInfo"));
 
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
             {
                 Utils.RequestProxyMessage(msg, ExilerId);
                 MessageBlocker.UpdateLastMessageTime();

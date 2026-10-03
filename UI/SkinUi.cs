@@ -165,7 +165,7 @@ namespace BanMod
                 if (string.IsNullOrWhiteSpace(presetName))
                     return;
 
-                string baseDir = Path.Combine(Application.dataPath, "../BAN_DATA/CUSTOM/SKINPRESET");
+                string baseDir = Path.Combine(Application.dataPath, "../DATA/OTHER/SKINPRESET");
                 string imgDir = Path.Combine(baseDir, "PresetImage");
                 string filePath = Path.Combine(baseDir, "Presets.txt");
 
@@ -214,7 +214,7 @@ namespace BanMod
         {
             outfitPresets.Clear();
 
-            string baseDir = Path.Combine(Application.dataPath, "../BAN_DATA/CUSTOM/SKINPRESET");
+            string baseDir = Path.Combine(Application.dataPath, "../DATA/OTHER/SKINPRESET");
             string imgDir = Path.Combine(baseDir, "PresetImage");
             string filePath = Path.Combine(baseDir, "Presets.txt");
 
@@ -300,7 +300,7 @@ namespace BanMod
 
                 var outfit = PlayerControl.LocalPlayer.Data.DefaultOutfit;
 
-                string baseDir = Path.Combine(Application.dataPath, "../BAN_DATA/CUSTOM/SKINPRESET");
+                string baseDir = Path.Combine(Application.dataPath, "../DATA/OTHER/SKINPRESET");
                 string imgDir = Path.Combine(baseDir, "PresetImage");
                 if (!Directory.Exists(imgDir)) Directory.CreateDirectory(imgDir);
 
@@ -564,7 +564,7 @@ namespace BanMod
                 if (preset == null || string.IsNullOrWhiteSpace(preset.Name))
                     return;
 
-                string baseDir = Path.Combine(Application.dataPath, "../BAN_DATA/CUSTOM/SKINPRESET");
+                string baseDir = Path.Combine(Application.dataPath, "../DATA/OTHER/SKINPRESET");
                 string imgDir = Path.Combine(baseDir, "PresetImage");
                 string filePath = Path.Combine(baseDir, "Presets.txt");
                 string imgPath = Path.Combine(imgDir, preset.Name + ".png");

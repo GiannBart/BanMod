@@ -34,8 +34,14 @@ public class LobbyStartPatch
             LobbyStairsColliderFix.ApplyDelayed(__instance).WrapToIl2Cpp()
         );
 
-        if (AmongUsClient.Instance.AmHost && !LobbyStartPatch.hasSentSummary1 && (gameMode != GameModeType.FFA))
+        if (AmongUsClient.Instance.AmHost && !LobbyStartPatch.hasSentSummary1)
         {
+            if (gameMode == GameModeType.FFA) return;
+            if (gameMode == GameModeType.FFATeam) return;
+            if (gameMode == GameModeType.KillRace) return;
+            if (gameMode == GameModeType.HotPotatoModded) return;
+            if (gameMode == GameModeType.Assassin) return;
+
             __instance.StartCoroutine(SendSummaryDelayed().WrapToIl2Cpp());
         }
 
@@ -68,8 +74,6 @@ public class LobbyStartPatch
             Utils.SendMessage(report, 255);
             sentAtLeastOne = true;
 
-            // Evita che i due messaggi si sovrappongano
-            // o vengano bloccati come spam.
             yield return new WaitForSeconds(0.75f);
         }
 
@@ -565,17 +569,18 @@ public class LobbyBehaviourPatch
     }
 }
 
+
 [HarmonyPatch(typeof(LobbyBehaviour), nameof(LobbyBehaviour.Update))]
 public static class LobbyBehaviour_Update_Patch
 {
-    private static float timeEnteredLobby = -1;
+    private static float timeEnteredLobby = -1f;
     private static HashSet<byte> rpcSentTo = new();
 
     public static bool _popupShown = false;
 
-    public static Dictionary<string, float> playerJoinTimes = new Dictionary<string, float>();
-    public static Dictionary<string, float> playersToMessage = new Dictionary<string, float>();
-    public static HashSet<string> messagedPlayers = new HashSet<string>();
+    public static Dictionary<string, float> playerJoinTimes = new();
+    public static Dictionary<string, float> playersToMessage = new();
+    public static HashSet<string> messagedPlayers = new();
 
     public static void Postfix()
     {
@@ -597,14 +602,46 @@ public static class LobbyBehaviour_Update_Patch
 
             _popupShown = true;
         }
+        if (AmongUsClient.Instance.AmHost &&
+            GameStates.isLobby &&
+            BanModServerSelection.IsModded25 &&
+            BanMod.AllPlayerControls != null)
+        {
+            foreach (var player in BanMod.AllPlayerControls)
+            {
+                if (player == null || player.Data == null)
+                    continue;
 
+                ChatCommands.RestoreModdedNameIfNeeded(player.PlayerId);
+
+                if (player == PlayerControl.LocalPlayer)
+                {
+                    ChatCommands.StoreOriginalName(player.PlayerId);
+
+                    if (Options.TagName.GetBool())
+                    {
+                        string newName = ChatCommands.GetDisplayName(player);
+
+                        if (player.Data.PlayerName != newName)
+                        {
+                            player.RpcSetName(newName);
+                        }
+                    }
+                }
+            }
+        }
         if (!AmongUsClient.Instance.AmHost)
             return;
 
-        if (GameData.Instance == null || GameData.Instance.AllPlayers == null || !Options.sendwelcome.GetBool())
+        if (GameData.Instance == null
+            || GameData.Instance.AllPlayers == null
+            || !Options.sendwelcome.GetBool())
+        {
             return;
+        }
 
         float currentTime = Time.time;
+
 
         if (BanMod.AllPlayerControls != null)
         {
@@ -613,7 +650,7 @@ public static class LobbyBehaviour_Update_Patch
                 if (player == null || player.Data == null)
                     continue;
 
-                var friendCode = player.Data.FriendCode;
+                string friendCode = player.Data.FriendCode;
 
                 if (string.IsNullOrEmpty(friendCode))
                     continue;
@@ -642,52 +679,142 @@ public static class LobbyBehaviour_Update_Patch
             }
         }
 
-        foreach (var friendCode in toSend)
+        foreach (string friendCode in toSend)
         {
-            var player = BanMod.AllPlayerControls?.FirstOrDefault(p => p != null && p.Data != null && p.Data.FriendCode == friendCode);
+            var player = BanMod.AllPlayerControls?
+                .FirstOrDefault(p =>
+                    p != null
+                    && p.Data != null
+                    && p.Data.FriendCode == friendCode
+                );
 
             if (player == null || player.Data == null)
             {
                 playersToMessage.Remove(friendCode);
                 continue;
             }
+
+            string name = player.Data.PlayerName;
+            string mode = Options.GameMode.GetString();
+
+
+            string templateName = mode switch
             {
-                string name = player.Data.PlayerName;
-                string mode = Options.GameMode.GetString();
+                "SnS" => "WelcomeTemplateSns",
+                "PnS" => "WelcomeTemplatePns",
+                "KaitoRun" => "WelcomeTemplateKaitoRun",
+                "Default" => "WelcomeTemplate",
+                "TaskRun" => "WelcomeTemplateTaskRun",
+                "JBMode" => "WelcomeTemplateJBMode",
+                "FFA" => "WelcomeTemplateFFA",
+                "ZombieMode" => "WelcomeTemplateZombieMode",
+                "FFATEAM" => "WelcomeTemplateFFATEAM",
+                _ => "WelcomeTemplate"
+            };
 
-                string templateName = mode switch
-                {
-                    "SnS" => "WelcomeTemplateSns",
-                    "PnS" => "WelcomeTemplatePns",
-                    "KaitoRun" => "WelcomeTemplateKaitoRun",
-                    "Default" => "WelcomeTemplate",
-                    "TaskRun" => "WelcomeTemplateTaskRun",
-                    "JBMode" => "WelcomeTemplateJBMode",
-                    "FFA" => "WelcomeTemplateFFA",
-                    "ZombieMode" => "WelcomeTemplateZombieMode",
-                    "HotPotato" => "WelcomeTemplateHotPotato",
-                    _ => "WelcomeTemplate"
-                };
+            string templateNameModded = mode switch
+            {
+                "SnS" => "WelcomeTemplateSnsModded",
+                "PnS" => "WelcomeTemplatePnsModded",
+                "KaitoRun" => "WelcomeTemplateKaitoRunModded",
+                "Default" => "WelcomeTemplateModded",
+                "TaskRun" => "WelcomeTemplateTaskRunModded",
+                "JBMode" => "WelcomeTemplateJBModeModded",
+                "FFA" => "WelcomeTemplateFFAModded",
+                "FFATEAM" => "WelcomeTemplateFFATEAMModded",
+                "KillRace" => "WelcomeTemplateKillRaceModded",
+                "Assassin" => "WelcomeTemplateAssassinModded",
+                "ZombieMode" => "WelcomeTemplateZombieModeModded",
+                "HotPotatoModded" => "WelcomeTemplateHotPotatoModded",
+                "RoomRush" => "WelcomeTemplateRoomRushModded",
+                "DeathRun" => "WelcomeTemplateDeathRunModded",
+                "TargetRush" => "WelcomeTemplateTargetRushModded",
+                _ => "WelcomeTemplateModded"
+            };
 
-                string title = TemplateLoader.FormatTemplate(templateName, name);
 
-                Utils.SendMessage(title, player.PlayerId);
+            bool messageSent = false;
+
+            if (BanModServerSelection.IsVanilla)
+            {
+                string title =
+                    TemplateLoader.FormatWelcomeTemplate(
+                        templateName,
+                        name
+                    );
+
+                Utils.SendMessage(
+                    title,
+                    player.PlayerId
+                );
+
                 MessageBlocker.UpdateLastMessageTime();
+
+                messageSent = true;
             }
-            playersToMessage.Remove(friendCode);
-            messagedPlayers.Add(friendCode);
+            else if (BanModServerSelection.IsModded25)
+            {
+                string title =
+                    TemplateLoader.FormatWelcomeModdedTemplate(
+                        templateNameModded,
+                        name
+                    );
+
+                Utils.SendMessage(
+                    title,
+                    player.PlayerId
+                );
+
+                MessageBlocker.UpdateLastMessageTime();
+
+                messageSent = true;
+            }
+
+            if (messageSent)
+            {
+                playersToMessage.Remove(friendCode);
+                messagedPlayers.Add(friendCode);
+            }
         }
     }
 
     public static void ResetState()
     {
         rpcSentTo.Clear();
-        timeEnteredLobby = -1;
+
+        timeEnteredLobby = -1f;
 
         playerJoinTimes.Clear();
         playersToMessage.Clear();
         messagedPlayers.Clear();
 
         _popupShown = false;
+    }
+
+}
+[HarmonyPatch(typeof(IntroCutscene), "OnDestroy")]
+public static class BanModGameNamePatch
+{
+    public static void Postfix()
+    {
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+            return;
+
+        if (!BanModServerSelection.IsModded25)
+            return;
+
+        var player = PlayerControl.LocalPlayer;
+
+        if (player == null || player.Data == null)
+            return;
+
+        string newName =
+            ChatCommands.GetDisplayName(player);
+
+        if (player.Data.PlayerName != newName)
+        {
+            player.RpcSetName(newName);
+        }
     }
 }

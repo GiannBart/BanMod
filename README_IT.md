@@ -97,7 +97,7 @@ Gli aggiornamenti di Among Us possono interrompere la compatibilità. Controlla 
 
 ### Aggiornamento e disinstallazione
 
-Quando indicato nelle note di rilascio, esegui il backup della cartella `BAN_DATA`. Rimuovi DLL BanMod obsolete o duplicate da `BepInEx/plugins` e non mescolare file di release diverse.
+Quando indicato nelle note di rilascio, esegui il backup della cartella `DATA`. Rimuovi DLL BanMod obsolete o duplicate da `BepInEx/plugins` e non mescolare file di release diverse.
 
 Per disinstallare, salva prima eventuali preset o configurazioni che vuoi conservare, quindi usa la verifica dei file della piattaforma:
 

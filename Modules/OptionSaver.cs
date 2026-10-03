@@ -11,7 +11,7 @@ public static class OptionSaver
 {
     [Obfuscation(Exclude = true)]
     private static readonly DirectoryInfo SaveDataDirectoryInfo =
-        new("./BAN_DATA/SETTINGS/SaveData/");
+        new("./DATA/SETTINGS_CONFIG/SaveData/");
 
     [Obfuscation(Exclude = true)]
     private static readonly FileInfo OptionSaverFileInfo =

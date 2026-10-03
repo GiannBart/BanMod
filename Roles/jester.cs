@@ -146,7 +146,7 @@ namespace BanMod
             if (killer == null || killer.Data == null || killer.Data.IsDead) return;
 
             string msg = string.Format(GetString("JesterInfo"));
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
             {
                 Utils.RequestProxyMessage(msg, JesterId);
                 MessageBlocker.UpdateLastMessageTime();

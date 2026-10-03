@@ -27,6 +27,7 @@ public static class ImmortalManager
 
         if (Utils.Engineer(player)) return;
         if (Utils.Detective(player)) return;
+        if (Utils.SpiritGuide(player)) return;
         if (Utils.Noisemaker(player)) return;
         if (player.PlayerId == Guesser.SpecialKillerId) return;
         if (player.PlayerId == Watcher.WatcherId) return;
@@ -83,7 +84,7 @@ public static class ImmortalManager
         if (Options.sendtoAll.GetBool())
         {
             string msgAll = GetString("immortaladded");
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
                 Utils.RequestProxyMessage(msgAll);
             else
                 Utils.SendMessage(msgAll, 255);
@@ -96,7 +97,7 @@ public static class ImmortalManager
             if (Options.sendtoimmortal.GetBool())
             {
                 string msgPriv = GetString("ImmortalSelfMessage");
-                if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+                if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
                     Utils.RequestProxyMessage(msgPriv, immortalCandidate);
                 else
                     Utils.SendMessage(msgPriv, immortalCandidate);

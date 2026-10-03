@@ -475,7 +475,7 @@ namespace BanMod
             }
 
             string json = "{"
-                + "\"action\":\"delete\"," 
+                + "\"action\":\"delete\","
                 + "\"modId\":" + BanModJson.StringValue(SafeGetModId()) + ","
                 + "\"senderFriendCode\":" + BanModJson.StringValue(SafeGetFriendCode())
                 + "}";
@@ -634,14 +634,23 @@ namespace BanMod
                 yield break;
             }
 
+            string replyFriendCode = SafeGetFriendCode();
+            if (string.IsNullOrWhiteSpace(replyFriendCode))
+            {
+                callback?.Invoke(false, "FriendCode unavailable.");
+                yield break;
+            }
+
             string json = "{"
-                + "\"action\":\"message\"," 
+                + "\"action\":\"message\","
+                + "\"FriendCode\":" + BanModJson.StringValue(replyFriendCode) + ","
+                + "\"senderFriendCode\":" + BanModJson.StringValue(replyFriendCode) + ","
                 + "\"modId\":" + BanModJson.StringValue(SafeGetModId()) + ","
-                + "\"senderFriendCode\":" + BanModJson.StringValue(SafeGetFriendCode()) + ","
                 + "\"message\":" + BanModJson.StringValue(message)
                 + "}";
 
             UnityWebRequest request = CreateJsonRequest(BanModCommunicationConfig.ReportMessageUrl(reportId), "POST", json);
+            try { request.SetRequestHeader("X-BANMOD-FriendCode", replyFriendCode); } catch { }
 
             yield return request.SendWebRequest();
 
@@ -651,6 +660,16 @@ namespace BanMod
             {
                 request.Dispose();
                 request = CreateJsonRequest(BanModCommunicationConfig.ReportMessagesUrl(reportId), "POST", json);
+                try { request.SetRequestHeader("X-BANMOD-FriendCode", replyFriendCode); } catch { }
+                yield return request.SendWebRequest();
+                responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
+            }
+
+            if (request.responseCode == 404 || request.responseCode == 405)
+            {
+                request.Dispose();
+                request = CreateJsonRequest(BanModCommunicationConfig.ReportItemUrl(reportId), "POST", json);
+                try { request.SetRequestHeader("X-BANMOD-FriendCode", replyFriendCode); } catch { }
                 yield return request.SendWebRequest();
                 responseText = request.downloadHandler != null ? request.downloadHandler.text : "";
             }
@@ -712,7 +731,7 @@ namespace BanMod
                 {
                     string obj = objects[i];
                     ReportSummary report = new ReportSummary();
-                    report.Id = ExtractJsonInt(obj, "id", 0);
+                    report.Id = ExtractTopLevelJsonInt(obj, "id", 0);
                     report.Type = BanModApiTokenManager.ExtractJsonString(obj, "type", "");
                     report.Title = BanModApiTokenManager.ExtractJsonString(obj, "title", "");
                     report.Message = BanModApiTokenManager.ExtractJsonString(obj, "message", "");
@@ -909,6 +928,112 @@ namespace BanMod
             }
 
             return -1;
+        }
+
+        private static int ExtractTopLevelJsonInt(string json, string key, int fallback)
+        {
+            if (string.IsNullOrWhiteSpace(json) || string.IsNullOrWhiteSpace(key))
+                return fallback;
+
+            try
+            {
+                int depth = 0;
+                bool inString = false;
+                bool escaped = false;
+
+                for (int i = 0; i < json.Length; i++)
+                {
+                    char c = json[i];
+
+                    if (inString)
+                    {
+                        if (c == '\\' && !escaped)
+                        {
+                            escaped = true;
+                            continue;
+                        }
+
+                        if (c == '"' && !escaped)
+                            inString = false;
+
+                        escaped = false;
+                        continue;
+                    }
+
+                    if (c == '{' || c == '[')
+                    {
+                        depth++;
+                        continue;
+                    }
+
+                    if (c == '}' || c == ']')
+                    {
+                        depth--;
+                        continue;
+                    }
+
+                    if (c != '"' || depth != 1)
+                        continue;
+
+                    int nameStart = i + 1;
+                    int nameEnd = nameStart;
+                    bool nameEscaped = false;
+                    while (nameEnd < json.Length)
+                    {
+                        char nc = json[nameEnd];
+                        if (nc == '\\' && !nameEscaped)
+                        {
+                            nameEscaped = true;
+                            nameEnd++;
+                            continue;
+                        }
+                        if (nc == '"' && !nameEscaped)
+                            break;
+                        nameEscaped = false;
+                        nameEnd++;
+                    }
+
+                    if (nameEnd >= json.Length)
+                        return fallback;
+
+                    string propertyName = json.Substring(nameStart, nameEnd - nameStart);
+                    int colon = nameEnd + 1;
+                    while (colon < json.Length && char.IsWhiteSpace(json[colon]))
+                        colon++;
+
+                    if (colon >= json.Length || json[colon] != ':')
+                    {
+                        i = nameEnd;
+                        continue;
+                    }
+
+                    if (!string.Equals(propertyName, key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        i = nameEnd;
+                        continue;
+                    }
+
+                    int start = colon + 1;
+                    while (start < json.Length && char.IsWhiteSpace(json[start]))
+                        start++;
+
+                    int end = start;
+                    while (end < json.Length && (char.IsDigit(json[end]) || json[end] == '-' || json[end] == '+'))
+                        end++;
+
+                    if (end <= start)
+                        return fallback;
+
+                    string number = json.Substring(start, end - start);
+                    if (int.TryParse(number, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value))
+                        return value;
+
+                    return fallback;
+                }
+            }
+            catch { }
+
+            return fallback;
         }
 
         private static int ExtractJsonInt(string json, string key, int fallback)

@@ -196,23 +196,10 @@ namespace BanMod
             }
             catch { }
 
-            if (!showMenu && !popupVisible)
-            {
-                if (Input.GetKeyDown(KeyCode.F3))
-                    OpenMenu();
-                return;
-            }
 
             HandleWindowDrag();
             HandlePopupBodyManualScroll();
 
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-                if (showMenu)
-                    CloseMenu();
-                else
-                    OpenMenu();
-            }
         }
 
         public void ToggleMenu()
@@ -401,8 +388,6 @@ namespace BanMod
             if (uiRoot != null)
                 return;
 
-            EnsureEventSystem();
-
             uiRoot = new GameObject("BanMod_CommunicationCanvas");
             UnityEngine.Object.DontDestroyOnLoad(uiRoot);
 
@@ -421,21 +406,6 @@ namespace BanMod
             CreateFloatingUnreadBadge();
             CreateMainPanel();
             CreatePopupPanel();
-        }
-
-        private void EnsureEventSystem()
-        {
-            try
-            {
-                if (EventSystem.current != null)
-                    return;
-
-                GameObject eventSystem = new GameObject("BanMod_EventSystem");
-                UnityEngine.Object.DontDestroyOnLoad(eventSystem);
-                eventSystem.AddComponent<EventSystem>();
-                eventSystem.AddComponent<StandaloneInputModule>();
-            }
-            catch { }
         }
 
         private void CreateInputBlocker()
@@ -531,7 +501,6 @@ namespace BanMod
 
         private void CreateHomePanel()
         {
-            CreateLabel(homePanel.transform, "Hint", T("Comm_OpenHint", "Press F3 to open or close this menu."), 19, TextAlignmentOptions.Center, Color.white, new Vector2(760f, 38f), new Vector2(0f, 245f));
             CreateButton(homePanel.transform, "BugReportButton", T("Comm_BugReport", "Bug Report"), new Vector2(330f, 60f), new Vector2(-185f, 145f), new Color(0.12f, 0.36f, 0.58f, 1f), () => OpenPanel(PanelMode.BugReport));
             CreateButton(homePanel.transform, "PlayerReportButton", T("Comm_ReportPlayer", "Report Player"), new Vector2(330f, 60f), new Vector2(185f, 145f), new Color(0.45f, 0.22f, 0.12f, 1f), () => OpenPanel(PanelMode.PlayerReport));
             CreateButton(homePanel.transform, "SupportButton", T("Comm_SupportRequest", "Support Request"), new Vector2(330f, 60f), new Vector2(0f, 60f), new Color(0.18f, 0.42f, 0.18f, 1f), () => OpenPanel(PanelMode.Support));
@@ -2117,7 +2086,6 @@ namespace BanMod
                     return;
                 }
 
-                // Primo tentativo sulla UI. Se Unity/IL2CPP rifiuta la coroutine, fallback su AmongUsClient.
                 try
                 {
                     StartCoroutine(coroutine.WrapToIl2Cpp());
@@ -2410,7 +2378,6 @@ namespace BanMod
             input.inputType = TMP_InputField.InputType.Standard;
             input.richText = false;
 
-            // Viewport: impedisce al testo di uscire dal riquadro.
             GameObject viewport = CreateEmpty(go.transform, "Viewport", size, Vector2.zero);
             RectTransform viewportRect = viewport.GetComponent<RectTransform>();
             viewportRect.anchorMin = Vector2.zero;

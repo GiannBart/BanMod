@@ -47,7 +47,7 @@ public static class ImpostorManager
             string name = impostor.name;
             string msg = GetString("OnlyImpostor");
             string msg1 = $"{GetString("OnlyImpostor")}";
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
             {
                 Utils.RequestProxyMessage(msg, (byte)impostor.PlayerId);
                 MessageBlocker.UpdateLastMessageTime();
@@ -71,7 +71,7 @@ public static class ImpostorManager
             string msgToI2 = $"{GetString("ImpostorAlly")} {name1}";
             string msgToI11 = $"{GetString("ImpostorAlly")} {name2}";
             string msgToI22 = $"{GetString("ImpostorAlly")} {name1}";
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
             {
                 Utils.RequestProxyMessage(msgToI1, (byte)i1.PlayerId);
                 MessageBlocker.UpdateLastMessageTime();
@@ -82,7 +82,7 @@ public static class ImpostorManager
                 MessageBlocker.UpdateLastMessageTime();
 
             }
-            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
             {
                 Utils.RequestProxyMessage(msgToI2, (byte)i2.PlayerId);
                 MessageBlocker.UpdateLastMessageTime();

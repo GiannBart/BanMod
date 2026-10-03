@@ -1,6 +1,5 @@
 //credits and licenses in the resources folder/
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using UnityEngine;
@@ -10,9 +9,9 @@ namespace BanMod
     public sealed class BanModLoginUi : MonoBehaviour
     {
         private const int WindowId = 62031;
-        private const float WindowWidth = 780f;
-        private const float MinWindowHeight = 590f;
-        private const float MaxWindowHeight = 920f;
+        private const float WindowWidth = 640f;
+        private const float UsernameWindowHeight = 430f;
+        private const float LoadingWindowHeight = 300f;
 
         private static readonly Regex UsernameRegex = new Regex(
             "^[A-Za-z0-9_.-]{3,24}$",
@@ -27,8 +26,6 @@ namespace BanMod
         public static bool IsOpen => Instance != null && Instance._visible;
 
         private Rect _windowRect;
-        private Vector2 _scrollPosition = Vector2.zero;
-
         private LoginMenuModel _model;
         private string _username = "";
         private string _statusMessage = "";
@@ -43,12 +40,11 @@ namespace BanMod
         private GUIStyle _titleStyle;
         private GUIStyle _descriptionStyle;
         private GUIStyle _sectionStyle;
-        private GUIStyle _buttonStyle;
         private GUIStyle _saveButtonStyle;
         private GUIStyle _statusStyle;
-        private GUIStyle _lockedUsernameStyle;
         private GUIStyle _usernameInputStyle;
         private GUIStyle _hintStyle;
+        private GUIStyle _loadingStyle;
 
         public static void EnsureCreated()
         {
@@ -80,16 +76,17 @@ namespace BanMod
             if (!_visible)
                 return;
 
-            try
+            if (_model != null && _model.username_required)
             {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-            }
-            catch
-            {
-            }
+                try
+                {
+                    Cursor.visible = true;
+                    Cursor.lockState = CursorLockMode.None;
+                }
+                catch { }
 
-            HandleUsernameKeyboardInput();
+                HandleUsernameKeyboardInput();
+            }
         }
 
         private void OnDestroy()
@@ -111,37 +108,64 @@ namespace BanMod
             }
             catch (Exception ex)
             {
-                _statusMessage = "Invalid login menu data: " + ex.Message;
+                _model = new LoginMenuModel { loading_only = true };
+                _statusMessage = "Invalid login data: " + ex.Message;
                 _statusIsError = true;
+                _busy = false;
                 _visible = true;
-                CaptureCursor();
-                CenterWindow(MinWindowHeight);
+                CenterWindow(LoadingWindowHeight);
                 return;
             }
 
             _model = model ?? new LoginMenuModel();
-            if (_model.services == null)
-                _model.services = new List<LoginServiceModel>();
-
-            _username = _model.username ?? "";
+            _username = _model.username_required ? (_model.username ?? "") : "";
             _statusMessage = "";
             _statusIsError = false;
-            _busy = false;
+            _busy = _model.loading_only || !_model.username_required;
             _visible = true;
-            _scrollPosition = Vector2.zero;
-            try { Debug.Log("[BANMOD][LOGIN] BanModLoginUi visible; services=" + _model.services.Count); } catch { }
 
-            float height = CalculateWindowHeight(_model.services.Count);
-            CenterWindow(height);
-            CaptureCursor();
+            if (_model.username_required)
+            {
+                CenterWindow(UsernameWindowHeight);
+                CaptureCursor();
+            }
+            else
+            {
+                RestoreCursor();
+                CenterWindow(LoadingWindowHeight);
+            }
 
+            try
+            {
+                Debug.Log(
+                    _model.username_required
+                        ? "[BANMOD][LOGIN] Username registration UI visible."
+                        : "[BANMOD][LOGIN] Automatic service loading UI visible.");
+            }
+            catch { }
+        }
+
+        public void ShowLoading(string message)
+        {
+            _model = new LoginMenuModel
+            {
+                username_required = false,
+                loading_only = true,
+                username = ""
+            };
+            _username = "";
+            _statusMessage = message ?? "";
+            _statusIsError = false;
+            _busy = true;
+            _visible = true;
+            RestoreCursor();
+            CenterWindow(LoadingWindowHeight);
         }
 
         public void SetStatus(string message, bool isError)
         {
             _statusMessage = message ?? "";
             _statusIsError = isError;
-
         }
 
         public void SetBusy(bool busy, string message)
@@ -197,126 +221,45 @@ namespace BanMod
                 return;
             }
 
-            bool showUsername = _model.username_required || _model.show_username;
-            GUILayout.Label(
-                _model.username_required ? "BANMOD LOGIN" : "BANMOD SERVICES",
-                _titleStyle,
-                GUILayout.Height(42f));
-            GUILayout.Space(6f);
-
-            string description = _model.username_required
-                ? "Choose a permanent username and select the optional modules you want to use."
-                : (showUsername
-                    ? "FriendCode accepted. Your username is locked; select the optional modules you want to use."
-                    : "FriendCode accepted. Select the optional premium modules you want to use.");
-
-            GUILayout.Label(description, _descriptionStyle, GUILayout.Height(48f));
-            GUILayout.Space(12f);
-
-            if (showUsername)
-            {
-                GUILayout.Label("USERNAME", _sectionStyle, GUILayout.Height(28f));
-
-                if (_model.username_required)
-                {
-                    bool showCaret = ((int)(Time.realtimeSinceStartup * 2f) & 1) == 0;
-                    string shownUsername = string.IsNullOrEmpty(_username)
-                        ? "Type your username..."
-                        : _username + (showCaret ? "|" : "");
-
-                    GUILayout.Label(
-                        shownUsername,
-                        _usernameInputStyle,
-                        GUILayout.Height(44f));
-
-                    GUILayout.Label(
-                        "Type directly on the keyboard. Backspace deletes. Allowed: letters, numbers, dot, dash and underscore.",
-                        _hintStyle,
-                        GUILayout.Height(38f));
-                }
-                else
-                {
-                    GUILayout.Label(
-                        string.IsNullOrWhiteSpace(_username) ? "(not available)" : _username,
-                        _lockedUsernameStyle,
-                        GUILayout.Height(44f));
-                }
-
-                GUILayout.Space(14f);
-            }
-
-            GUILayout.Label("OPTIONAL MODULES", _sectionStyle, GUILayout.Height(28f));
-            GUILayout.Space(4f);
-
-            float servicesHeight = Mathf.Clamp(60f + _model.services.Count * 50f, 90f, 330f);
-            _scrollPosition = GUILayout.BeginScrollView(
-                _scrollPosition,
-                GUILayout.Height(servicesHeight),
-                GUILayout.ExpandWidth(true));
-
-            if (_model.services.Count == 0)
-            {
-                GUILayout.Space(14f);
-                GUILayout.Label(
-                    "No optional modules are currently available for this account.",
-                    _descriptionStyle,
-                    GUILayout.Height(50f));
-            }
+            if (_model.username_required)
+                DrawUsernameRegistration();
             else
-            {
-                for (int i = 0; i < _model.services.Count; i++)
-                {
-                    LoginServiceModel service = _model.services[i];
-                    if (service == null)
-                        continue;
+                DrawLoadingView();
 
-                    string label = string.IsNullOrWhiteSpace(service.label)
-                        ? (service.key ?? "MODULE")
-                        : service.label;
+            GUI.DragWindow(new Rect(0f, 0f, _windowRect.width, 46f));
+        }
 
-                    Color previousBackground = GUI.backgroundColor;
-                    GUI.backgroundColor = service.selected
-                        ? new Color(0.12f, 0.58f, 0.28f, 1f)
-                        : new Color(0.17f, 0.20f, 0.27f, 1f);
-
-                    bool previousEnabled = GUI.enabled;
-                    GUI.enabled = !_busy;
-
-                    if (GUILayout.Button(
-                        (service.selected ? "[X]  " : "[ ]  ") + label,
-                        _buttonStyle,
-                        GUILayout.Height(43f),
-                        GUILayout.ExpandWidth(true)))
-                    {
-                        service.selected = !service.selected;
-                    }
-
-                    GUI.enabled = previousEnabled;
-                    GUI.backgroundColor = previousBackground;
-                    GUILayout.Space(5f);
-                }
-            }
-
-            GUILayout.EndScrollView();
+        private void DrawUsernameRegistration()
+        {
+            GUILayout.Label("BANMOD LOGIN", _titleStyle, GUILayout.Height(42f));
             GUILayout.Space(8f);
+            GUILayout.Label(
+                "Choose the username associated with this FriendCode.",
+                _descriptionStyle,
+                GUILayout.Height(48f));
+            GUILayout.Space(14f);
 
-            if (!string.IsNullOrWhiteSpace(_statusMessage))
-            {
-                Color previousContent = GUI.contentColor;
-                GUI.contentColor = _statusIsError
-                    ? new Color(1f, 0.42f, 0.42f, 1f)
-                    : new Color(0.55f, 0.92f, 1f, 1f);
+            GUILayout.Label("USERNAME", _sectionStyle, GUILayout.Height(28f));
 
-                GUILayout.Label(_statusMessage, _statusStyle);
-                GUI.contentColor = previousContent;
-                GUILayout.Space(5f);
-            }
+            bool showCaret = !_busy && ((int)(Time.realtimeSinceStartup * 2f) & 1) == 0;
+            string shownUsername = string.IsNullOrEmpty(_username)
+                ? "Type your username..."
+                : _username + (showCaret ? "|" : "");
+
+            GUILayout.Label(shownUsername, _usernameInputStyle, GUILayout.Height(46f));
+            GUILayout.Label(
+                "Type directly on the keyboard. Allowed: letters, numbers, dot, dash and underscore (3-24 characters).",
+                _hintStyle,
+                GUILayout.Height(42f));
+
+            GUILayout.Space(12f);
+            DrawStatus();
 
             bool wasEnabled = GUI.enabled;
             GUI.enabled = !_busy;
 
             if (GUILayout.Button(
-                _busy ? "PLEASE WAIT..." : "SAVE",
+                _busy ? "PLEASE WAIT..." : "CONTINUE",
                 _saveButtonStyle,
                 GUILayout.Height(52f),
                 GUILayout.ExpandWidth(true)))
@@ -333,8 +276,45 @@ namespace BanMod
                 Submit();
                 current.Use();
             }
+        }
 
-            GUI.DragWindow(new Rect(0f, 0f, _windowRect.width, 46f));
+        private void DrawLoadingView()
+        {
+            GUILayout.Label("BANMOD LOGIN", _titleStyle, GUILayout.Height(42f));
+            GUILayout.Space(16f);
+
+            int phase = ((int)(Time.realtimeSinceStartup * 2.5f)) % 4;
+            string dots = new string('.', phase);
+            string loadingText = "Loading compatible services" + dots;
+
+            GUILayout.Label(
+                _busy ? loadingText : "Service loading finished.",
+                _loadingStyle,
+                GUILayout.Height(56f));
+
+            GUILayout.Space(10f);
+            GUILayout.Label(
+                "Premium modules are selected automatically only when the server marks them as available and compatible.",
+                _descriptionStyle,
+                GUILayout.Height(60f));
+
+            GUILayout.Space(8f);
+            DrawStatus();
+        }
+
+        private void DrawStatus()
+        {
+            if (string.IsNullOrWhiteSpace(_statusMessage))
+                return;
+
+            Color previousContent = GUI.contentColor;
+            GUI.contentColor = _statusIsError
+                ? new Color(1f, 0.42f, 0.42f, 1f)
+                : new Color(0.55f, 0.92f, 1f, 1f);
+
+            GUILayout.Label(_statusMessage, _statusStyle, GUILayout.Height(38f));
+            GUI.contentColor = previousContent;
+            GUILayout.Space(5f);
         }
 
         private void HandleUsernameKeyboardInput()
@@ -343,14 +323,8 @@ namespace BanMod
                 return;
 
             string input;
-            try
-            {
-                input = Input.inputString;
-            }
-            catch
-            {
-                return;
-            }
+            try { input = Input.inputString; }
+            catch { return; }
 
             if (string.IsNullOrEmpty(input))
                 return;
@@ -368,7 +342,6 @@ namespace BanMod
                         _username = _username.Substring(0, _username.Length - 1);
                         changed = true;
                     }
-
                     continue;
                 }
 
@@ -404,14 +377,11 @@ namespace BanMod
 
         private void Submit()
         {
-            if (_busy || _model == null)
+            if (_busy || _model == null || !_model.username_required)
                 return;
 
-            string username = _model.username_required
-                ? (_username ?? "").Trim()
-                : (_model.username ?? "").Trim();
-
-            if (_model.username_required && !UsernameRegex.IsMatch(username))
+            string username = (_username ?? "").Trim();
+            if (!UsernameRegex.IsMatch(username))
             {
                 SetStatus(
                     "Invalid username. Use 3-24 letters, numbers, dot, dash or underscore.",
@@ -419,35 +389,23 @@ namespace BanMod
                 return;
             }
 
-            List<string> selected = new List<string>();
-            for (int i = 0; i < _model.services.Count; i++)
-            {
-                LoginServiceModel service = _model.services[i];
-                if (service != null && service.selected && !string.IsNullOrWhiteSpace(service.key))
-                    selected.Add(service.key);
-            }
-
             string json;
             try
             {
                 json = JsonSerializer.Serialize(new LoginSubmission
                 {
-                    username = username,
-                    selected_services = selected
+                    username = username
                 });
             }
             catch (Exception ex)
             {
-                SetStatus("Could not prepare the configuration: " + ex.Message, true);
+                SetStatus("Could not prepare username registration: " + ex.Message, true);
                 return;
             }
 
             _busy = true;
             _statusIsError = false;
-            _statusMessage = _model.username_required
-                ? "Checking username availability..."
-                : "Saving module preferences...";
-
+            _statusMessage = "Registering username...";
 
             try
             {
@@ -456,7 +414,7 @@ namespace BanMod
             catch (Exception ex)
             {
                 _busy = false;
-                SetStatus("Could not submit the configuration: " + ex.Message, true);
+                SetStatus("Could not submit username registration: " + ex.Message, true);
             }
         }
 
@@ -487,15 +445,6 @@ namespace BanMod
                 alignment = TextAnchor.MiddleLeft
             };
 
-            // White rounded base because this screen already uses GUI.backgroundColor
-            // to visually distinguish selected/unselected modules.
-            _buttonStyle = new GUIStyle(BanModUiStyles.TintableButton)
-            {
-                fontSize = 17,
-                alignment = TextAnchor.MiddleLeft
-            };
-            SetPadding(_buttonStyle, 18, 12, 8, 8);
-
             _saveButtonStyle = new GUIStyle(BanModUiStyles.AccentButton)
             {
                 fontSize = 19,
@@ -509,14 +458,6 @@ namespace BanMod
                 alignment = TextAnchor.MiddleCenter,
                 wordWrap = true
             };
-
-            _lockedUsernameStyle = new GUIStyle(BanModUiStyles.DarkBox)
-            {
-                fontSize = 18,
-                alignment = TextAnchor.MiddleLeft
-            };
-            _lockedUsernameStyle.normal.textColor = new Color(0.72f, 0.92f, 1f, 1f);
-            SetPadding(_lockedUsernameStyle, 14, 10, 8, 8);
 
             _usernameInputStyle = new GUIStyle(BanModUiStyles.DarkBox)
             {
@@ -532,6 +473,15 @@ namespace BanMod
                 alignment = TextAnchor.MiddleLeft,
                 wordWrap = true
             };
+
+            _loadingStyle = new GUIStyle(BanModUiStyles.HeaderLabel)
+            {
+                fontSize = 21,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = true
+            };
+            _loadingStyle.normal.textColor = BanModUiStyles.AccentHoverColor;
         }
 
         private static void SetPadding(GUIStyle style, int left, int right, int top, int bottom)
@@ -551,12 +501,6 @@ namespace BanMod
                 padding.bottom = bottom;
             }
             catch { }
-        }
-
-        private static float CalculateWindowHeight(int serviceCount)
-        {
-            int boundedCount = Mathf.Clamp(serviceCount, 0, 10);
-            return Mathf.Clamp(465f + boundedCount * 49f, MinWindowHeight, MaxWindowHeight);
         }
 
         private void CenterWindow(float height)
@@ -582,11 +526,7 @@ namespace BanMod
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
             }
-            catch
-            {
-            }
-
-            HandleUsernameKeyboardInput();
+            catch { }
         }
 
         private void RestoreCursor()
@@ -599,9 +539,7 @@ namespace BanMod
                 Cursor.visible = _oldCursorVisible;
                 Cursor.lockState = _oldCursorLock;
             }
-            catch
-            {
-            }
+            catch { }
 
             _cursorCaptured = false;
         }
@@ -609,22 +547,13 @@ namespace BanMod
         private sealed class LoginMenuModel
         {
             public bool username_required { get; set; }
-            public bool show_username { get; set; }
+            public bool loading_only { get; set; }
             public string username { get; set; }
-            public List<LoginServiceModel> services { get; set; }
-        }
-
-        private sealed class LoginServiceModel
-        {
-            public string key { get; set; }
-            public string label { get; set; }
-            public bool selected { get; set; }
         }
 
         private sealed class LoginSubmission
         {
             public string username { get; set; }
-            public List<string> selected_services { get; set; }
         }
     }
 }

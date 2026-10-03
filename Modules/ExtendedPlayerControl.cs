@@ -163,6 +163,7 @@ public static class FixedUpdateUnifiedPatch
     private static bool cachedProximityMonitorEnabled;
     private static bool cachedCamTaskDetectorEnabled;
     private static bool cachedCamDetectorEnabled;
+    private static float nextLobbyVisualRefreshTime = 0f;
 
     private static void Prefix(PlayerControl __instance)
     {
@@ -393,6 +394,15 @@ public static class FixedUpdateUnifiedPatch
         if (PlayerControl.LocalPlayer == null || PlayerControl.LocalPlayer.Data == null)
             return;
 
+        if (GameStates.isLobby &&
+            Time.realtimeSinceStartup >= nextLobbyVisualRefreshTime)
+        {
+            nextLobbyVisualRefreshTime =
+                Time.realtimeSinceStartup + 0.5f;
+
+            RefreshAllNameDisplays();
+        }
+
         if (PlayerControl.LocalPlayer.Data.Role == null)
             return;
 
@@ -438,7 +448,7 @@ public static class FixedUpdateUnifiedPatch
                 Time.realtimeSinceStartup + 1f;
 
             const string denyFilePath =
-                "./BAN_DATA/DENIED/DenyName.txt";
+                "./DATA/DENIED/DenyName.txt";
 
             try
             {
@@ -458,7 +468,7 @@ public static class FixedUpdateUnifiedPatch
     }
     public static void RefreshDeniedNamesNow()
     {
-        const string denyFilePath = "./BAN_DATA/DENIED/DenyName.txt";
+        const string denyFilePath = "./DATA/DENIED/DenyName.txt";
 
         try
         {
@@ -508,7 +518,7 @@ public static class FixedUpdateUnifiedPatch
     {
         CustomNames.Clear();
 
-        string path = "BAN_DATA/CUSTOM/NAME/CustomNames.txt";
+        string path = "DATA/OTHER/NAME/CustomNames.txt";
 
         if (!File.Exists(path))
             return;
@@ -884,11 +894,17 @@ public static class AmongUsClient_OnGameJoined_RefreshNamesPatch
         try
         {
             FixedUpdateUnifiedPatch.RpcCustomNames.Clear();
+
             FixedUpdateUnifiedPatch.LoadCustomNames();
             FixedUpdateUnifiedPatch.RefreshAllNameDisplays();
+
+            VisualOptions.Instance?.ScheduleLobbyVisualRefresh();
         }
-        catch
+        catch (Exception e)
         {
+            BMLogger.LogError(
+                $"[OnGameJoined] Refresh names error: {e.Message}"
+            );
         }
     }
 }

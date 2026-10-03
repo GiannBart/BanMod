@@ -19,9 +19,9 @@ namespace BanMod;
 public static class BanManager
 {
     public static List<string> DenyNames = new();
-    private const string DenyNameListPath = "./BAN_DATA/DENIED/DenyName.txt";
-    private const string BanListPath = "./BAN_DATA/DENIED/BanList.txt";
-    private const string BanModeratorListPath = "./BAN_DATA/DENIED/BanModeratorList.txt";
+    private const string DenyNameListPath = "./DATA/DENIED/DenyName.txt";
+    private const string BanListPath = "./DATA/DENIED/BanList.txt";
+    private const string BanModeratorListPath = "./DATA/DENIED/BanModeratorList.txt";
     public class BanEntry
     {
         public string FriendCode;
@@ -34,7 +34,7 @@ public static class BanManager
     {
         try
         {
-            Directory.CreateDirectory("BAN_DATA/DENIED");
+            Directory.CreateDirectory("DATA/DENIED");
 
             if (!File.Exists(BanListPath))
                 File.Create(BanListPath).Close();
@@ -45,13 +45,11 @@ public static class BanManager
             if (!File.Exists(DenyNameListPath))
                 File.Create(DenyNameListPath).Close();
 
-            // Carica i DenyName in memoria
             DenyNames = File.ReadAllLines(DenyNameListPath, Encoding.UTF8)
                 .Select(x => x.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
 
-            Directory.CreateDirectory("BAN_DATA/ALLOWED");
         }
         catch (Exception ex)
         {
@@ -77,7 +75,6 @@ public static class BanManager
             Encoding.UTF8
         );
 
-        // subito in memoria
         DenyNames.Add(name);
 
         return true;
@@ -111,6 +108,7 @@ public static class BanManager
 
         return removed > 0;
     }
+    
     public static IEnumerator WaitAndCheckAll(ClientData client)
     {
         if (client == null)
@@ -123,15 +121,52 @@ public static class BanManager
         string fallbackName = client.PlayerName ?? "";
 
         PlayerControl playerControl = null;
+        ClientData liveClient = null;
+
         int attempts = 0;
 
         while (playerControl == null && attempts < 30)
         {
-            if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
+            if (AmongUsClient.Instance == null ||
+                !AmongUsClient.Instance.AmHost)
+            {
                 yield break;
+            }
 
-            playerControl = PlayerControl.AllPlayerControls.ToArray()
-                .FirstOrDefault(p => p != null && p.OwnerId == clientId);
+            liveClient =
+                AmongUsClient.Instance.GetClient(clientId) ??
+                AmongUsClient.Instance.GetRecentClient(clientId);
+
+            if (liveClient != null && liveClient.Character != null)
+            {
+                playerControl = liveClient.Character;
+                break;
+            }
+
+            foreach (var pc in PlayerControl.AllPlayerControls.ToArray())
+            {
+                if (pc == null)
+                    continue;
+
+                try
+                {
+                    int pcClientId =
+                        AmongUsClient.Instance.GetClientIdFromCharacter(pc);
+
+                    if (pcClientId == clientId)
+                    {
+                        playerControl = pc;
+                        break;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    BMLogger.Info(
+                        $"[BanMod] Errore GetClientIdFromCharacter " +
+                        $"client={clientId}: {e.Message}"
+                    );
+                }
+            }
 
             if (playerControl == null)
             {
@@ -142,7 +177,6 @@ public static class BanManager
 
         if (playerControl == null)
         {
-            BMLogger.Info("[BanMod] Impossibile trovare PlayerControl per il client: " + fallbackName);
             yield break;
         }
 
@@ -151,10 +185,17 @@ public static class BanManager
         if (GameData.Instance == null)
             yield break;
 
-        if (playerControl == null || playerControl.Data == null || playerControl.Data.Disconnected)
+        if (playerControl == null)
             yield break;
 
-        NetworkedPlayerInfo playerInfo = GameData.Instance.GetPlayerById(playerControl.PlayerId);
+        if (playerControl.Data == null)
+            yield break;
+
+        if (playerControl.Data.Disconnected)
+            yield break;
+
+        NetworkedPlayerInfo playerInfo =
+            GameData.Instance.GetPlayerById(playerControl.PlayerId);
 
         if (playerInfo != null && playerInfo.PlayerLevel <= 1)
         {
@@ -163,7 +204,11 @@ public static class BanManager
             if (GameData.Instance == null)
                 yield break;
 
-            playerInfo = GameData.Instance.GetPlayerById(playerControl.PlayerId);
+            if (playerControl == null)
+                yield break;
+
+            playerInfo =
+                GameData.Instance.GetPlayerById(playerControl.PlayerId);
 
             if (playerInfo != null && playerInfo.PlayerLevel == 0)
             {
@@ -172,85 +217,196 @@ public static class BanManager
                 if (GameData.Instance == null)
                     yield break;
 
-                playerInfo = GameData.Instance.GetPlayerById(playerControl.PlayerId);
+                if (playerControl == null)
+                    yield break;
+
+                playerInfo =
+                    GameData.Instance.GetPlayerById(playerControl.PlayerId);
             }
         }
 
         if (playerInfo == null)
-            yield break;
+        {
+            BMLogger.Info(
+                $"[BanMod] PlayerInfo non disponibile " +
+                $"clientId={clientId}, " +
+                $"PlayerId={playerControl.PlayerId}, " +
+                $"name={fallbackName}"
+            );
 
-        if (AmongUsClient.Instance == null)
             yield break;
+        }
 
-        ClientData liveClient = AmongUsClient.Instance.GetClient(clientId) ?? AmongUsClient.Instance.GetRecentClient(clientId);
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            yield break;
+        }
+
+        liveClient =
+            AmongUsClient.Instance.GetClient(clientId) ??
+            AmongUsClient.Instance.GetRecentClient(clientId);
 
         if (liveClient == null)
             liveClient = client;
 
-        string realName = playerInfo.DefaultOutfit?.PlayerName ?? liveClient.PlayerName ?? fallbackName;
+        if (liveClient == null)
+            yield break;
 
+        string realName =
+            playerInfo.DefaultOutfit?.PlayerName ??
+            liveClient.PlayerName ??
+            fallbackName;
+
+        BMLogger.Info(
+            $"[BanMod] Controllo giocatore: " +
+            $"name={realName}, " +
+            $"clientId={clientId}, " +
+            $"PlayerId={playerInfo.PlayerId}, " +
+            $"PlayerLevel={playerInfo.PlayerLevel}"
+        );
+
+        int colorId =
+            playerInfo.DefaultOutfit?.ColorId ?? -1;
+
+        BMLogger.Info(
+            $"[BanMod] Color check: " +
+            $"name={realName}, " +
+            $"colorId={colorId}"
+        );
+
+        if (colorId == 18 &&
+            !BanMod.IsProtected(liveClient))
         {
-            int colorId = playerInfo.DefaultOutfit?.ColorId ?? -1;
-
-            if (colorId == 18 && !BanMod.IsProtected(liveClient))
+            if (AmongUsClient.Instance != null &&
+                AmongUsClient.Instance.AmHost)
             {
-                if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost)
-                    AmongUsClient.Instance.KickPlayer(clientId, false);
+                BMLogger.Info(
+                    $"[BanMod] Kick per ColorId 18: " +
+                    $"name={realName}, " +
+                    $"clientId={clientId}"
+                );
 
-                yield break;
+                AmongUsClient.Instance.KickPlayer(
+                    clientId,
+                    false
+                );
             }
+
+            yield break;
         }
 
-        if (Options.KickLevel.GetBool() && !BanMod.IsProtected(liveClient))
+
+        if (Options.KickLevel.GetBool() &&
+            !BanMod.IsProtected(liveClient))
         {
             if (GameData.Instance == null)
                 yield break;
 
-            var pInfo = GameData.Instance.GetPlayerById(playerInfo.PlayerId);
+            var pInfo =
+                GameData.Instance.GetPlayerById(playerInfo.PlayerId);
 
             if (pInfo == null)
+            {
+                BMLogger.Info(
+                    $"[BanMod] Impossibile ottenere pInfo per " +
+                    $"{realName}"
+                );
+
                 yield break;
+            }
 
             if (pInfo.PlayerLevel == 0)
             {
+                BMLogger.Info(
+                    $"[BanMod] PlayerLevel ancora 0 per " +
+                    $"{realName}, attendo sincronizzazione..."
+                );
+
                 yield return new WaitForSeconds(3f);
 
                 if (GameData.Instance == null)
                     yield break;
 
-                pInfo = GameData.Instance.GetPlayerById(playerInfo.PlayerId);
+                if (playerControl == null)
+                    yield break;
+
+                pInfo =
+                    GameData.Instance.GetPlayerById(
+                        playerControl.PlayerId
+                    );
 
                 if (pInfo == null)
                     yield break;
             }
 
-            int realLevel = (int)(pInfo.PlayerLevel + 1);
-            int minLevel = Options.KickLevelLevel.GetInt();
-            string action = Options.KickLevelAction.GetString();
+            int realLevel =
+                (int)(pInfo.PlayerLevel + 1);
+
+            int minLevel =
+                Options.KickLevelLevel.GetInt();
+
+            string action =
+                Options.KickLevelAction.GetString();
+
+            BMLogger.Info(
+                $"[BanMod] Level check: " +
+                $"name={realName}, " +
+                $"storedLevel={pInfo.PlayerLevel}, " +
+                $"realLevel={realLevel}, " +
+                $"minLevel={minLevel}, " +
+                $"action={action}"
+            );
 
             if (realLevel < minLevel)
             {
-                if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
+                if (AmongUsClient.Instance == null ||
+                    !AmongUsClient.Instance.AmHost)
+                {
                     yield break;
+                }
+
+                BMLogger.Info(
+                    $"[BanMod] Livello insufficiente: " +
+                    $"{realName} " +
+                    $"LV={realLevel} " +
+                    $"MIN={minLevel}"
+                );
 
                 if (action == "Ban")
                 {
-                    AmongUsClient.Instance.KickPlayer(clientId, true);
+                    AmongUsClient.Instance.KickPlayer(
+                        clientId,
+                        true
+                    );
                 }
                 else if (action == "Kick")
                 {
-                    AmongUsClient.Instance.KickPlayer(clientId, false);
+                    AmongUsClient.Instance.KickPlayer(
+                        clientId,
+                        false
+                    );
                 }
 
                 if (HudManager.Instance?.Notifier != null)
                 {
-                    NotificationPopper_AddInfoMessagePatch.AddInfoMessage(
-                        HudManager.Instance.Notifier,
-                        $"{realName} rimosso (LV {realLevel} < {minLevel})"
-                    );
+                    NotificationPopper_AddInfoMessagePatch
+                        .AddInfoMessage(
+                            HudManager.Instance.Notifier,
+                            $"{realName} rimosso " +
+                            $"(LV {realLevel} < {minLevel})"
+                        );
                 }
+
+                yield break;
             }
         }
+
+        BMLogger.Info(
+            $"[BanMod] Controlli completati: " +
+            $"name={realName}, " +
+            $"clientId={clientId}"
+        );
     }
     public static string GetResourcesTxt(string path)
     {
@@ -380,7 +536,7 @@ public static class BanManager
 
         try
         {
-            Directory.CreateDirectory("BAN_DATA/DENIED");
+            Directory.CreateDirectory("DATA/DENIED");
 
             if (!File.Exists(BanListPath))
                 File.Create(BanListPath).Close();
@@ -447,7 +603,7 @@ public static class BanManager
 
         try
         {
-            Directory.CreateDirectory("BAN_DATA/DENIED");
+            Directory.CreateDirectory("DATA/DENIED");
 
             if (!File.Exists(BanListPath))
                 File.Create(BanListPath).Close();

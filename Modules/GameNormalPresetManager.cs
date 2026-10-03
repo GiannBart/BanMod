@@ -26,11 +26,12 @@ namespace BanMod
         public RoleOption Noisemaker { get; set; } = new RoleOption();
         public RoleOption Tracker { get; set; } = new RoleOption();
         public RoleOption Detective { get; set; } = new RoleOption();
-        public RoleOption Judge { get; set; } = new RoleOption { Count = 0, Chance = 100 };
+        public RoleOption Judge { get; set; } = new RoleOption();
         public RoleOption Viper { get; set; } = new RoleOption();
+        public RoleOption SpiritGuide { get; set; } = new RoleOption();
 
         public float viperDissolveTime { get; set; } = 10f;
-
+        public float SpiritGuideCooldownSeconds { get; set; } = 20f;
         public float DetectiveSuspectLimit { get; set; } = 3f;
         public float JudgeTaskRequirementPercentage { get; set; } = 50f;
 
@@ -95,8 +96,13 @@ namespace BanMod
         FFA = 6,
         ZombieMode = 7,
         PnS = 8,
-        HotPotato = 9
-
+        HotPotatoModded = 9,
+        RoomRush = 10,
+        TargetRush = 11,
+        FFATeam = 12,
+        Assassin = 13,
+        KillRace = 14,
+        DeathRun = 15
     }
 
     public enum PresetSelectionType
@@ -107,12 +113,10 @@ namespace BanMod
         Preset3 = 3
     }
 
-    [HarmonyPatch(typeof(NormalGameOptionsV11), nameof(NormalGameOptionsV11.SetRecommendations), new Type[] { typeof(int), typeof(bool), typeof(RulesPresets) })]
+    [HarmonyPatch(typeof(NormalGameOptionsV12), nameof(NormalGameOptionsV12.SetRecommendations), new Type[] { typeof(int), typeof(bool), typeof(RulesPresets) })]
     public static class SetRecommendationsPatch
     {
-        private const RoleTypes JudgeRoleType = (RoleTypes)19;
-
-        public static bool Prefix(NormalGameOptionsV11 __instance, int numPlayers, bool isOnline, RulesPresets rulesPresets)
+        public static bool Prefix(NormalGameOptionsV12 __instance, int numPlayers, bool isOnline, RulesPresets rulesPresets)
         {
             try
             {
@@ -167,7 +171,7 @@ namespace BanMod
             }
         }
 
-        public static void SetStandardRecommendations(NormalGameOptionsV11 __instance, int numPlayers, bool isOnline)
+        public static void SetStandardRecommendations(NormalGameOptionsV12 __instance, int numPlayers, bool isOnline)
         {
             if (__instance == null)
                 return;
@@ -231,7 +235,7 @@ namespace BanMod
                 case GameModeType.ZombieMode:
                     return LoadOrCreateGameModePreset("ZombieMode.json", CreateZombieModeDefaults());
 
-                case GameModeType.HotPotato:
+                case GameModeType.HotPotatoModded:
                     return LoadOrCreateGameModePreset("HotPotato.json", CreateHotPotatoDefaults());
 
                 case GameModeType.BanMod:
@@ -252,12 +256,30 @@ namespace BanMod
                 case GameModeType.FFA:
                     return LoadOrCreateGameModePreset("FFA.json", CreateFFAModeDefaults());
 
+                case GameModeType.FFATeam:
+                    return LoadOrCreateGameModePreset("FFATEAM.json", CreateFFATEAMModeDefaults());
+
+                case GameModeType.KillRace:
+                    return LoadOrCreateGameModePreset("KillRace.json", CreateKillRaceModeDefaults());
+
+                case GameModeType.Assassin:
+                    return LoadOrCreateGameModePreset("Assassin.json", CreateAssassinModeDefaults());
+
+                case GameModeType.RoomRush:
+                    return LoadOrCreateGameModePreset("RoomRush.json", CreateRoomRushModeDefaults());
+
+                case GameModeType.TargetRush:
+                    return LoadOrCreateGameModePreset("TargetRush.json", CreateTargetRushModeDefaults());
+
+                case GameModeType.DeathRun:
+                    return LoadOrCreateGameModePreset("DeathRun.json", CreateDeathRunModeDefaults());
+
                 default:
                     return new CustomOptions();
             }
         }
 
-        public static void ApplyToInstance(NormalGameOptionsV11 __instance, CustomOptions options)
+        public static void ApplyToInstance(NormalGameOptionsV12 __instance, CustomOptions options)
         {
             __instance.MaxPlayers = options.MaxPlayers;
             __instance.NumImpostors = options.NumImpostors;
@@ -291,61 +313,68 @@ namespace BanMod
             __instance.roleOptions.SetRoleRate(RoleTypes.Viper, roles.Viper.Count, roles.Viper.Chance);
             __instance.roleOptions.SetRoleRate(RoleTypes.Detective, roles.Detective.Count, roles.Detective.Chance);
             __instance.roleOptions.SetRoleRate(RoleTypes.Judge, roles.Judge.Count, roles.Judge.Chance);
+            __instance.roleOptions.SetRoleRate(RoleTypes.SpiritGuide, roles.SpiritGuide.Count, roles.SpiritGuide.Chance);
 
-            if (__instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV11>(RoleTypes.Viper, out var viperOptions))
+
+            if (__instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV12>(RoleTypes.Viper, out var viperOptions))
             {
                 viperOptions.ViperDissolveTime = roles.viperDissolveTime;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV11>(RoleTypes.Detective, out var detectiveOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV12>(RoleTypes.Detective, out var detectiveOptions))
             {
                 detectiveOptions.DetectiveSuspectLimit = roles.DetectiveSuspectLimit;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<JudgeRoleOptionsV11>(RoleTypes.Judge, out var judgeOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<SpiritGuideRoleOptionsV12>(RoleTypes.SpiritGuide, out var SpiritGuideOptions))
+            {
+                SpiritGuideOptions.SpiritGuideCooldownSeconds = roles.SpiritGuideCooldownSeconds;
+            }
+
+            if (__instance.roleOptions.TryGetRoleOptions<JudgeRoleOptionsV12>(RoleTypes.Judge, out var judgeOptions))
             {
                 judgeOptions.JudgeTaskRequirementPercentage = roles.JudgeTaskRequirementPercentage;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV11>(RoleTypes.Engineer, out var engineerOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV12>(RoleTypes.Engineer, out var engineerOptions))
             {
                 engineerOptions.EngineerCooldown = roles.EngineerCooldown;
                 engineerOptions.EngineerInVentMaxTime = roles.EngineerInVentMaxTime;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV11>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV12>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
             {
                 guardianAngelOptions.GuardianAngelCooldown = roles.GuardianAngelCooldown;
                 guardianAngelOptions.ProtectionDurationSeconds = roles.GuardianAngelDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV11>(RoleTypes.Scientist, out var scientistOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV12>(RoleTypes.Scientist, out var scientistOptions))
             {
                 scientistOptions.ScientistCooldown = roles.ScientistCooldown;
                 scientistOptions.ScientistBatteryCharge = roles.ScientistBattery;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV11>(RoleTypes.Tracker, out var trackerOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV12>(RoleTypes.Tracker, out var trackerOptions))
             {
                 trackerOptions.TrackerCooldown = roles.TrackerCooldown;
                 trackerOptions.TrackerDelay = roles.TrackerDelay;
                 trackerOptions.TrackerDuration = roles.TrackerDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV11>(RoleTypes.Noisemaker, out var noisemakerOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV12>(RoleTypes.Noisemaker, out var noisemakerOptions))
             {
                 noisemakerOptions.NoisemakerImpostorAlert = roles.NoisemakerAlert;
                 noisemakerOptions.NoisemakerAlertDuration = roles.NoisemakerDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV11>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV12>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
             {
                 shapeshifterOptions.ShapeshifterLeaveSkin = roles.ShapeshifterLeaveSkin;
                 shapeshifterOptions.ShapeshifterCooldown = roles.ShapeshifterCooldown;
                 shapeshifterOptions.ShapeshifterDuration = roles.ShapeshifterDuration;
             }
 
-            if (__instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV11>(RoleTypes.Phantom, out var phantomOptions))
+            if (__instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV12>(RoleTypes.Phantom, out var phantomOptions))
             {
                 phantomOptions.PhantomCooldown = roles.PhantomCooldown;
                 phantomOptions.PhantomDuration = roles.PhantomDuration;
@@ -353,7 +382,7 @@ namespace BanMod
         }
 
 
-        public static CustomOptions CaptureFromInstance(NormalGameOptionsV11 instance)
+        public static CustomOptions CaptureFromInstance(NormalGameOptionsV12 instance)
         {
             if (instance == null)
                 return null;
@@ -408,23 +437,25 @@ namespace BanMod
             result.Roles.Detective = CaptureRoleOption(instance, RoleTypes.Detective, fallback.Roles.Detective);
             result.Roles.Judge = CaptureRoleOption(instance, RoleTypes.Judge, fallback.Roles.Judge);
             result.Roles.Viper = CaptureRoleOption(instance, RoleTypes.Viper, fallback.Roles.Viper);
+            result.Roles.SpiritGuide = CaptureRoleOption(instance, RoleTypes.SpiritGuide, fallback.Roles.SpiritGuide);
 
-            if (instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV11>(RoleTypes.Viper, out var viperOptions))
+
+            if (instance.roleOptions.TryGetRoleOptions<ViperRoleOptionsV12>(RoleTypes.Viper, out var viperOptions))
                 result.Roles.viperDissolveTime = viperOptions.ViperDissolveTime;
             else
                 result.Roles.viperDissolveTime = fallback.Roles.viperDissolveTime;
 
-            if (instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV11>(RoleTypes.Detective, out var detectiveOptions))
+            if (instance.roleOptions.TryGetRoleOptions<DetectiveRoleOptionsV12>(RoleTypes.Detective, out var detectiveOptions))
                 result.Roles.DetectiveSuspectLimit = detectiveOptions.DetectiveSuspectLimit;
             else
                 result.Roles.DetectiveSuspectLimit = fallback.Roles.DetectiveSuspectLimit;
 
-            if (instance.roleOptions.TryGetRoleOptions<JudgeRoleOptionsV11>(RoleTypes.Judge, out var judgeOptions))
+            if (instance.roleOptions.TryGetRoleOptions<JudgeRoleOptionsV12>(RoleTypes.Judge, out var judgeOptions))
                 result.Roles.JudgeTaskRequirementPercentage = judgeOptions.JudgeTaskRequirementPercentage;
             else
                 result.Roles.JudgeTaskRequirementPercentage = fallback.Roles.JudgeTaskRequirementPercentage;
 
-            if (instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV11>(RoleTypes.Engineer, out var engineerOptions))
+            if (instance.roleOptions.TryGetRoleOptions<EngineerRoleOptionsV12>(RoleTypes.Engineer, out var engineerOptions))
             {
                 result.Roles.EngineerCooldown = engineerOptions.EngineerCooldown;
                 result.Roles.EngineerInVentMaxTime = engineerOptions.EngineerInVentMaxTime;
@@ -435,7 +466,7 @@ namespace BanMod
                 result.Roles.EngineerInVentMaxTime = fallback.Roles.EngineerInVentMaxTime;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV11>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
+            if (instance.roleOptions.TryGetRoleOptions<GuardianAngelRoleOptionsV12>(RoleTypes.GuardianAngel, out var guardianAngelOptions))
             {
                 result.Roles.GuardianAngelCooldown = guardianAngelOptions.GuardianAngelCooldown;
                 result.Roles.GuardianAngelDuration = guardianAngelOptions.ProtectionDurationSeconds;
@@ -446,7 +477,16 @@ namespace BanMod
                 result.Roles.GuardianAngelDuration = fallback.Roles.GuardianAngelDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV11>(RoleTypes.Scientist, out var scientistOptions))
+            if (instance.roleOptions.TryGetRoleOptions<SpiritGuideRoleOptionsV12>(RoleTypes.SpiritGuide, out var SpiritGuideOptions))
+            {
+                result.Roles.SpiritGuideCooldownSeconds = SpiritGuideOptions.SpiritGuideCooldownSeconds;
+            }
+            else
+            {
+                result.Roles.SpiritGuideCooldownSeconds = fallback.Roles.SpiritGuideCooldownSeconds;
+            }
+
+            if (instance.roleOptions.TryGetRoleOptions<ScientistRoleOptionsV12>(RoleTypes.Scientist, out var scientistOptions))
             {
                 result.Roles.ScientistCooldown = scientistOptions.ScientistCooldown;
                 result.Roles.ScientistBattery = scientistOptions.ScientistBatteryCharge;
@@ -457,7 +497,7 @@ namespace BanMod
                 result.Roles.ScientistBattery = fallback.Roles.ScientistBattery;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV11>(RoleTypes.Tracker, out var trackerOptions))
+            if (instance.roleOptions.TryGetRoleOptions<TrackerRoleOptionsV12>(RoleTypes.Tracker, out var trackerOptions))
             {
                 result.Roles.TrackerCooldown = trackerOptions.TrackerCooldown;
                 result.Roles.TrackerDelay = trackerOptions.TrackerDelay;
@@ -470,7 +510,7 @@ namespace BanMod
                 result.Roles.TrackerDuration = fallback.Roles.TrackerDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV11>(RoleTypes.Noisemaker, out var noisemakerOptions))
+            if (instance.roleOptions.TryGetRoleOptions<NoisemakerRoleOptionsV12>(RoleTypes.Noisemaker, out var noisemakerOptions))
             {
                 result.Roles.NoisemakerAlert = noisemakerOptions.NoisemakerImpostorAlert;
                 result.Roles.NoisemakerDuration = noisemakerOptions.NoisemakerAlertDuration;
@@ -481,7 +521,7 @@ namespace BanMod
                 result.Roles.NoisemakerDuration = fallback.Roles.NoisemakerDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV11>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
+            if (instance.roleOptions.TryGetRoleOptions<ShapeshifterRoleOptionsV12>(RoleTypes.Shapeshifter, out var shapeshifterOptions))
             {
                 result.Roles.ShapeshifterLeaveSkin = shapeshifterOptions.ShapeshifterLeaveSkin;
                 result.Roles.ShapeshifterCooldown = shapeshifterOptions.ShapeshifterCooldown;
@@ -494,7 +534,7 @@ namespace BanMod
                 result.Roles.ShapeshifterDuration = fallback.Roles.ShapeshifterDuration;
             }
 
-            if (instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV11>(RoleTypes.Phantom, out var phantomOptions))
+            if (instance.roleOptions.TryGetRoleOptions<PhantomRoleOptionsV12>(RoleTypes.Phantom, out var phantomOptions))
             {
                 result.Roles.PhantomCooldown = phantomOptions.PhantomCooldown;
                 result.Roles.PhantomDuration = phantomOptions.PhantomDuration;
@@ -509,7 +549,7 @@ namespace BanMod
         }
 
         private static RoleOption CaptureRoleOption(
-            NormalGameOptionsV11 instance,
+            NormalGameOptionsV12 instance,
             RoleTypes role,
             RoleOption fallback)
         {
@@ -609,7 +649,7 @@ namespace BanMod
             }
         }
 
-        public static NormalGameOptionsV11 GetCurrentGameOptions()
+        public static NormalGameOptionsV12 GetCurrentGameOptions()
         {
             try
             {
@@ -621,12 +661,12 @@ namespace BanMod
 
                 return GameOptionsManager.Instance
                     .CurrentGameOptions
-                    .Cast<NormalGameOptionsV11>();
+                    .Cast<NormalGameOptionsV12>();
             }
             catch (Exception ex)
             {
                 Debug.LogWarning(
-                    "[BanMod] Could not get NormalGameOptionsV11: " +
+                    "[BanMod] Could not get NormalGameOptionsV12: " +
                     ex.GetType().Name + " - " + ex.Message
                 );
 
@@ -634,7 +674,7 @@ namespace BanMod
             }
         }
 
-        public static void SyncCurrentOptions(NormalGameOptionsV11 options)
+        public static void SyncCurrentOptions(NormalGameOptionsV12 options)
         {
             if (options == null)
                 return;
@@ -776,7 +816,7 @@ namespace BanMod
                 return new CustomOptions();
 
             string fileName = $"Preset_{number}.json";
-            string fullPath = Path.Combine("BAN_DATA", "PRESET", fileName);
+            string fullPath = Path.Combine("DATA", "GAMEMODES_PRESETS", "PRESET", fileName);
 
             try
             {
@@ -850,7 +890,7 @@ namespace BanMod
                 return false;
 
             string fileName = $"Preset_{number}.json";
-            string fullPath = Path.Combine("BAN_DATA", "PRESET", fileName);
+            string fullPath = Path.Combine("DATA", "GAMEMODES_PRESETS", "PRESET", fileName);
 
             try
             {
@@ -962,7 +1002,7 @@ namespace BanMod
             {
                 case GameModeType.SnS: return "SnS";
                 case GameModeType.PnS: return "PnS";
-                case GameModeType.HotPotato: return "HotPotato";
+                case GameModeType.HotPotatoModded: return "HotPotato";
                 case GameModeType.ZombieMode: return "ZombieMode";
                 case GameModeType.BanMod: return "BanMod";
                 case GameModeType.KaitoRun: return "KaitoRun";
@@ -970,6 +1010,12 @@ namespace BanMod
                 case GameModeType.TaskRun: return "TaskRun";
                 case GameModeType.JBMode: return "JBMode";
                 case GameModeType.FFA: return "FFA";
+                case GameModeType.FFATeam: return "FFATeam";
+                case GameModeType.Assassin: return "Assassin";
+                case GameModeType.KillRace: return "KillRace";
+                case GameModeType.RoomRush: return "RoomRush";
+                case GameModeType.DeathRun: return "DeathRun";
+                case GameModeType.TargetRush: return "TargetRush";
                 default: return gameMode.ToString();
             }
         }
@@ -983,7 +1029,7 @@ namespace BanMod
                 return fallback;
 
             string fullPath =
-                Path.Combine("BAN_DATA", "GAMEMODES", fileName);
+                Path.Combine("DATA", "GAMEMODES_PRESETS", "GAMEMODES", fileName);
 
             try
             {
@@ -1052,13 +1098,19 @@ namespace BanMod
                 {
                     GetGameModePresetName(GameModeType.SnS),
                     GetGameModePresetName(GameModeType.PnS),
-                    GetGameModePresetName(GameModeType.HotPotato),
+                    GetGameModePresetName(GameModeType.HotPotatoModded),
                     GetGameModePresetName(GameModeType.ZombieMode),
                     GetGameModePresetName(GameModeType.BanMod),
                     GetGameModePresetName(GameModeType.KaitoRun),
                     GetGameModePresetName(GameModeType.Default),
                     GetGameModePresetName(GameModeType.TaskRun),
                     GetGameModePresetName(GameModeType.JBMode),
+                    GetGameModePresetName(GameModeType.RoomRush),
+                    GetGameModePresetName(GameModeType.DeathRun),
+                    GetGameModePresetName(GameModeType.TargetRush),
+                    GetGameModePresetName(GameModeType.KillRace),
+                    GetGameModePresetName(GameModeType.Assassin),
+                    GetGameModePresetName(GameModeType.FFATeam),
                     GetGameModePresetName(GameModeType.FFA)
                 };
 
@@ -1098,7 +1150,7 @@ namespace BanMod
                 case GameModeType.PnS:
                     return "PnS.json";
 
-                case GameModeType.HotPotato:
+                case GameModeType.HotPotatoModded:
                     return "HotPotato.json";
 
                 case GameModeType.ZombieMode:
@@ -1119,8 +1171,26 @@ namespace BanMod
                 case GameModeType.JBMode:
                     return "JBMode.json";
 
+                case GameModeType.RoomRush:
+                    return "RoomRush.json";
+
+                case GameModeType.TargetRush:
+                    return "TargetRush.json";
+
+                case GameModeType.DeathRun:
+                    return "DeathRun.json";
+
                 case GameModeType.FFA:
                     return "FFA.json";
+
+                case GameModeType.FFATeam:
+                    return "FFATeam.json";
+
+                case GameModeType.KillRace:
+                    return "KillRace.json";
+
+                case GameModeType.Assassin:
+                    return "Assassin.json";
 
                 default:
                     return null;
@@ -1142,7 +1212,8 @@ namespace BanMod
 
             string fullPath =
                 Path.Combine(
-                    "BAN_DATA",
+                    "DATA",
+                    "GAMEMODES_PRESETS",
                     "GAMEMODES",
                     fileName
                 );
@@ -1188,7 +1259,7 @@ namespace BanMod
 
         public static CustomOptions LoadOrCreateGameModePreset(string fileName, CustomOptions defaultOptions)
         {
-            string fullPath = Path.Combine("BAN_DATA", "GAMEMODES", fileName);
+            string fullPath = Path.Combine("DATA", "GAMEMODES_PRESETS", "GAMEMODES", fileName);
 
             try
             {
@@ -1302,7 +1373,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
                     Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1361,7 +1434,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
                     Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1420,12 +1495,196 @@ namespace BanMod
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
                     Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
                     EngineerCooldown = 5f,
                     EngineerInVentMaxTime = 30f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+
+        private static CustomOptions CreateRoomRushModeDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 1,
+                PlayerSpeedMod = 2f,
+                CrewLightMod = 1f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 0.001f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 1,
+                NumEmergencyMeetings = 0,
+                AnonymousVotes = false,
+                TaskBarMode = AmongUs.GameOptions.TaskBarMode.Normal,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = true,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 15, Chance = 100 },
+                    Phantom = new RoleOption { Count = 0, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 0, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
+
+                    SpiritGuideCooldownSeconds = 20f,
+                    viperDissolveTime = 10f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 10f,
+                    EngineerInVentMaxTime = 5f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+
+        private static CustomOptions CreateDeathRunModeDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 1,
+                PlayerSpeedMod = 2f,
+                CrewLightMod = 1f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 0.001f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 1,
+                NumEmergencyMeetings = 0,
+                AnonymousVotes = false,
+                TaskBarMode = AmongUs.GameOptions.TaskBarMode.Normal,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = true,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 15, Chance = 100 },
+                    Phantom = new RoleOption { Count = 0, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 0, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
+
+                    SpiritGuideCooldownSeconds = 20f,
+                    viperDissolveTime = 10f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 10f,
+                    EngineerInVentMaxTime = 5f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+        private static CustomOptions CreateTargetRushModeDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 1,
+                PlayerSpeedMod = 2f,
+                CrewLightMod = 1f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 0.001f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 1,
+                NumEmergencyMeetings = 0,
+                AnonymousVotes = false,
+                TaskBarMode = AmongUs.GameOptions.TaskBarMode.Normal,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = true,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 15, Chance = 100 },
+                    Phantom = new RoleOption { Count = 0, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 0, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
+
+                    SpiritGuideCooldownSeconds = 20f,
+                    viperDissolveTime = 10f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 10f,
+                    EngineerInVentMaxTime = 5f,
                     GuardianAngelCooldown = 35f,
                     GuardianAngelDuration = 25f,
                     ScientistCooldown = 10f,
@@ -1478,7 +1737,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
                     Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1536,7 +1797,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 1, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
                     Judge = new RoleOption { Count = 1, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1595,7 +1858,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
                     Judge = new RoleOption { Count = 1, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1653,7 +1918,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 1, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
                     Judge = new RoleOption { Count = 1, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1711,7 +1978,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 0, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
                     Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 10f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1769,7 +2038,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 2, Chance = 100 },
                     Detective = new RoleOption { Count = 1, Chance = 100 },
                     Judge = new RoleOption { Count = 1, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 5f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1827,7 +2098,9 @@ namespace BanMod
                     Viper = new RoleOption { Count = 15, Chance = 100 },
                     Detective = new RoleOption { Count = 0, Chance = 100 },
                     Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
 
+                    SpiritGuideCooldownSeconds = 20f,
                     viperDissolveTime = 1f,
                     DetectiveSuspectLimit = 3f,
                     JudgeTaskRequirementPercentage = 50f,
@@ -1850,6 +2123,187 @@ namespace BanMod
                 }
             };
         }
+        private static CustomOptions CreateFFATEAMModeDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 3,
+                PlayerSpeedMod = 1.75f,
+                CrewLightMod = 0.75f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 10f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 0,
+                NumEmergencyMeetings = 2,
+                AnonymousVotes = false,
+                TaskBarMode = (AmongUs.GameOptions.TaskBarMode)1,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = false,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Phantom = new RoleOption { Count = 0, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 15, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
+
+                    SpiritGuideCooldownSeconds = 20f,
+                    viperDissolveTime = 1f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 5f,
+                    EngineerInVentMaxTime = 30f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+        private static CustomOptions CreateAssassinModeDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 3,
+                PlayerSpeedMod = 1.75f,
+                CrewLightMod = 0.75f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 10f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 0,
+                NumEmergencyMeetings = 2,
+                AnonymousVotes = false,
+                TaskBarMode = (AmongUs.GameOptions.TaskBarMode)1,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = false,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Phantom = new RoleOption { Count = 0, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 15, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
+
+                    SpiritGuideCooldownSeconds = 20f,
+                    viperDissolveTime = 1f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 5f,
+                    EngineerInVentMaxTime = 30f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+        private static CustomOptions CreateKillRaceModeDefaults()
+        {
+            return new CustomOptions
+            {
+                MaxPlayers = 15,
+                NumImpostors = 3,
+                PlayerSpeedMod = 1.75f,
+                CrewLightMod = 0.75f,
+                ImpostorLightMod = 2.0f,
+                KillCooldown = 10f,
+                NumCommonTasks = 0,
+                NumLongTasks = 0,
+                NumShortTasks = 0,
+                NumEmergencyMeetings = 2,
+                AnonymousVotes = false,
+                TaskBarMode = (AmongUs.GameOptions.TaskBarMode)1,
+                KillDistance = 0,
+                EmergencyCooldown = 15,
+                DiscussionTime = 45,
+                VotingTime = 60,
+                IsDefaults = true,
+                ConfirmImpostor = true,
+                VisualTasks = false,
+                Roles = new RoleSettings
+                {
+                    Shapeshifter = new RoleOption { Count = 0, Chance = 100 },
+                    Phantom = new RoleOption { Count = 0, Chance = 100 },
+                    Scientist = new RoleOption { Count = 0, Chance = 100 },
+                    GuardianAngel = new RoleOption { Count = 0, Chance = 100 },
+                    Engineer = new RoleOption { Count = 0, Chance = 100 },
+                    Noisemaker = new RoleOption { Count = 0, Chance = 100 },
+                    Tracker = new RoleOption { Count = 0, Chance = 100 },
+                    Viper = new RoleOption { Count = 15, Chance = 100 },
+                    Detective = new RoleOption { Count = 0, Chance = 100 },
+                    Judge = new RoleOption { Count = 0, Chance = 100 },
+                    SpiritGuide = new RoleOption { Count = 0, Chance = 100 },
+
+                    SpiritGuideCooldownSeconds = 20f,
+                    viperDissolveTime = 1f,
+                    DetectiveSuspectLimit = 3f,
+                    JudgeTaskRequirementPercentage = 50f,
+                    EngineerCooldown = 5f,
+                    EngineerInVentMaxTime = 30f,
+                    GuardianAngelCooldown = 35f,
+                    GuardianAngelDuration = 25f,
+                    ScientistCooldown = 10f,
+                    ScientistBattery = 30f,
+                    TrackerCooldown = 10f,
+                    TrackerDelay = 0f,
+                    TrackerDuration = 30f,
+                    NoisemakerAlert = true,
+                    NoisemakerDuration = 10f,
+                    ShapeshifterLeaveSkin = false,
+                    ShapeshifterCooldown = 10f,
+                    ShapeshifterDuration = 30f,
+                    PhantomCooldown = 10f,
+                    PhantomDuration = 30f
+                }
+            };
+        }
+        
     }
 
 
@@ -2478,7 +2932,7 @@ namespace BanMod
 
         private static void SaveCurrent(int slot)
         {
-            NormalGameOptionsV11 current =
+            NormalGameOptionsV12 current =
                 SetRecommendationsPatch.GetCurrentGameOptions();
 
             if (current == null)
@@ -2534,7 +2988,7 @@ namespace BanMod
             string displayName =
                 SetRecommendationsPatch.GetGameModePresetName(gameMode);
 
-            NormalGameOptionsV11 current =
+            NormalGameOptionsV12 current =
                 SetRecommendationsPatch.GetCurrentGameOptions();
 
             if (current == null)
@@ -2579,7 +3033,6 @@ namespace BanMod
             if (_titleStyle != null)
                 return;
 
-            // Visual-only restyle: same UI flow/callbacks, shared modern theme.
             _titleStyle =
                 new GUIStyle(BanModUiStyles.TitleLabel)
                 {

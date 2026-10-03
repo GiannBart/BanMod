@@ -273,6 +273,12 @@ namespace BanMod
                         ChatCommands.ShowChat($"Detective: {selectedPlayer.name}");
                     }
 
+                    if (GUILayout.Button("SPIRITGUIDE", buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
+                    {
+                        ForcedRoleSystem.SetForcedRole(selectedPlayer.PlayerId, RoleTypes.SpiritGuide);
+                        ChatCommands.ShowChat($"SpiritGuide: {selectedPlayer.name}");
+                    }
+
                     if (GUILayout.Button("JUDGE", buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
                     {
                         ForcedRoleSystem.SetForcedRole(selectedPlayer.PlayerId, RoleTypes.Judge);

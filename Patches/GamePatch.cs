@@ -30,10 +30,6 @@ public static class GameEndPatch
 
         VoteBanTracker.Reset();
 
-        //var NoisemakerRunManager = UnityEngine.Object.FindObjectOfType<NoisemakerRunManager>();
-        //if (NoisemakerRunManager != null) NoisemakerRunManager.ResetState();
-        //var StopandGoManager = UnityEngine.Object.FindObjectOfType<StopandGoManager>();
-        //if (StopandGoManager != null) StopandGoManager.ResetState();
         if (!AmongUsClient.Instance.AmHost) return;
         JesterWinState.Reset();
         UnifiedRPCHandlerPatch.ModdedClients.Clear();
@@ -267,8 +263,13 @@ public static class GameStartPatch
         while (PlayerControl.LocalPlayer.Data == null)
             yield return null;
 
-        while (!BanMod.AllPlayerControls.All(p => p != null && p.Data != null && (p.roleAssigned || p.Data.Disconnected)))
-        yield return null;
+        while (!BanMod.AllPlayerControls
+            .Where(p => p != null && p != PlayerControl.LocalPlayer)
+            .All(p => p.Data != null &&
+                      (p.roleAssigned || p.Data.Disconnected)))
+        {
+            yield return null;
+        }
 
         ApplyProtectFirst();
         ApplyManualFirstMeetingProtection();
@@ -279,13 +280,13 @@ public static class GameStartPatch
         }
         if (BanMod.GM.Value)
         {
-            PlayerControl.LocalPlayer.RpcSetRole(RoleTypes.CrewmateGhost);
+            PlayerControl.LocalPlayer.RpcSetRole(RoleTypes.CrewmateGhost, true);
             HudManager.Instance.StartCoroutine(CheatUtils.CompletaTutteLeTaskConDelay(1f));
             BMLogger.Info("[BANMOD] GM Mode");
         }
         if (ForcedRoleSystem.GM)
         {
-            PlayerControl.LocalPlayer.RpcSetRole(RoleTypes.CrewmateGhost);
+            PlayerControl.LocalPlayer.RpcSetRole(RoleTypes.CrewmateGhost, true);
             HudManager.Instance.StartCoroutine(CheatUtils.CompletaTutteLeTaskConDelay(1f));
             BMLogger.Info("[BANMOD] GM Mode");
         }
@@ -371,7 +372,7 @@ public static class CheckEndCriteriaPatch
             }
 
         }
-        if (gameMode == GameModeType.HotPotato)
+        if (gameMode == GameModeType.HotPotatoModded)
         {
             {
                 return false;
@@ -379,6 +380,48 @@ public static class CheckEndCriteriaPatch
 
         }
         if (gameMode == GameModeType.FFA)
+        {
+            {
+                return false;
+            }
+
+        }
+        if (gameMode == GameModeType.FFATeam)
+        {
+            {
+                return false;
+            }
+
+        }
+        if (gameMode == GameModeType.Assassin)
+        {
+            {
+                return false;
+            }
+
+        }
+        if (gameMode == GameModeType.KillRace)
+        {
+            {
+                return false;
+            }
+
+        }
+        if (gameMode == GameModeType.RoomRush)
+        {
+            {
+                return false;
+            }
+
+        }
+        if (gameMode == GameModeType.TargetRush)
+        {
+            {
+                return false;
+            }
+
+        }
+        if (gameMode == GameModeType.DeathRun)
         {
             {
                 return false;
@@ -478,34 +521,89 @@ public static class CheckEndCriteriaPatch
         return true; 
     }
 }
-[HarmonyPatch(typeof(EndGameManager), nameof(EndGameManager.Start))]
+
+[HarmonyPatch(
+    typeof(EndGameManager),
+    nameof(EndGameManager.Start))]
 public static class EndGameSavePatch
 {
     public static void Postfix()
     {
-        if (!AmongUsClient.Instance.AmHost) return;
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
 
         HostAfkManager.IsHostAfk = false;
-        var reason = EndGameResult.CachedGameOverReason;
-        PreviousMatchPopupTracker.SaveCurrentMatch();
 
-        if (GameManager.Instance.DidHumansWin(reason))
+        var reason =
+            EndGameResult.CachedGameOverReason;
+
+        PreviousMatchPopupTracker
+            .SaveCurrentMatch();
+
+        if (GameTimeLimit.EndedByTimer)
         {
-            MatchSummary1.CrewmateWin = true;
-            MatchSummary1.ImpostorWin = false;
+            switch (GameTimeLimit.WinnerByTimer)
+            {
+                case GameTimeLimit.TimerWinner.Crewmates:
+                    {
+                        MatchSummary1.CrewmateWin = true;
+                        MatchSummary1.ImpostorWin = false;
+                        break;
+                    }
+
+                case GameTimeLimit.TimerWinner.Impostors:
+                    {
+                        MatchSummary1.CrewmateWin = false;
+                        MatchSummary1.ImpostorWin = true;
+                        break;
+                    }
+
+                default:
+                    {
+                        if (GameManager.Instance != null &&
+                            GameManager.Instance.DidHumansWin(reason))
+                        {
+                            MatchSummary1.CrewmateWin = true;
+                            MatchSummary1.ImpostorWin = false;
+                        }
+                        else
+                        {
+                            MatchSummary1.CrewmateWin = false;
+                            MatchSummary1.ImpostorWin = true;
+                        }
+
+                        break;
+                    }
+            }
         }
         else
         {
-            MatchSummary1.CrewmateWin = false;
-            MatchSummary1.ImpostorWin = true;
+            if (GameManager.Instance != null &&
+                GameManager.Instance.DidHumansWin(reason))
+            {
+                MatchSummary1.CrewmateWin = true;
+                MatchSummary1.ImpostorWin = false;
+            }
+            else
+            {
+                MatchSummary1.CrewmateWin = false;
+                MatchSummary1.ImpostorWin = true;
+            }
         }
+
         MatchSummary1.StopMatchTimer();
         MatchSummary1.SaveToHistory();
-        UnifiedRPCHandlerPatch.AlreadyHandledCheaters.Clear();
+
+        UnifiedRPCHandlerPatch
+            .AlreadyHandledCheaters
+            .Clear();
+
         GameTimeLimit.Stop();
     }
 }
-
 [HarmonyPatch(typeof(GameManager), nameof(GameManager.CheckTaskCompletion))]
 class CheckTaskCompletionPatch
 {
@@ -518,7 +616,7 @@ class CheckTaskCompletionPatch
             __result = false;
             return false;
         }
-        if (gameMode == GameModeType.HotPotato)
+        if (gameMode == GameModeType.HotPotatoModded)
         {
             __result = false;
             return false;
@@ -531,139 +629,15 @@ class CheckTaskCompletionPatch
         return true;
     }
 }
-[HarmonyPatch(typeof(LogicRoleSelectionHnS), nameof(LogicRoleSelectionHnS.AssignRolesForTeam))]
-public static class RoleSelectionPatch
-{
-    public static bool Prefix(
-        LogicRoleSelectionHnS __instance,
-        Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo> players,
-        IGameOptions opts,
-        RoleTeamTypes team,
-        ref int teamMax)
-    {
-        if (!Options.MoreSeek)
-            return true;
-
-        if (team != RoleTeamTypes.Impostor)
-            return true;
-
-        if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
-            return true;
-
-        if (players == null)
-            return false;
-
-        int totalSeekersNeeded = Options.NumSeekers.GetInt();
-
-        if (totalSeekersNeeded < 1)
-            totalSeekersNeeded = 1;
-
-        if (totalSeekersNeeded > players.Count)
-            totalSeekersNeeded = players.Count;
-
-        if (totalSeekersNeeded > 14)
-            totalSeekersNeeded = 14;
-
-        var hnsOptions = GameOptionsManager.Instance.CurrentGameOptions.Cast<HideNSeekGameOptionsV11>();
-
-        if (hnsOptions != null)
-        {
-            hnsOptions.NumImpostors = totalSeekersNeeded;
-
-            hnsOptions.ImpostorPlayerID = -1;
-        }
-
-        teamMax = totalSeekersNeeded;
-
-        for (int i = 0; i < totalSeekersNeeded; i++)
-        {
-            if (players.Count == 0)
-                break;
-
-            string choice = "Round-robin";
-
-            if (Options.SeekerSelections != null && i < Options.SeekerSelections.Count && Options.SeekerSelections[i] != null)
-            {
-                try
-                {
-                    choice = Options.SeekerSelections[i].GetString();
-                }
-                catch
-                {
-                    choice = "Round-robin";
-                }
-            }
-
-            NetworkedPlayerInfo picked = PickSeeker(players, choice, i);
-
-            if (picked == null || picked.Object == null)
-                continue;
-
-            if (i == 0 && hnsOptions != null)
-            {
-                hnsOptions.ImpostorPlayerID = picked.PlayerId;
-            }
-
-            picked.Object.RpcSetRole(RoleTypes.Impostor, false);
-            players.Remove(picked);
-        }
-
-        return false;
-    }
-
-    private static NetworkedPlayerInfo PickSeeker(
-        Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo> players,
-        string choice,
-        int seekerIndex)
-    {
-        if (players == null || players.Count == 0)
-            return null;
-
-        if (!string.IsNullOrEmpty(choice) && choice != "Round-robin")
-        {
-            for (int i = 0; i < players.Count; i++)
-            {
-                NetworkedPlayerInfo p = players[i];
-
-                if (p == null)
-                    continue;
-
-                if (p.PlayerName == choice)
-                    return p;
-            }
-
-            return players[UnityEngine.Random.Range(0, players.Count)];
-        }
-
-        var pseudoRandomList = new PseudoRandomList<NetworkedPlayerInfo>(AmongUsClient.Instance.GameId);
-
-        for (int i = 0; i < players.Count; i++)
-        {
-            NetworkedPlayerInfo p = players[i];
-
-            if (p == null)
-                continue;
-
-            pseudoRandomList.Add(p);
-        }
-
-        int skips = GameData.RoundsPlayedInSession + seekerIndex;
-
-        for (int r = 0; r < skips; r++)
-        {
-            pseudoRandomList.PickRandom();
-        }
-
-        return pseudoRandomList.PickRandom();
-    }
-}
 
 [HarmonyPatch(typeof(LogicGameFlowHnS), nameof(LogicGameFlowHnS.IsGameOverDueToDeath))]
 public static class VictoryLogicPatch
 {
     public static bool Prefix(LogicGameFlowHnS __instance, ref bool __result)
     {
-        if (!Options.MoreSeek)
+        int totalSeekersNeeded = Options.NumSeekers.GetInt();
+
+        if (totalSeekersNeeded == 1)
             return true;
 
 
@@ -693,7 +667,9 @@ public static class EndCriteriaPatch
         if (__instance == null || __instance.Manager == null || AmongUsClient.Instance.IsGameOver)
             return false;
 
-        if (!Options.MoreSeek)
+        int totalSeekersNeeded = Options.NumSeekers.GetInt();
+
+        if (totalSeekersNeeded == 1)
             return true;
 
         bool showAd = false;
@@ -779,23 +755,3 @@ public static class UpdateSeekerNamesPatch
         }
     }
 }
-//[HarmonyPatch(typeof(GameManager), nameof(GameManager.RpcEndGame))]
-//public static class AllChatRpcEndGamePatch
-//{
-//    public static bool Prefix(
-//        [HarmonyArgument(0)] GameOverReason endReason)
-//    {
-//        if (BanMod.UnlockingAllChat &&
-//            endReason == GameOverReason.CrewmatesByTask)
-//        {
-//            BMLogger.Info(
-//                "[AllChat] Bloccato CrewmatesByTask causato dal report artificiale.",
-//                "AllChat"
-//            );
-
-//            return false;
-//        }
-
-//        return true;
-//    }
-//}

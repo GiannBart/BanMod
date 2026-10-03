@@ -545,13 +545,13 @@ namespace BanMod
 
             return new float[]
             {
-                contentWidth * 0.15f, 
-                contentWidth * 0.16f, 
-                contentWidth * 0.15f, 
-                contentWidth * 0.10f, 
-                contentWidth * 0.16f, 
-                contentWidth * 0.18f, 
-                contentWidth * 0.08f  
+                contentWidth * 0.15f,
+                contentWidth * 0.16f,
+                contentWidth * 0.15f,
+                contentWidth * 0.10f,
+                contentWidth * 0.16f,
+                contentWidth * 0.18f,
+                contentWidth * 0.08f
             };
         }
 

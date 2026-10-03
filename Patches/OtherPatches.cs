@@ -530,6 +530,13 @@ public static class LobbyHistoryPatch
             gameMode == GameModeType.SnS ||
             gameMode == GameModeType.PnS ||
             gameMode == GameModeType.TaskRun ||
+            gameMode == GameModeType.RoomRush ||
+            gameMode == GameModeType.TargetRush ||
+            gameMode == GameModeType.DeathRun ||
+            gameMode == GameModeType.HotPotatoModded ||
+            gameMode == GameModeType.FFATeam ||
+            gameMode == GameModeType.Assassin ||
+            gameMode == GameModeType.KillRace ||
             gameMode == GameModeType.FFA)
         {
             BanMod.DisableAllRoles();
@@ -647,7 +654,7 @@ public static class CursorUpdatePatch
 
     private static void LoadTextures()
     {
-        string folderPath = Path.Combine(Application.dataPath, "..", "BAN_DATA", "IMAGE", "Cursor");
+        string folderPath = Path.Combine(Application.dataPath, "..", "DATA", "IMAGE", "Cursor");
 
         if (!Directory.Exists(folderPath))
         {

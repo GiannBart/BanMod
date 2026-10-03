@@ -463,9 +463,14 @@ internal static class PnsPhantomMovementPatch
         BMLogger.Info(
             $"{player.Data.PlayerName} became ImpostorGhost: {reason}.");
 
-        player.RpcSetRole(
-            RoleTypes.ImpostorGhost,
-            false);
+        if (BanModServerSelection.IsModded25)
+        {
+            player.RpcMurderPlayer(player, true);
+        }
+        else
+        {
+            player.RpcSetRole(RoleTypes.ImpostorGhost, false);
+        }
     }
 
     private static void Clear(

@@ -139,13 +139,6 @@ namespace BanMod
             return popup;
         }
 
-        /// <summary>
-        /// Popup aggiornamenti BanMod.
-        /// La lingua viene letta direttamente dalla lingua UI selezionata in Among Us.
-        /// - mandatory = false: mostra "Aggiorna" e "Non aggiornare".
-        /// - mandatory = true: mostra solo "Aggiorna" e mantiene BanMod bloccata.
-        /// Le note della release restano esattamente quelle ricevute dal server.
-        /// </summary>
         public static GameObject CreateUpdatePopup(
             string title,
             string content,
@@ -180,9 +173,6 @@ namespace BanMod
 
             popup.AddComponent<GraphicRaycaster>();
 
-            // Overlay a schermo intero: assorbe tutti i raycast UGUI.
-            // I PassiveButton di Among Us sono bloccati separatamente dalla patch Harmony
-            // BanModUpdatePopupBlockPassiveButtonsPatch finché IsUpdatePopupOpen è true.
             var blocker = new GameObject("InputBlocker");
             blocker.transform.SetParent(popup.transform, false);
 
@@ -199,7 +189,6 @@ namespace BanMod
             blockerImage.color = new Color(0f, 0f, 0f, mandatory ? 0.82f : 0.68f);
             blockerImage.raycastTarget = true;
 
-            // CanvasGroup rende esplicito il blocco dell'intero canvas sottostante.
             var blockerGroup = blocker.AddComponent<CanvasGroup>();
             blockerGroup.alpha = 1f;
             blockerGroup.interactable = true;
@@ -497,7 +486,6 @@ namespace BanMod
 
         private static string GetAmongUsLanguageKey()
         {
-            // Among Us aggiorna TranslationController.currentLanguage quando la lingua UI viene cambiata.
             try
             {
                 if (TranslationController.Instance != null)
@@ -861,11 +849,6 @@ namespace BanMod
         }
     }
 
-    /// <summary>
-    /// Among Us usa PassiveButton per molti controlli del menu. Un overlay UGUI
-    /// non impedisce necessariamente a PassiveButton di ricevere il click, quindi
-    /// durante il popup updater blocchiamo direttamente i suoi handler di click.
-    /// </summary>
     [HarmonyPatch]
     public static class BanModUpdatePopupBlockPassiveButtonsPatch
     {

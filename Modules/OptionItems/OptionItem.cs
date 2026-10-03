@@ -37,7 +37,10 @@ namespace BanMod
                     or OptionCategory.SNS
                     or OptionCategory.PNS
                     or OptionCategory.FFA
+                    or OptionCategory.FFATEAM
+                    or OptionCategory.KillRace
                     or OptionCategory.HotPotato
+                    or OptionCategory.Assassin
                     or OptionCategory.Zombie 
                     or OptionCategory.Seeker
                     or OptionCategory.Gameplay
@@ -107,7 +110,10 @@ namespace BanMod
                 OptionCategory.Zombie => "TabGroup.Zombie",
                 OptionCategory.HotPotato => "TabGroup.HotPotato",
                 OptionCategory.FFA => "TabGroup.FFA",
+                OptionCategory.FFATEAM => "TabGroup.FFATEAM",
+                OptionCategory.KillRace => "TabGroup.KillRace",
                 OptionCategory.Seeker => "Seeker",
+                OptionCategory.Assassin => "Assassin",
 
                 // MODERATION
                 OptionCategory.Blocklist => "TabGroup.Block",
@@ -212,6 +218,14 @@ namespace BanMod
 
         public static IReadOnlyList<OptionItem> FFAOptions
             => GetOptions(OptionCategory.FFA);
+        public static IReadOnlyList<OptionItem> FFATEAMOptions
+            => GetOptions(OptionCategory.FFATEAM);
+
+        public static IReadOnlyList<OptionItem> KillRaceOptions
+            => GetOptions(OptionCategory.KillRace);
+
+        public static IReadOnlyList<OptionItem> AssassinOptions
+            => GetOptions(OptionCategory.Assassin);
 
         public static IReadOnlyList<OptionItem> SeekerOptions
             => GetOptions(OptionCategory.Seeker);
@@ -781,7 +795,13 @@ namespace BanMod
                 gameMode == GameModeType.PnS ||
                 gameMode == GameModeType.TaskRun ||
                 gameMode == GameModeType.ZombieMode ||
-                gameMode == GameModeType.HotPotato ||
+                gameMode == GameModeType.HotPotatoModded ||
+                gameMode == GameModeType.RoomRush ||
+                gameMode == GameModeType.DeathRun ||
+                gameMode == GameModeType.TargetRush ||
+                gameMode == GameModeType.FFATeam ||
+                gameMode == GameModeType.KillRace ||
+                gameMode == GameModeType.Assassin ||
                 gameMode == GameModeType.FFA
             )
             {
@@ -863,9 +883,12 @@ namespace BanMod
         SNS,
         PNS,
         FFA,
+        FFATEAM,
+        KillRace,
         HotPotato,
         Zombie,
         Seeker,
+        Assassin,
 
         // MODERATION
         Levels,

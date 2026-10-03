@@ -95,7 +95,6 @@ internal static class PlayerHistory
                 HistoryEntry entry = MakeHistoryEntry(player);
                 string key = GetKey(entry.Recent);
 
-                // Mantiene i dati di piattaforma già catturati nel Prefix di OnPlayerLeft.
                 if (!PreviousMatch.TryGetValue(key, out HistoryEntry existing) ||
                     existing.Platform == Platforms.Unknown)
                 {
@@ -239,8 +238,8 @@ internal static class AmongUsClientOnPlayerLeftPatch
 {
     private static void Prefix(ClientData data)
     {
-        // Nel Prefix ClientData contiene ancora PlatformData.
         PlayerHistory.RememberLeaver(data);
+
     }
 }
 
@@ -450,8 +449,6 @@ internal static class RefreshRecentlyPlayedPatch
         else
             label.text = "ADD TO BANLIST";
 
-        // The custom background may be hidden by the LobbyPlayerBar mask.
-        // Black remains clearly visible on the white player card.
         label.color = Color.black;
 
         SetBanButtonColor(background, canBan, alreadyBanned);

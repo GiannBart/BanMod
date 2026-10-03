@@ -182,7 +182,7 @@ namespace BanMod
                             AmongUsClient.Instance.KickPlayer(pc.GetClientId(), false);
                             string text = $"{pc.Data.PlayerName} {GetString("AFKKicked")}";
 
-                            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead)
+                            if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
                             {
                                 Utils.RequestProxyMessage(text, 255);
                                 MessageBlocker.UpdateLastMessageTime();
