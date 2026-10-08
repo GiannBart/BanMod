@@ -112,8 +112,6 @@ internal static class MurderPlayerCombinedPatch
         }
         if (succeeded)
         {
-            Watcher.OnPlayerDied(target.PlayerId);
-
             if (BanMod.FirstDeadFriendCode == null)
             {
                 var friendCode = target.Data.FriendCode;

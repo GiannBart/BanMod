@@ -50,15 +50,11 @@ namespace BanMod
                             && p.Data.Role.TeamType == RoleTeamTypes.Crewmate
                             && !p.Data.IsDead
                             && p.PlayerId != Exiler.ExilerId
-                            && p.PlayerId != Judge.JudgeId
-                            && p.PlayerId != Profiler.ProfilerId
                             && p.PlayerId != Jester.JesterId
-                            && p.PlayerId != Watcher.WatcherId
                             && (!BanMod.forceImpostor || !BanMod.forcedImpostorIds.Contains(p.PlayerId))
                             && !Utils.Scientist(p)
                             && !Utils.Tracker(p)
                             && !Utils.Engineer(p)
-                            && !Judge(p)
                             && !Utils.SpiritGuide(p)
                             && !Utils.Detective(p))
 

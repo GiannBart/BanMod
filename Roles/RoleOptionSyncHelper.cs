@@ -26,31 +26,7 @@ namespace BanMod
                 ? Exiler.ExilerId
                 : HostRoleOptionsStatus.ExilerId;
         }
-        public static bool IsJudgeEnabled()
-        {
-            return IsHost()
-                ? Options.Judge.GetBool()
-                : HostRoleOptionsStatus.JudgeEnabled;
-        }
-        public static byte GetJudgeId()
-        {
-            return IsHost()
-                ? Judge.JudgeId
-                : HostRoleOptionsStatus.JudgeId;
-        }
 
-        public static bool IsProfilerEnabled()
-        {
-            return IsHost()
-                ? Options.Profiler.GetBool()
-                : HostRoleOptionsStatus.ProfilerEnabled;
-        }
-        public static byte GetProfilerId()
-        {
-            return IsHost()
-                ? Profiler.ProfilerId
-                : HostRoleOptionsStatus.ProfilerId;
-        }
         public static bool IsGuesserEnabled()
         {
             return IsHost()

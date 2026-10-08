@@ -48,7 +48,6 @@ using UnityEngine.UIElements;
 using UnityEngine.UIElements.Experimental;
 using UnityEngine.UIElements.UIR;
 using static BanMod.ChatCommands;
-using static BanMod.ChatController_LateUpdate;
 using static BanMod.ExtendedPlayerControl;
 using static BanMod.ImmortalManager;
 using static BanMod.Translator;
@@ -165,42 +164,31 @@ public static class HudManager_Update
             __instance.Chat.gameObject.SetActive(false);
         }
 
-        MatchInfoButtonPosition.Set(__instance, chatVisible);
     }
 }
 
-[HarmonyPatch(typeof(ChatController), "LateUpdate")]
-public static class ChatController_LateUpdate
+[HarmonyPatch(typeof(MatchInfoHudButton), "Update")]
+public static class MatchInfoHudButton_Update_Patch
 {
-    public static void Postfix()
+    public static void Postfix(MatchInfoHudButton __instance)
     {
-        if (!DestroyableSingleton<HudManager>.InstanceExists)
+        if (__instance == null)
             return;
 
-        MatchInfoButtonPosition.Set(
-            DestroyableSingleton<HudManager>.Instance,
-            Utils.chatUiActive()
-        );
-    }
-    internal static class MatchInfoButtonPosition
-    {
-        private const float NormalX = 3.1833f;
-        private const float ChatX = 2.5833f;
+        if (!Utils.chatUiActive())
+            return;
 
-        internal static void Set(HudManager hud, bool chatVisible)
-        {
-            if (!hud || !hud.MatchInfoButton)
-                return;
+        AspectPosition aspect =
+            __instance.GetComponent<AspectPosition>();
 
-            Transform button = hud.MatchInfoButton.transform;
+        if (aspect == null)
+            return;
 
-            if (!button.gameObject.activeInHierarchy)
-                return;
+        // ESATTAMENTE la posizione vanilla usata durante i meeting.
+        aspect.DistanceFromEdge =
+            new Vector3(2.75f, 0.505f, -400f);
 
-            Vector3 position = button.localPosition;
-            position.x = chatVisible ? ChatX : NormalX;
-            button.localPosition = position;
-        }
+        aspect.AdjustPosition();
     }
 }
 [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.Update))]
@@ -211,14 +199,46 @@ public static class AmongUsClient_Update
         Spoof.spoofLevel();
     }
 }
-
-[HarmonyPatch(typeof(PlayerBanData), nameof(PlayerBanData.BanMinutesLeft), MethodType.Getter)]
-public static class RemoveDisconnectPenalty_PlayerBanData_BanMinutesLeft_Postfix
+[HarmonyPatch(typeof(PlayerBanData))]
+public static class PlayerBanDataPatch
 {
-    public static void Postfix(PlayerBanData __instance, ref int __result)
+    [HarmonyPatch(nameof(PlayerBanData.BanPoints), MethodType.Getter)]
+    [HarmonyPrefix]
+    public static bool BanPoints_Getter(ref float __result)
     {
-        __instance.BanPoints = 0f;
+        __result = 0f;
+        return false;
+    }
+
+    [HarmonyPatch(nameof(PlayerBanData.BanMinutes), MethodType.Getter)]
+    [HarmonyPrefix]
+    public static bool BanMinutes_Getter(ref float __result)
+    {
+        __result = 0f;
+        return false;
+    }
+
+    [HarmonyPatch(nameof(PlayerBanData.BanMinutesLeft), MethodType.Getter)]
+    [HarmonyPrefix]
+    public static bool BanMinutesLeft_Getter(ref int __result)
+    {
         __result = 0;
+        return false;
+    }
+
+    [HarmonyPatch(nameof(PlayerBanData.IsBanned), MethodType.Getter)]
+    [HarmonyPrefix]
+    public static bool IsBanned_Getter(ref bool __result)
+    {
+        __result = false;
+        return false;
+    }
+
+    [HarmonyPatch(nameof(PlayerBanData.BanPoints), MethodType.Setter)]
+    [HarmonyPrefix]
+    public static bool BanPoints_Setter(PlayerBanData __instance)
+    {
+        return false;
     }
 }
 
@@ -793,6 +813,140 @@ public static class ProxyMessageQueueUpdatePatch
         }
         catch
         {
+        }
+    }
+}
+
+[HarmonyPatch(typeof(LogicGameFlowHnS), nameof(LogicGameFlowHnS.SeekerAdminMapEnabled))]
+public static class SeekerAdminMapFFAPatch
+{
+    public static void Postfix(
+        LogicGameFlowHnS __instance,
+        PlayerControl player,
+        ref bool __result)
+    {
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost ||
+            !Options.EnableFFA.GetBool())
+            return;
+
+        if (player == null ||
+            player.Data == null ||
+            player.Data.Role == null)
+        {
+            __result = false;
+            return;
+        }
+
+        LogicOptionsHnS options =
+            GameManager.Instance?.LogicOptions as LogicOptionsHnS;
+
+        if (options == null || !options.GetSeekerFinalMap())
+        {
+            __result = false;
+            return;
+        }
+
+        int alivePlayers = PlayerControl.AllPlayerControls
+            .ToArray()
+            .Count(p =>
+                p != null &&
+                p.Data != null &&
+                !p.Data.IsDead &&
+                !p.Data.Disconnected);
+
+        __result =
+            !player.inVent &&
+            !player.Data.IsDead &&
+            options.GetSeekerFinalMap() &&
+            (
+                __instance.IsFinalCountdown ||
+                alivePlayers <= 4
+            );
+    }
+}
+[HarmonyPatch(typeof(LogicPingsHnS), "SeekerPing")]
+public static class LogicPingsHnSFFAPatch
+{
+    private static readonly AccessTools.FieldRef<LogicPingsHnS, LogicOptionsHnS> OptionsRef =
+        AccessTools.FieldRefAccess<LogicPingsHnS, LogicOptionsHnS>("options");
+
+    private static readonly AccessTools.FieldRef<LogicPingsHnS, ObjectPoolBehavior> PingPoolRef =
+        AccessTools.FieldRefAccess<LogicPingsHnS, ObjectPoolBehavior>("pingPool");
+
+    public static bool Prefix(
+        LogicPingsHnS __instance,
+        ref Il2CppSystem.Collections.IEnumerator __result)
+    {
+        if (AmongUsClient.Instance == null ||
+            !Options.EnableFFA.GetBool())
+            return true;
+
+        __result = FfaSeekerPing(__instance).WrapToIl2Cpp();
+        return false;
+    }
+
+    private static System.Collections.IEnumerator FfaSeekerPing(
+        LogicPingsHnS instance)
+    {
+        LogicOptionsHnS options = OptionsRef(instance);
+        ObjectPoolBehavior pingPool = PingPoolRef(instance);
+
+        while (GameManager.Instance != null &&
+               GameManager.Instance.GameHasStarted)
+        {
+            PlayerControl localPlayer = PlayerControl.LocalPlayer;
+
+            if (localPlayer != null &&
+                localPlayer.Data != null &&
+                !localPlayer.Data.IsDead)
+            {
+                for (int i = 0; i < PlayerControl.AllPlayerControls.Count; i++)
+                {
+                    PlayerControl target =
+                        PlayerControl.AllPlayerControls[i];
+
+                    if (target == null ||
+                        target == localPlayer ||
+                        target.Data == null ||
+                        target.Data.IsDead ||
+                        target.Data.Disconnected)
+                    {
+                        continue;
+                    }
+
+                    PingBehaviour pingBehaviour =
+                        pingPool.Get<PingBehaviour>();
+
+                    pingBehaviour.target =
+                        target.GetTruePosition();
+
+                    pingBehaviour.AmSeeker = true;
+
+                    pingBehaviour.UpdatePosition();
+                    pingBehaviour.gameObject.SetActive(true);
+                    pingBehaviour.SetImageEnabled(true);
+                }
+            }
+
+            yield return new WaitForSeconds(
+                options.GetShowPingTime());
+
+            foreach (PoolableBehavior poolableBehavior in pingPool.activeChildren)
+            {
+                ArrowBehaviour arrowBehaviour =
+                    poolableBehavior as ArrowBehaviour;
+
+                if (arrowBehaviour == null)
+                    continue;
+
+                arrowBehaviour.target = Vector3.zero;
+                arrowBehaviour.SetImageEnabled(false);
+                arrowBehaviour.gameObject.SetActive(false);
+            }
+
+            yield return new WaitForSeconds(
+                options.GetMaxPingTime());
         }
     }
 }

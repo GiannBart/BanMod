@@ -102,12 +102,18 @@ namespace BanMod
                 _pendingSubmit = null;
             }
         }
+        public string GetClientToken()
+        {
+            return BanModCore.GetCurrentClientToken();
+        }
+
         public string GetSnapshotJson()
         {
             var payload = new
             {
                 api_base_url = BanModCore.PublicApiBaseUrl,
                 friend_code = BanModCore.GetCurrentFriendCode(),
+                client_token = BanModCore.GetCurrentClientToken(),
                 player_name = BanModCore.GetCurrentPlayerName(),
                 banmod_sha256 = BanModCore.GetCurrentBanModSha256(),
                 build_id = BanModCore.GetCurrentBuildId(),

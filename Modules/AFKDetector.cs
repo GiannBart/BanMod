@@ -116,7 +116,7 @@ namespace BanMod
 
                     if (data.CurrentPhase == DataAFK.Phase.Warning)
                     {
-                        if (!ImmortalManager.IsImmortal(pc.PlayerId) && !Watcher.IsWatcher(pc.PlayerId))
+                        if (!ImmortalManager.IsImmortal(pc.PlayerId))
                         {
                             BanMod.ShieldedPlayers.Remove(pc.PlayerId);
                             pc.RemoveProtection();
@@ -138,7 +138,7 @@ namespace BanMod
 
             if (Vector2.Distance(pc.Pos(), data.LastPosition) > 0.1f)
             {
-                if (!ImmortalManager.IsImmortal(pc.PlayerId) && !Watcher.IsWatcher(pc.PlayerId))
+                if (!ImmortalManager.IsImmortal(pc.PlayerId))
                 {
                     BanMod.ShieldedPlayers.Remove(pc.PlayerId);
                     pc.RemoveProtection();
@@ -169,7 +169,7 @@ namespace BanMod
                         break;
 
                     case DataAFK.Phase.Consequence:
-                        if (!ImmortalManager.IsImmortal(pc.PlayerId) && !Watcher.IsWatcher(pc.PlayerId))
+                        if (!ImmortalManager.IsImmortal(pc.PlayerId))
                         {
                             BanMod.ShieldedPlayers.Remove(pc.PlayerId);
                             pc.RemoveProtection();

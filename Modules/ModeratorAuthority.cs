@@ -444,6 +444,7 @@ namespace BanMod
                             targetPlayerId,
                             fromModeratorCommand);
 
+                        BanMod.EndGameForced = true;
                         GameManager.Instance.RpcEndGame(
                             GameOverReason.CrewmatesByTask,
                             false);

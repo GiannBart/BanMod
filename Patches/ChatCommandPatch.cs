@@ -708,12 +708,6 @@ internal class ChatCommands
                     Guesser.SpecialKillerSelected = false;
                     Exiler.ExilerId = 255;
                     Exiler.ExilerSelected = false;
-                    Judge.JudgeId = 255;
-                    Judge.JudgeSelected = false;
-                    Profiler.ProfilerId = 255;
-                    Profiler.ProfilerSelected = false;
-                    Watcher.WatcherId = 255;
-                    Watcher.WatcherSelected = false;
                     ChatCommands.ShowChat("<color=#00ffff>Forced roles cleared for new game.</color>");
 
                     return true;
@@ -852,7 +846,7 @@ internal class ChatCommands
             case "/endgame":
                 if (!AmongUsClient.Instance.AmHost)
                     return true;
-
+                BanMod.EndGameForced = true;
                 GameManager.Instance.RpcEndGame(GameOverReason.CrewmatesByTask, false);
                 return true;
 
@@ -1651,9 +1645,6 @@ internal class ChatCommands
                 bool isSpecialKiller1 = Options.Guess.GetBool() && PlayerControl.LocalPlayer.PlayerId == Guesser.SpecialKillerId;
                 bool isJester1 = Options.Jester.GetBool() && PlayerControl.LocalPlayer.PlayerId == Jester.JesterId;
                 bool isPresident1 = Options.ExilerExe.GetBool() && PlayerControl.LocalPlayer.PlayerId == Exiler.ExilerId;
-                bool isJudge1 = Options.Judge.GetBool() && PlayerControl.LocalPlayer.PlayerId == Judge.JudgeId;
-                bool isProfiler1 = Options.Profiler.GetBool() && PlayerControl.LocalPlayer.PlayerId == Profiler.ProfilerId;
-                bool isWatcher1 = Options.Watcher.GetBool() && PlayerControl.LocalPlayer.PlayerId == Watcher.WatcherId;
                 bool isScientist1 = Options.ScientistTime.GetBool() && Scientist(PlayerControl.LocalPlayer);
                 bool isPhantom1 = Options.PhantomGuess.GetBool() && Phantom(PlayerControl.LocalPlayer);
                 bool isEngineer1 = Options.EngineerFixer.GetBool() && Engineer(PlayerControl.LocalPlayer) && (!isJester1);
@@ -1698,18 +1689,6 @@ internal class ChatCommands
                 {
                     Exiler.SendExilerMessage();
                 }
-                if (isProfiler1)
-                {
-                    Profiler.SendProfilerMessage();
-                }
-                if (isJudge1)
-                {
-                    Judge.SendJudgeMessage();
-                }
-                if (isWatcher1)
-                {
-                    Watcher.SendWatcherMessage();
-                }
                 if (isImmortal1)
                 {
                     string msg = GetString("ImmortalSelfMessage");
@@ -1724,7 +1703,7 @@ internal class ChatCommands
                         MessageBlocker.UpdateLastMessageTime();
                     }
                 }
-                if (!isSpecialKiller1 && !isJester1 && !isWatcher1 && !isPresident1 && !isScientist1 && !isPhantom1 && !isEngineer1 && !isImmortal1 && !Shapeshifter1 && !isCobra1 && !isImpostor1)
+                if (!isSpecialKiller1 && !isJester1 && !isPresident1 && !isScientist1 && !isPhantom1 && !isEngineer1 && !isImmortal1 && !Shapeshifter1 && !isCobra1 && !isImpostor1)
                 {
                     string msg = string.Format(GetString("NeutralInfo"));
                     Utils.SendMessage(msg, PlayerControl.LocalPlayer.PlayerId);
@@ -1768,18 +1747,6 @@ internal class ChatCommands
                 if (Options.ExilerExe.GetBool())
                 {
                     Exiler.SendExilerMessage();
-                }
-                if (Options.Judge.GetBool())
-                {
-                    Judge.SendJudgeMessage();
-                }
-                if (Options.Profiler.GetBool())
-                {
-                    Profiler.SendProfilerMessage();
-                }
-                if (Options.Watcher.GetBool())
-                {
-                    Watcher.SendWatcherMessage();
                 }
                 return true;
 
@@ -1975,125 +1942,6 @@ internal class ChatCommands
                 else
                 {
                     ShowChat("Correct use: /setexiler ");
-                }
-                return true;
-
-
-
-
-
-            case "/setjudge":
-                if (!AmongUsClient.Instance.AmHost)
-                    return true;
-                if (args.Length == 2 && byte.TryParse(subArgs, out byte targetId6))
-                {
-                    var target = BanMod.AllPlayerControls.FirstOrDefault(p =>
-                        p.PlayerId == targetId6 &&
-                        p.Data != null &&
-                        !p.Data.IsDead);
-
-                    if (target != null)
-                    {
-                        Judge.JudgeId = targetId6;
-                        Judge.JudgeSelected = true;
-                        ShowChat($"Judge set to {target.name} (ID: {targetId6}).");
-
-                        if (AmongUsClient.Instance.AmHost)
-                        {
-                            var writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetJudge, SendOption.Reliable, -1);
-                            writer.Write(targetId6);
-                            AmongUsClient.Instance.FinishRpcImmediately(writer);
-                        }
-                        else
-                        {
-                            ShowChat("Only the host can set the Judge.");
-                        }
-                    }
-                    else
-                    {
-                        ShowChat($"Player with ID {targetId6} is invalid");
-                    }
-                }
-                else
-                {
-                    ShowChat("Correct use: /setjudge ");
-                }
-                return true;
-
-            case "/setprofiler":
-                if (!AmongUsClient.Instance.AmHost)
-                    return true;
-                if (args.Length == 2 && byte.TryParse(subArgs, out byte targetId7))
-                {
-                    var target = BanMod.AllPlayerControls.FirstOrDefault(p =>
-                        p.PlayerId == targetId7 &&
-                        p.Data != null &&
-                        !p.Data.IsDead);
-
-                    if (target != null)
-                    {
-                        Profiler.ProfilerId = targetId7;
-                        Profiler.ProfilerSelected = true;
-                        ShowChat($"Profiler set to {target.name} (ID: {targetId7}).");
-
-                        if (AmongUsClient.Instance.AmHost)
-                        {
-                            var writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetProfiler, SendOption.Reliable, -1);
-                            writer.Write(targetId7);
-                            AmongUsClient.Instance.FinishRpcImmediately(writer);
-                        }
-                        else
-                        {
-                            ShowChat("Only the host can set the Profiler.");
-                        }
-                    }
-                    else
-                    {
-                        ShowChat($"Player with ID {targetId7} is invalid");
-                    }
-                }
-                else
-                {
-                    ShowChat("Correct use: /setprofiler ");
-                }
-                return true;
-
-            case "/sw":
-            case "/setwatcher":
-                if (!AmongUsClient.Instance.AmHost)
-                    return true;
-                if (args.Length == 2 && byte.TryParse(subArgs, out byte targetId4))
-                {
-                    var target = BanMod.AllPlayerControls.FirstOrDefault(p =>
-                        p.PlayerId == targetId4 &&
-                        p.Data != null &&
-                        !p.Data.IsDead);
-
-                    if (target != null)
-                    {
-                        Watcher.WatcherId = targetId4;
-                        Watcher.WatcherSelected = true;
-                        ShowChat($"Watcher set to {target.name} (ID: {targetId4}).");
-
-                        if (AmongUsClient.Instance.AmHost)
-                        {
-                            var writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetWatcher, SendOption.Reliable, -1);
-                            writer.Write(targetId4);
-                            AmongUsClient.Instance.FinishRpcImmediately(writer);
-                        }
-                        else
-                        {
-                            ShowChat("Only the host can set the Watcher.");
-                        }
-                    }
-                    else
-                    {
-                        ShowChat($"Player with ID {targetId4} is invalid");
-                    }
-                }
-                else
-                {
-                    ShowChat("Correct use: /setwatcher ");
                 }
                 return true;
 
@@ -3179,14 +3027,6 @@ internal class ChatCommands
 
                     return;
                 }
-            case "/end":
-            case "/End":
-            case "/Close":
-            case "/close":
-                {
-                    Judge.TryHandleEndCommand(player, command, out canceled);
-                    return;
-                }
 
             case "/instantstart":
                 {
@@ -3299,7 +3139,7 @@ internal class ChatCommands
                         player,
                         "End Game (/endgame)"
                     );
-
+                    BanMod.EndGameForced = true;
                     GameManager.Instance.RpcEndGame(
                         GameOverReason.CrewmatesByTask,
                         false
@@ -3527,9 +3367,6 @@ internal class ChatCommands
                 bool isSpecialKiller1 = Options.Guess.GetBool() && player.PlayerId == Guesser.SpecialKillerId;
                 bool isJester1 = Options.Jester.GetBool() && player.PlayerId == Jester.JesterId;
                 bool isPresident1 = Options.ExilerExe.GetBool() && player.PlayerId == Exiler.ExilerId;
-                bool isJudge1 = Options.Judge.GetBool() && player.PlayerId == Judge.JudgeId;
-                bool isProfiler1 = Options.Profiler.GetBool() && player.PlayerId == Profiler.ProfilerId;
-                bool isWatcher1 = Options.Watcher.GetBool() && player.PlayerId == Watcher.WatcherId;
                 bool isScientist1 = Options.ScientistTime.GetBool() && Scientist(player);
                 bool isPhantom1 = Options.PhantomGuess.GetBool() && Phantom(player);
                 bool isCobra1 = Options.ViperGuess.GetBool() && Cobra(player);
@@ -3574,18 +3411,6 @@ internal class ChatCommands
                 {
                     Exiler.SendExilerMessage();
                 }
-                if (isJudge1)
-                {
-                    Judge.SendJudgeMessage();
-                }
-                if (isProfiler1)
-                {
-                    Profiler.SendProfilerMessage();
-                }
-                if (isWatcher1)
-                {
-                    Watcher.SendWatcherMessage();
-                }
                 if (isImmortal1)
                 {
                     string msg = GetString("ImmortalSelfMessage");
@@ -3600,7 +3425,7 @@ internal class ChatCommands
                         MessageBlocker.UpdateLastMessageTime();
                     }
                 }
-                if (!isSpecialKiller1 && !isJester1 && !isWatcher1 && !isPresident1 && !isScientist1 && !isPhantom1 && !isEngineer1 && !isImmortal1 && !Shapeshifter1 && !isCobra1 && !isImpostor1)
+                if (!isSpecialKiller1 && !isJester1 && !isPresident1 && !isScientist1 && !isPhantom1 && !isEngineer1 && !isImmortal1 && !Shapeshifter1 && !isCobra1 && !isImpostor1)
                 {
                     string msg = string.Format(GetString("NeutralInfo"));
                     Utils.SendMessage(msg, player.PlayerId);

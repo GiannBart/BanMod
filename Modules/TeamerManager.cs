@@ -450,6 +450,10 @@ namespace BanMod
 
                 using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, BanModApiConfig.TeamersAddUrl);
                 request.Headers.Add("X-BANMOD-FriendCode", apiFriendCode);
+                string clientToken = BanModCore.GetCurrentClientToken();
+                if (string.IsNullOrWhiteSpace(clientToken))
+                    return false;
+                request.Headers.Add("X-BANMOD-Client-Token", clientToken);
                 request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 using HttpResponseMessage response = await httpClient.SendAsync(request);
@@ -502,6 +506,13 @@ namespace BanMod
                 {
                     using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, BanModApiConfig.TeamersUrl);
                     request.Headers.Add("X-BANMOD-FriendCode", apiFriendCode);
+                    string clientToken = BanModCore.GetCurrentClientToken();
+                    if (string.IsNullOrWhiteSpace(clientToken))
+                    {
+                        await Task.Delay(StartupTokenWaitDelayMs);
+                        continue;
+                    }
+                    request.Headers.Add("X-BANMOD-Client-Token", clientToken);
 
                     using HttpResponseMessage response = await httpClient.SendAsync(request);
 
@@ -554,7 +565,8 @@ namespace BanMod
             for (int i = 0; i < StartupTokenWaitAttempts; i++)
             {
                 string friendCode = GetAvailableFriendCode();
-                if (!string.IsNullOrWhiteSpace(friendCode))
+                string clientToken = BanModCore.GetCurrentClientToken();
+                if (!string.IsNullOrWhiteSpace(friendCode) && !string.IsNullOrWhiteSpace(clientToken))
                     return friendCode;
 
                 await Task.Delay(StartupTokenWaitDelayMs);

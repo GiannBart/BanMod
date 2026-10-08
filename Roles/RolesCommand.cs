@@ -30,8 +30,6 @@ public static class RolesCommand
         bool isSpecialKiller = player.PlayerId == Guesser.SpecialKillerId;
         bool isJester = player.PlayerId == Jester.JesterId;
         bool isPresident = player.PlayerId == Exiler.ExilerId;
-        bool isJudge= player.PlayerId == Judge.JudgeId;
-        bool isProfiler = player.PlayerId == Profiler.ProfilerId;
         bool isScientist = Scientist(player);
         bool isTracker = Tracker(player);
         bool isPhantom = Phantom(player) && Options.EnableImmortal.GetBool();

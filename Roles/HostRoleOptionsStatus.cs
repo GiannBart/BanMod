@@ -20,10 +20,7 @@ namespace BanMod
                 if (PlayerControl.LocalPlayer == null)
                     return;
 
-                byte watcherId = Watcher.WatcherSelected ? Watcher.WatcherId : byte.MaxValue;
                 byte exilerId = Exiler.ExilerSelected ? Exiler.ExilerId : byte.MaxValue;
-                byte judgeId = Judge.JudgeSelected ? Judge.JudgeId : byte.MaxValue;
-                byte profilerId = Profiler.ProfilerSelected ? Profiler.ProfilerId : byte.MaxValue;
                 byte guesserId = Guesser.SpecialKillerSelected ? Guesser.SpecialKillerId : byte.MaxValue;
                 byte jesterId = Jester.JesterSelected ? Jester.JesterId : byte.MaxValue;
 
@@ -34,10 +31,7 @@ namespace BanMod
                     -1
                 );
 
-                writer.Write(Options.Watcher.GetBool());
                 writer.Write(Options.ExilerExe.GetBool());
-                writer.Write(Options.Judge.GetBool());
-                writer.Write(Options.Profiler.GetBool());
                 writer.Write(Options.Guess.GetBool());
                 writer.Write(Options.Jester.GetBool());
 
@@ -47,29 +41,20 @@ namespace BanMod
                 writer.Write(Options.ImpostorGuess.GetBool());
 
                 writer.Write(exilerId);
-                writer.Write(judgeId);
-                writer.Write(profilerId);
-                writer.Write(watcherId);
                 writer.Write(guesserId);
                 writer.Write(jesterId); 
 
                 AmongUsClient.Instance.FinishRpcImmediately(writer);
 
                 HostRoleOptionsStatus.Update(
-                    Options.Watcher.GetBool(),
                     Options.ExilerExe.GetBool(),
-                    Options.Judge.GetBool(),
-                    Options.Profiler.GetBool(),
                     Options.Guess.GetBool(),
                     Options.Jester.GetBool(),
                     Options.PhantomGuess.GetBool(),
                     Options.ViperGuess.GetBool(),
                     Options.ShapeGuess.GetBool(),
                     Options.ImpostorGuess.GetBool(),
-                    watcherId,
                     exilerId,
-                    judgeId,
-                    profilerId,
                     guesserId,
                     jesterId
                 );
@@ -128,20 +113,14 @@ namespace BanMod
 
 
                 HostRoleOptionsStatus.Update(
-                    watcherEnabled,
                     exilerEnabled,
-                    judgeEnabled,
-                    profilerEnabled,
                     guesserEnabled,
                     jesterEnabled,
                     phantomGuessEnabled,
                     viperGuessEnabled,
                     shapeGuessEnabled,
                     impostorGuessEnabled,
-                    watcherId,
                     exilerId,
-                    judgeId,
-                    profilerId,
                     guesserId,
                     jesterId
                 );
@@ -192,22 +171,16 @@ namespace BanMod
     {
         public static bool ReceivedFromHost = false;
 
-        public static bool WatcherEnabled = false;
         public static bool ExilerEnabled = false;
         public static bool GuesserEnabled = false;
         public static bool JesterEnabled = false;
-        public static bool JudgeEnabled = false;
-        public static bool ProfilerEnabled = false;
 
         public static bool PhantomGuessEnabled = false;
         public static bool ViperGuessEnabled = false;
         public static bool ShapeGuessEnabled = false;
         public static bool ImpostorGuessEnabled = false;
 
-        public static byte WatcherId = byte.MaxValue;
         public static byte ExilerId = byte.MaxValue;
-        public static byte JudgeId = byte.MaxValue;
-        public static byte ProfilerId = byte.MaxValue;
         public static byte GuesserId = byte.MaxValue;
         public static byte JesterId = byte.MaxValue;
 
@@ -215,10 +188,7 @@ namespace BanMod
         {
             ReceivedFromHost = false;
 
-            WatcherEnabled = false;
             ExilerEnabled = false;
-            JudgeEnabled = false;
-            ProfilerEnabled = false;
             GuesserEnabled = false;
             JesterEnabled = false;
 
@@ -227,64 +197,40 @@ namespace BanMod
             ShapeGuessEnabled = false;
             ImpostorGuessEnabled = false;
 
-            WatcherId = byte.MaxValue;
             ExilerId = byte.MaxValue;
-            ProfilerId = byte.MaxValue;
-            JudgeId = byte.MaxValue;
             GuesserId = byte.MaxValue;
             JesterId = byte.MaxValue;
         }
 
         public static void Update(
-            bool watcherEnabled,
             bool exilerEnabled,
-            bool judgeEnabled,
-            bool profilerEnabled,
             bool guesserEnabled,
             bool jesterEnabled,
             bool phantomGuessEnabled,
             bool viperGuessEnabled,
             bool shapeGuessEnabled,
             bool impostorGuessEnabled,
-            byte watcherId,
             byte exilerId,
-            byte judgeId,
-            byte profilerId,
             byte guesserId,
             byte jesterId)
         {
             ReceivedFromHost = true;
 
-            WatcherEnabled = watcherEnabled;
             ExilerEnabled = exilerEnabled;
             GuesserEnabled = guesserEnabled;
             JesterEnabled = jesterEnabled;
-            JudgeEnabled = judgeEnabled;
-            ProfilerEnabled = profilerEnabled;
 
             PhantomGuessEnabled = phantomGuessEnabled;
             ViperGuessEnabled = viperGuessEnabled;
             ShapeGuessEnabled = shapeGuessEnabled;
             ImpostorGuessEnabled = impostorGuessEnabled;
 
-            WatcherId = watcherId;
             ExilerId = exilerId;
             GuesserId = guesserId;
             JesterId = jesterId;
-            ProfilerId = profilerId;
-            JudgeId = judgeId;
-
-            Watcher.WatcherId = watcherId;
-            Watcher.WatcherSelected = watcherId != byte.MaxValue && watcherId != 255;
 
             Exiler.ExilerId = exilerId;
             Exiler.ExilerSelected = exilerId != byte.MaxValue && exilerId != 255;
-            
-            Judge.JudgeId = judgeId;
-            Judge.JudgeSelected = judgeId != byte.MaxValue && judgeId != 255;
-
-            Profiler.ProfilerId = profilerId;
-            Profiler.ProfilerSelected = profilerId != byte.MaxValue && profilerId != 255;
 
             Guesser.SpecialKillerId = guesserId;
             Guesser.SpecialKillerSelected = guesserId != byte.MaxValue && guesserId != 255;

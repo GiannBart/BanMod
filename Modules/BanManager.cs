@@ -227,12 +227,12 @@ public static class BanManager
 
         if (playerInfo == null)
         {
-            BMLogger.Info(
-                $"[BanMod] PlayerInfo non disponibile " +
-                $"clientId={clientId}, " +
-                $"PlayerId={playerControl.PlayerId}, " +
-                $"name={fallbackName}"
-            );
+            //BMLogger.Info(
+            //    $"[BanMod] PlayerInfo non disponibile " +
+            //    $"clientId={clientId}, " +
+            //    $"PlayerId={playerControl.PlayerId}, " +
+            //    $"name={fallbackName}"
+            //);
 
             yield break;
         }
@@ -258,22 +258,22 @@ public static class BanManager
             liveClient.PlayerName ??
             fallbackName;
 
-        BMLogger.Info(
-            $"[BanMod] Controllo giocatore: " +
-            $"name={realName}, " +
-            $"clientId={clientId}, " +
-            $"PlayerId={playerInfo.PlayerId}, " +
-            $"PlayerLevel={playerInfo.PlayerLevel}"
-        );
+        //BMLogger.Info(
+        //    $"[BanMod] Controllo giocatore: " +
+        //    $"name={realName}, " +
+        //    $"clientId={clientId}, " +
+        //    $"PlayerId={playerInfo.PlayerId}, " +
+        //    $"PlayerLevel={playerInfo.PlayerLevel}"
+        //);
 
         int colorId =
             playerInfo.DefaultOutfit?.ColorId ?? -1;
 
-        BMLogger.Info(
-            $"[BanMod] Color check: " +
-            $"name={realName}, " +
-            $"colorId={colorId}"
-        );
+        //BMLogger.Info(
+        //    $"[BanMod] Color check: " +
+        //    $"name={realName}, " +
+        //    $"colorId={colorId}"
+        //);
 
         if (colorId == 18 &&
             !BanMod.IsProtected(liveClient))

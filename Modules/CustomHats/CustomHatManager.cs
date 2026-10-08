@@ -32,7 +32,7 @@ namespace BanMod.Modules.CustomHats
         private static readonly string CustomHatsDirectory = Path.Combine(BanDataDirectory, "CustomHats");
         private static readonly string ExternalManifestPath = Path.Combine(CustomHatsDirectory, "hats.json");
 
-        private const string CustomHatsServerBaseUrl = "https://server.banmod.online/public/custom-hats";
+        private const string CustomHatsServerBaseUrl = "https://api.banmod.online/public/custom-hats";
         private static readonly HttpClient CustomHatsHttpClient = CreateHttpClient();
 
         private const string EmbeddedManifestPath = "BanMod.Resources.image.hat.hats.json";

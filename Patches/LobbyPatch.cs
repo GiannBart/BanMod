@@ -41,6 +41,7 @@ public class LobbyStartPatch
             if (gameMode == GameModeType.KillRace) return;
             if (gameMode == GameModeType.HotPotatoModded) return;
             if (gameMode == GameModeType.Assassin) return;
+            if (Options.EnableFFA.GetBool()) return;
 
             __instance.StartCoroutine(SendSummaryDelayed().WrapToIl2Cpp());
         }
@@ -57,7 +58,11 @@ public class LobbyStartPatch
         {
             yield break;
         }
-
+        if (BanMod.EndGameForced)
+        {
+            Utils.SendMessage(Translator.GetString("Lobby_Error"));
+            yield break;
+        }
         if (!Options.SendSummary.GetBool())
             yield break;
 

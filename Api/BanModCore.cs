@@ -23,7 +23,7 @@ namespace BanMod
 {
     public static class BanModCore
     {
-        private const string ApiBaseUrl = "https://server.banmod.online";
+        private const string ApiBaseUrl = "https://api.banmod.online";
         public const string PublicApiBaseUrl = ApiBaseUrl;
         private const string ActivationChallengeUrl = ApiBaseUrl + "/api/activation/challenge";
         private const string ActivationVerifyUrl = ApiBaseUrl + "/api/activation/verify";
@@ -58,6 +58,9 @@ namespace BanMod
         private static string _activationToken = "";
         private static long _activationTokenExpiresAtUnix = 0;
         private static bool _activationTokenRecoveryOnly;
+        private static string _clientToken = "";
+        private static string _clientTokenFriendCode = "";
+        private const string ClientTokenPrefsPrefix = "BANMOD_CLIENT_TOKEN_V1_";
         private static string _capturedFriendCode = "";
         private static string _capturedPlayerName = "";
         private static int _capturedClientId = -1;
@@ -394,17 +397,139 @@ namespace BanMod
             catch { }
         }
 
+        public static string GetCurrentClientToken()
+        {
+            try
+            {
+                string friendCode = Norm(_friendCode);
+                if (string.IsNullOrWhiteSpace(friendCode))
+                    return "";
+
+                if (!string.Equals(
+                        Norm(_clientTokenFriendCode),
+                        friendCode,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    _clientToken = LoadClientToken(friendCode);
+                    _clientTokenFriendCode = friendCode;
+                }
+
+                return _clientToken ?? "";
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static string ClientTokenPrefsKey(string friendCode)
+        {
+            friendCode = Norm(friendCode);
+            if (string.IsNullOrWhiteSpace(friendCode))
+                return ClientTokenPrefsPrefix + "UNKNOWN";
+
+            using SHA256 sha = SHA256.Create();
+            byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(friendCode.ToLowerInvariant()));
+            StringBuilder sb = new StringBuilder(hash.Length * 2);
+            foreach (byte b in hash) sb.Append(b.ToString("x2"));
+            return ClientTokenPrefsPrefix + sb.ToString();
+        }
+
+        private static string LoadClientToken(string friendCode)
+        {
+            try
+            {
+                return (PlayerPrefs.GetString(ClientTokenPrefsKey(friendCode), "") ?? "").Trim();
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static void SaveClientToken(string friendCode, string token)
+        {
+            friendCode = Norm(friendCode);
+            token = Norm(token);
+            if (string.IsNullOrWhiteSpace(friendCode) || string.IsNullOrWhiteSpace(token))
+                return;
+
+            try
+            {
+                PlayerPrefs.SetString(ClientTokenPrefsKey(friendCode), token);
+                PlayerPrefs.Save();
+                _clientToken = token;
+                _clientTokenFriendCode = friendCode;
+                BanModApiTokenManager.Token = token;
+            }
+            catch { }
+        }
+
+        private static void ClearClientTokenForFriendCode(string friendCode)
+        {
+            friendCode = Norm(friendCode);
+            if (string.IsNullOrWhiteSpace(friendCode))
+                return;
+
+            try
+            {
+                PlayerPrefs.DeleteKey(ClientTokenPrefsKey(friendCode));
+                PlayerPrefs.Save();
+            }
+            catch { }
+
+            if (string.Equals(
+                    Norm(_clientTokenFriendCode),
+                    friendCode,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                _clientToken = "";
+                _clientTokenFriendCode = "";
+                BanModApiTokenManager.Token = "";
+            }
+        }
+
+        public static void ApplyClientAuthHeaders(UnityWebRequest request)
+        {
+            if (request == null)
+                return;
+
+            string friendCode = GetCurrentFriendCode();
+            string token = GetCurrentClientToken();
+            try { request.SetRequestHeader("X-BANMOD-FriendCode", MakeHeaderSafe(friendCode, "Unknown")); } catch { }
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                try { request.SetRequestHeader("X-BANMOD-Client-Token", MakeHeaderSafe(token, "")); } catch { }
+            }
+        }
 
         public static IEnumerator EnsureActivationTokenForApi(Action<bool, string> callback)
         {
             TryCaptureEosFriendCode("EOSManager.FriendCode/api");
             string friendCode = Norm(_friendCode);
-            bool ready = !string.IsNullOrWhiteSpace(friendCode) && !BanMod.IsBanModDisabled;
+            if (string.IsNullOrWhiteSpace(friendCode) || BanMod.IsBanModDisabled)
+            {
+                callback?.Invoke(false, "");
+                yield break;
+            }
 
-            _activationToken = ready ? friendCode : "";
-            BanModApiTokenManager.Token = _activationToken;
-            callback?.Invoke(ready, _activationToken);
-            yield break;
+            string currentToken = GetCurrentClientToken();
+
+            if (string.IsNullOrWhiteSpace(currentToken))
+            {
+                bool activationOk = false;
+                yield return ActivationFlow(ok => activationOk = ok);
+                if (!activationOk)
+                {
+                    callback?.Invoke(false, "");
+                    yield break;
+                }
+                currentToken = GetCurrentClientToken();
+            }
+
+            bool ready = !string.IsNullOrWhiteSpace(currentToken);
+            BanModApiTokenManager.Token = ready ? currentToken : "";
+            callback?.Invoke(ready, ready ? currentToken : "");
         }
 
         public static bool TryApplyServerForceDisable(string responseText)
@@ -525,7 +650,7 @@ namespace BanMod
             UnityWebRequest request = UnityWebRequest.Get(LoginManifestUrl);
             request.timeout = RequestTimeoutSeconds;
             request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("X-BANMOD-FriendCode", _friendCode);
+            ApplyClientAuthHeaders(request);
 
             yield return request.SendWebRequest();
 
@@ -610,6 +735,8 @@ namespace BanMod
             {
                 _friendCode = newFriendCode;
                 _playerName = newPlayerName;
+                _clientToken = LoadClientToken(_friendCode);
+                BanModApiTokenManager.Token = _clientToken;
 
                 StopAllPremiumModules();
 
@@ -619,14 +746,26 @@ namespace BanMod
                 _playerName = newPlayerName;
             }
 
+            if (string.IsNullOrWhiteSpace(_clientToken))
+            {
+                _clientToken = LoadClientToken(_friendCode);
+                BanModApiTokenManager.Token = _clientToken;
+            }
+
             ModUpdater.StartupUpdateResult updateResult = null;
             yield return ModUpdater.CheckAtStartupCoroutine(result => updateResult = result);
 
             if (updateResult != null && updateResult.BlockStartup)
                 yield break;
 
-            _activationToken = _friendCode;
-            BanModApiTokenManager.Token = _friendCode;
+            bool activationReady = false;
+            yield return ActivationFlow(ok => activationReady = ok);
+            if (!activationReady || string.IsNullOrWhiteSpace(GetCurrentClientToken()))
+            {
+                Debug.LogWarning("[BANMOD][AUTH] Client token unavailable; private services were not started.");
+                StartLobbyLoops();
+                yield break;
+            }
 
             bool loginLoaded = false;
             yield return EnsureLoginBinLoaded(ok => loginLoaded = ok);
@@ -876,13 +1015,16 @@ namespace BanMod
             string banModSha256 = SafeGetOwnBanModSha256();
             string clientVersion = GetCurrentClientVersion();
 
+            string existingClientToken = GetCurrentClientToken();
+
             string body = "{"
                 + "\"FriendCode\":" + JsonString(_friendCode) + ","
                 + "\"PlayerName\":" + JsonString(_playerName) + ","
                 + "\"Nonce\":" + JsonString(challenge.nonce) + ","
                 + "\"ClientVersion\":" + JsonString(clientVersion) + ","
                 + "\"BuildId\":" + JsonString(buildId) + ","
-                + "\"BanModSha256\":" + JsonString(banModSha256)
+                + "\"BanModSha256\":" + JsonString(banModSha256) + ","
+                + "\"ClientToken\":" + JsonString(existingClientToken)
                 + "}";
 
             UnityWebRequest v = new UnityWebRequest(ActivationVerifyUrl, "POST");
@@ -890,6 +1032,10 @@ namespace BanMod
             v.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
             v.downloadHandler = new DownloadHandlerBuffer();
             v.SetRequestHeader("Content-Type", "application/json");
+            if (!string.IsNullOrWhiteSpace(existingClientToken))
+            {
+                try { v.SetRequestHeader("X-BANMOD-Client-Token", MakeHeaderSafe(existingClientToken, "")); } catch { }
+            }
 
             yield return v.SendWebRequest();
 
@@ -922,6 +1068,11 @@ namespace BanMod
             _activationToken = response.activation_token;
             _activationTokenRecoveryOnly = response.recovery_only;
 
+            if (!string.IsNullOrWhiteSpace(response.client_token))
+                SaveClientToken(_friendCode, response.client_token);
+            else if (string.IsNullOrWhiteSpace(_clientToken))
+                _clientToken = LoadClientToken(_friendCode);
+
             if (string.Equals(response.device_status, "pending", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.LogWarning(
@@ -939,7 +1090,7 @@ namespace BanMod
                 : 300;
             _activationTokenExpiresAtUnix =
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Math.Max(30, lifetime);
-            callback(!_activationTokenRecoveryOnly);
+            callback(!_activationTokenRecoveryOnly && !string.IsNullOrWhiteSpace(_clientToken));
         }
 
         private static string GetCurrentClientVersion()
@@ -966,15 +1117,19 @@ namespace BanMod
         private static IEnumerator RequestPremiumAndLoadBins()
         {
             bool identityReady = false;
-            string friendCode = "";
+            string clientToken = "";
 
             yield return EnsureActivationTokenForApi((success, value) =>
             {
                 identityReady = success;
-                friendCode = value ?? "";
+                clientToken = value ?? "";
             });
 
-            if (!identityReady || string.IsNullOrWhiteSpace(friendCode))
+            if (!identityReady || string.IsNullOrWhiteSpace(clientToken))
+                yield break;
+
+            string friendCode = GetCurrentFriendCode();
+            if (string.IsNullOrWhiteSpace(friendCode))
                 yield break;
 
             _friendCode = friendCode;
@@ -988,19 +1143,49 @@ namespace BanMod
                 + "\"LoginBinVersion\":" + JsonString(BanModLoginRuntime.LoginBinVersion)
                 + "}";
 
-            UnityWebRequest req = new UnityWebRequest(AccessUrl, "POST");
-            req.timeout = RequestTimeoutSeconds;
-            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            req.SetRequestHeader("X-BANMOD-FriendCode", _friendCode);
+            string text = "";
+            long responseCode = 0;
+            UnityWebRequest.Result result = UnityWebRequest.Result.InProgress;
 
-            yield return req.SendWebRequest();
+            for (int accessAttempt = 0; accessAttempt < 2; accessAttempt++)
+            {
+                UnityWebRequest req = new UnityWebRequest(AccessUrl, "POST");
+                req.timeout = RequestTimeoutSeconds;
+                req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                req.downloadHandler = new DownloadHandlerBuffer();
+                req.SetRequestHeader("Content-Type", "application/json");
+                ApplyClientAuthHeaders(req);
 
-            string text = req.downloadHandler != null ? req.downloadHandler.text : "";
-            long responseCode = req.responseCode;
-            UnityWebRequest.Result result = req.result;
-            try { req.Dispose(); } catch { }
+                yield return req.SendWebRequest();
+
+                text = req.downloadHandler != null ? req.downloadHandler.text : "";
+                responseCode = req.responseCode;
+                result = req.result;
+                try { req.Dispose(); } catch { }
+
+                bool clientTokenInvalid = responseCode == 401 &&
+                    text != null &&
+                    text.IndexOf("client_token_invalid", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (!clientTokenInvalid || accessAttempt > 0)
+                    break;
+
+                try
+                {
+                    Debug.LogWarning(
+                        "[BANMOD][AUTH] Client token rejected. " +
+                        "Requesting a new credential for this FriendCode/device."
+                    );
+                }
+                catch { }
+
+                ClearClientTokenForFriendCode(friendCode);
+
+                bool recovered = false;
+                yield return ActivationFlow(ok => recovered = ok);
+                if (!recovered || string.IsNullOrWhiteSpace(GetCurrentClientToken()))
+                    break;
+            }
 
             if (result != UnityWebRequest.Result.Success || responseCode < 200 || responseCode >= 300)
             {
@@ -1177,7 +1362,7 @@ namespace BanMod
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
-            req.SetRequestHeader("X-BANMOD-FriendCode", _friendCode);
+            ApplyClientAuthHeaders(req);
 
             yield return req.SendWebRequest();
 
@@ -1800,6 +1985,9 @@ namespace BanMod
                             client.Timeout = TimeSpan.FromSeconds(RequestTimeoutSeconds);
                             if (!string.IsNullOrWhiteSpace(_friendCode))
                                 client.DefaultRequestHeaders.TryAddWithoutValidation("X-BANMOD-FriendCode", _friendCode);
+                            string clientToken = GetCurrentClientToken();
+                            if (!string.IsNullOrWhiteSpace(clientToken))
+                                client.DefaultRequestHeaders.TryAddWithoutValidation("X-BANMOD-Client-Token", clientToken);
 
                             using (HttpResponseMessage response = await client.GetAsync(url))
                             {
@@ -2516,6 +2704,9 @@ namespace BanMod
         {
             public bool success { get; set; }
             public string activation_token { get; set; }
+            public string client_token { get; set; }
+            public bool client_token_issued { get; set; }
+            public bool client_token_required { get; set; }
             public int expires_in_seconds { get; set; }
             public bool recovery_only { get; set; }
             public string auth_level { get; set; }

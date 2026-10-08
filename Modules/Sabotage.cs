@@ -192,6 +192,26 @@ public static class ShipStatus_FixedUpdate_Patch
             FixAllSabotages(__instance);
             return true;
         }
+        if (gameMode == GameModeType.FFATeam)
+        {
+            FixAllSabotages(__instance);
+            return true;
+        }
+        if (gameMode == GameModeType.HotPotatoModded)
+        {
+            FixAllSabotages(__instance);
+            return true;
+        }
+        if (gameMode == GameModeType.KillRace)
+        {
+            FixAllSabotages(__instance);
+            return true;
+        }
+        if (gameMode == GameModeType.Assassin)
+        {
+            FixAllSabotages(__instance);
+            return true;
+        }
         if (gameMode == GameModeType.RoomRush)
         {
             FixAllSabotages(__instance);
@@ -302,6 +322,22 @@ public static class BlockCloseDoorsPatch
             return false; 
         }
         if (gameMode1 == GameModeType.FFA)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.FFATeam)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.KillRace)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.HotPotatoModded)
+        {
+            return false;
+        }
+        if (gameMode1 == GameModeType.Assassin)
         {
             return false;
         }

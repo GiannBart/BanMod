@@ -22,6 +22,8 @@ namespace BanMod
         private int currentNameIndex = 0;
 
         private PassiveButton rootButton;
+        internal PassiveButton RootButton => rootButton;
+
         private PassiveButton prevButton;
         private PassiveButton applyButton;
         private PassiveButton nextButton;
@@ -121,9 +123,7 @@ namespace BanMod
             LoadNamesFromFile();
             SyncIndexWithCurrentPlayerName();
 
-            Transform parent = MainMenuManagerStartPatch.Logo != null
-                ? MainMenuManagerStartPatch.Logo.transform
-                : null;
+            Transform parent = MainMenuManagerPatch.LeftButtonsAnchor;
 
             if (parent == null)
             {
@@ -135,7 +135,7 @@ namespace BanMod
             rootButton = CreateMenuButton(
                 name: "BanMod_NameRoot",
                 parent: parent,
-                localPosition: new Vector3(-2f, -0.55f, 1f),
+                localPosition: Vector3.zero,
                 normalColor: MainNormalColor,
                 hoverColor: MainHoverColor,
                 action: action,
@@ -271,12 +271,12 @@ namespace BanMod
             if (nameToShow == "\uFFA0")
             {
                 valueText.text = "INVISIBLE NAME";
-                valueText.color = new Color(0.62f, 0.66f, 0.74f, 1f); 
+                valueText.color = new Color(0.62f, 0.66f, 0.74f, 1f);
             }
             else
             {
                 valueText.text = nameToShow;
-                valueText.color = Color.white; 
+                valueText.color = Color.white;
             }
         }
 

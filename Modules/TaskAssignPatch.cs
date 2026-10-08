@@ -63,7 +63,6 @@ namespace BanMod
                 }
 
                 if (
-                    (Watcher.WatcherSelected && pc.PlayerId == Watcher.WatcherId) ||
                     ((BanMod.GM.Value || ForcedRoleSystem.GM) && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
                 )
                 {
@@ -111,7 +110,6 @@ namespace BanMod
             }
 
             if (
-                (Watcher.WatcherSelected && pc.PlayerId == Watcher.WatcherId) ||
                 ((BanMod.GM.Value || ForcedRoleSystem.GM) && pc.PlayerId == PlayerControl.LocalPlayer.PlayerId)
             )
             {

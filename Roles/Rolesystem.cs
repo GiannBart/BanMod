@@ -648,9 +648,18 @@ namespace BanMod
                 yield break;
             }
 
-            bool identityOk = !string.IsNullOrWhiteSpace(friendCode);
-            callback?.Invoke(identityOk, friendCode, playerName, "");
-            yield break;
+            bool tokenReady = false;
+            string clientToken = "";
+            yield return BanModCore.EnsureActivationTokenForApi((success, token) =>
+            {
+                tokenReady = success;
+                clientToken = token ?? "";
+            });
+
+            bool identityOk = !string.IsNullOrWhiteSpace(friendCode) &&
+                              tokenReady &&
+                              !string.IsNullOrWhiteSpace(clientToken);
+            callback?.Invoke(identityOk, friendCode, playerName, clientToken);
         }
 
         private static IEnumerator SendForceRoleRequest(
@@ -679,7 +688,7 @@ namespace BanMod
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
-            req.SetRequestHeader("X-BANMOD-FriendCode", friendCode ?? "");
+            BanModApiTokenManager.ApplyAuthHeader(req);
 
             yield return req.SendWebRequest();
 
@@ -1743,6 +1752,11 @@ namespace BanMod
                 return true;
             }
 
+            if (Options.EnableFFA.GetBool())
+            {
+                return true;
+            }
+
             if (gameMode == GameModeType.TaskRun ||
                 gameMode == GameModeType.ZombieMode ||
                 gameMode == GameModeType.RoomRush ||
@@ -1802,8 +1816,7 @@ namespace BanMod
 
             var gameOptions = GameOptionsManager.Instance.CurrentGameOptions;
 
-            if (GameManager.Instance != null &&
-    GameManager.Instance.IsHideAndSeek())
+            if (GameManager.Instance != null && GameManager.Instance.IsHideAndSeek())
             {
                 PrepareHnsSeekers();
 
@@ -1839,30 +1852,61 @@ namespace BanMod
                         bool isSeeker =
                             HnsSeekers.Contains(player.PlayerId);
 
-                        if (isSeeker)
+                        if (Options.EnableSNS.GetBool())
                         {
-                            RoleManager.Instance.SetRole(
-                                player,
-                                RoleTypes.Impostor);
+                            if (isSeeker)
+                            {
+                                RoleManager.Instance.SetRole(
+                                    player,
+                                    RoleTypes.Shapeshifter);
 
-                            player.RpcSetRole(
-                                RoleTypes.Impostor,
-                                false);
+                                player.RpcSetRole(
+                                    RoleTypes.Shapeshifter,
+                                    false);
 
-                            BMLogger.Info(
-                                $"[HnS] Seeker assegnato: " +
-                                $"{player.Data.PlayerName} " +
-                                $"PlayerId={player.PlayerId}");
+                                BMLogger.Info(
+                                    $"[HnS] Shapeshifter assegnato: " +
+                                    $"{player.Data.PlayerName} " +
+                                    $"PlayerId={player.PlayerId}");
+                            }
+                            else
+                            {
+                                RoleManager.Instance.SetRole(
+                                    player,
+                                    RoleTypes.Engineer);
+
+                                player.RpcSetRole(
+                                    RoleTypes.Engineer,
+                                    false);
+                            }
                         }
                         else
                         {
-                            RoleManager.Instance.SetRole(
-                                player,
-                                RoleTypes.Engineer);
+                            if (isSeeker)
+                            {
+                                RoleManager.Instance.SetRole(
+                                    player,
+                                    RoleTypes.Impostor);
 
-                            player.RpcSetRole(
-                                RoleTypes.Engineer,
-                                false);
+                                player.RpcSetRole(
+                                    RoleTypes.Impostor,
+                                    false);
+
+                                BMLogger.Info(
+                                    $"[HnS] Seeker assegnato: " +
+                                    $"{player.Data.PlayerName} " +
+                                    $"PlayerId={player.PlayerId}");
+                            }
+                            else
+                            {
+                                RoleManager.Instance.SetRole(
+                                    player,
+                                    RoleTypes.Engineer);
+
+                                player.RpcSetRole(
+                                    RoleTypes.Engineer,
+                                    false);
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -2038,19 +2082,53 @@ namespace BanMod
                     .Where(p => !(hasRealJester && Jester.IsJester(p)))
                     .ToList();
 
+                if (localIsGM && localPlayer != null)
+                {
+                    var gmPlayer = crewmatesToAssign
+                        .FirstOrDefault(p => p.PlayerId == localPlayer.PlayerId);
+
+                    if (gmPlayer != null)
+                    {
+                        ForcedRoleHelpers.ApplyExactRole(
+                            gmPlayer,
+                            RoleTypes.Crewmate
+                        );
+
+                        crewmatesToAssign.Remove(gmPlayer);
+                    }
+                }
+
                 if (impostorsToAssign.Count > 0)
                 {
-                    var impostorInfos = new Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo>();
-                    foreach (var imp in impostorsToAssign)
-                        impostorInfos.Add(imp.Data);
+                    if (fourImpActive)
+                    {
+                        foreach (var imp in impostorsToAssign)
+                        {
+                            if (imp == null || imp.Data == null)
+                                continue;
 
-                    GameManager.Instance.LogicRoleSelection.AssignRolesForTeam(
-                        impostorInfos,
-                        gameOptions,
-                        RoleTeamTypes.Impostor,
-                        int.MaxValue,
-                        new Il2CppSystem.Nullable<RoleTypes>()
-                    );
+                            ForcedRoleHelpers.ApplyExactRole(
+                                imp,
+                                RoleTypes.Impostor
+                            );
+                        }
+                    }
+                    else
+                    {
+                        var impostorInfos =
+                            new Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo>();
+
+                        foreach (var imp in impostorsToAssign)
+                            impostorInfos.Add(imp.Data);
+
+                        GameManager.Instance.LogicRoleSelection.AssignRolesForTeam(
+                            impostorInfos,
+                            gameOptions,
+                            RoleTeamTypes.Impostor,
+                            int.MaxValue,
+                            new Il2CppSystem.Nullable<RoleTypes>(RoleTypes.Impostor)
+                        );
+                    }
                 }
 
                 if (crewmatesToAssign.Count > 0)

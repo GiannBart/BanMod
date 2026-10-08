@@ -4668,9 +4668,32 @@ public static class MatchSummary1
                 )
             );
         }
+        if (GameOptionsManager.Instance.CurrentGameOptions.GameMode == GameModes.HideNSeek && !Options.EnableFFA.GetBool())
+        {
+            if (CrewmateWin)
+            {
+                report.AppendLine(
+                    GetString(
+                        "CrewmateWins"
+                    )
+                );
 
-        
-        if (Options.GameMode.Selected ==
+                AppendImpostors(report);
+            }
+            else if (ImpostorWin)
+            {
+                {
+                    report.AppendLine(
+                        GetString(
+                            "ImpostorWins"
+                        )
+                    );
+                }
+
+                AppendImpostors(report);
+            }
+        }
+        else if (Options.GameMode.Selected ==
             GameModeType.RoomRush)
         {
             report.AppendLine(

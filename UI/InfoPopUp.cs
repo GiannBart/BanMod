@@ -46,8 +46,12 @@ public static class PreviousMatchPopupTracker
         public byte PlayerId;
         public string Name = "";
         public string RoleName = "";
+
         public string VanillaRoleName = "";
         public string CustomRoleName = "";
+        public string DeadRoleName = "";
+
+        public bool WasImpostor;
     }
 
     public sealed class MatchSnapshot
@@ -159,13 +163,19 @@ public static class PreviousMatchPopupTracker
             string vanillaRole = GetVanillaRoleName(player);
             string roleName = GetRoleNameForSummary(player);
 
+            bool wasImpostor =
+                player.Data.Role != null &&
+                player.Data.Role.TeamType == RoleTeamTypes.Impostor;
+
             InitialRoles[player.PlayerId] = new PlayerRoleStat
             {
                 PlayerId = player.PlayerId,
                 Name = GetPlayerName(player),
                 RoleName = roleName,
                 VanillaRoleName = vanillaRole,
-                CustomRoleName = customRole
+                CustomRoleName = customRole,
+                DeadRoleName = "",
+                WasImpostor = wasImpostor
             };
         }
 
@@ -269,9 +279,6 @@ public static class PreviousMatchPopupTracker
             return;
 
         if (ImmortalManager.IsImmortal(target.PlayerId))
-            return;
-
-        if (Watcher.IsWatcher(target.PlayerId))
             return;
 
         if (BanMod.ShieldedPlayers.Contains(target.PlayerId))
@@ -666,6 +673,51 @@ public static class PreviousMatchPopupTracker
         History.Add(snap);
     }
 
+    public static void CaptureFinalRole()
+    {
+        foreach (var player in PlayerControl.AllPlayerControls.ToArray())
+        {
+            if (player == null ||
+                player.Data == null ||
+                player.Data.Role == null)
+            {
+                continue;
+            }
+
+            if (!InitialRoles.TryGetValue(
+                    player.PlayerId,
+                    out var roleStat))
+            {
+                continue;
+            }
+
+            roleStat.Name = GetPlayerName(player);
+
+            switch (player.Data.Role.Role)
+            {
+                case RoleTypes.SpiritGuide:
+                    roleStat.DeadRoleName =
+                        "<color=#00FFFF>Spirit Guide</color>";
+                    break;
+
+                case RoleTypes.GuardianAngel:
+                    roleStat.DeadRoleName =
+                        "<color=#FFD966>Guardian Angel</color>";
+                    break;
+
+                case RoleTypes.CrewmateGhost:
+                    roleStat.DeadRoleName =
+                        "<color=#00FFFF>Crewmate Ghost</color>";
+                    break;
+
+                case RoleTypes.ImpostorGhost:
+                    roleStat.DeadRoleName =
+                        "<color=#FF4D4D>Impostor Ghost</color>";
+                    break;
+            }
+        }
+    }
+
     public static string GetLastSavedReport()
     {
         return LastSnapshot != null ? LastSnapshot.ReportText : "";
@@ -713,6 +765,40 @@ public static class PreviousMatchPopupTracker
         return $"<color=#00FFFF>{GetString("Crewmate")}</color>";
     }
 
+    private static string GetDeadRoleName(
+    PlayerControl player,
+    PlayerRoleStat initialRole)
+    {
+        if (player == null ||
+            player.Data == null ||
+            !player.Data.IsDead)
+        {
+            return "";
+        }
+
+        if (player.Data.Role != null)
+        {
+            switch (player.Data.Role.Role)
+            {
+                case RoleTypes.SpiritGuide:
+                    return $"<color=#00FFFF>SpiritGuide</color>";
+
+                case RoleTypes.GuardianAngel:
+                    return "<color=#FFD966>Guardian Angel</color>";
+
+                case RoleTypes.CrewmateGhost:
+                    return "<color=#00FFFF>Crewmate Ghost</color>";
+
+                case RoleTypes.ImpostorGhost:
+                    return "<color=#FF4D4D>Impostor Ghost</color>";
+            }
+        }
+
+        if (initialRole != null && initialRole.WasImpostor)
+            return "<color=#FF4D4D>Impostor Ghost</color>";
+
+        return "<color=#00FFFF>Crewmate Ghost</color>";
+    }
     private static string GetCustomRoleName(PlayerControl player)
     {
         if (player == null || player.Data == null)
@@ -727,17 +813,8 @@ public static class PreviousMatchPopupTracker
         if (player.PlayerId == Exiler.ExilerId)
             return $"<color=#FFA500>{GetString("ExilerRole")}</color>";
 
-        if (player.PlayerId == Judge.JudgeId)
-            return $"<color=#FFA500>{GetString("JudgeRole")}</color>";
-
-        if (player.PlayerId == Profiler.ProfilerId)
-            return $"<color=#FFA500>{GetString("ProfilerRole")}</color>";
-
         if (player.PlayerId == ImmortalManager.ImmortalPlayerId)
             return $"<color=#FFA500>{GetString("Immortal")}</color>";
-
-        if (player.PlayerId == Watcher.WatcherId)
-            return $"<color=#FFA500>{GetString("Watcher")}</color>";
 
         return null;
     }
@@ -1085,7 +1162,9 @@ public static class PreviousMatchPopupTracker
             Name = s.Name,
             RoleName = s.RoleName,
             VanillaRoleName = s.VanillaRoleName,
-            CustomRoleName = s.CustomRoleName
+            CustomRoleName = s.CustomRoleName,
+            DeadRoleName = s.DeadRoleName,
+            WasImpostor = s.WasImpostor
         };
     }
 }

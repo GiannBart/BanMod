@@ -396,12 +396,6 @@ namespace BanMod
                         Jester.ForcedJesterSelected = false;
                         Exiler.ExilerId = 255;
                         Exiler.ExilerSelected = false;
-                        Judge.JudgeId = 255;
-                        Judge.JudgeSelected = false;
-                        Profiler.ProfilerId = 255;
-                        Profiler.ProfilerSelected = false;
-                        Watcher.WatcherId = 255;
-                        Watcher.WatcherSelected = false;
                         ChatCommands.ShowChat($"Removed: ALL");
                     }
                 }

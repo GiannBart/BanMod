@@ -56,13 +56,21 @@ namespace BanMod
     [HarmonyPatch(typeof(MainMenuManager))]
     public static class MainMenuManagerPatch
     {
+        //private static PassiveButton template;
+        //private static PassiveButton websiteButton;
+        //private static PassiveButton discordButton;
+        //private static PassiveButton GitButton;
+        //private static PassiveButton KaitoButton;
+        //private static PassiveButton policyPrivacyButton;
         private static PassiveButton template;
-        private static PassiveButton websiteButton;
-        private static PassiveButton GitButton;
+
+        private static PassiveButton policyPrivacyButton;
+        private static PassiveButton contactsButton;
         private static PassiveButton KaitoButton;
+        internal static Transform LeftButtonsAnchor { get; private set; }
 
         public static bool visualized = false;
-        public static PassiveButton UpdateButton { get; private set; }
+        public static PassiveButton CommunityButton { get; private set; }
 
         private static GameObject RightPanel;
         private static Vector3 RightPanelOp;
@@ -297,6 +305,10 @@ namespace BanMod
 
                     ModifyPanel(__instance.mainMenuUI.gameObject, "LeftPanel");
                     ModifyPanel(__instance.mainMenuUI.gameObject, "RightPanel");
+
+                    // Restyling SOLO VISIVO dei pulsanti vanilla.
+                    // Non modifica Transform, posizioni, scale o layout.
+                    StyleExistingMainMenuButtons(__instance);
                 }
 
                 var originalStars = GameObject.Find("BackgroundStarField");
@@ -308,55 +320,64 @@ namespace BanMod
                 if (template == null)
                     return;
 
-                if (GitButton == null)
+                if (LeftButtonsAnchor == null && template.transform != null && template.transform.parent != null)
                 {
-                    GitButton = CreateButton(
-                        "GitButton",
-                        new(-2f, -1.5f, 1f),
-                        new(88, 101, 242, byte.MaxValue),
-                        new(148, 161, byte.MaxValue, byte.MaxValue),
-                        (UnityEngine.Events.UnityAction)(() => Application.OpenURL(BanMod.GitsiteUrl)),
-                        "GitHub");
+                    var anchorObject = new GameObject("BanMod_LeftButtonsAnchor");
+                    LeftButtonsAnchor = anchorObject.transform;
+                    LeftButtonsAnchor.SetParent(template.transform.parent, false);
+                    LeftButtonsAnchor.localPosition = Vector3.zero;
+                    LeftButtonsAnchor.localScale = Vector3.one;
                 }
 
-                if (GitButton != null)
-                    GitButton.gameObject.SetActive(BanMod.ShowGitButton);
+                //if (GitButton == null)
+                //{
+                //    GitButton = CreateButton(
+                //        "GitButton",
+                //        Vector3.zero,
+                //        new Color32(36, 41, 47, 255),      // GitHub graphite
+                //        new Color32(84, 73, 118, 255),     // GitHub hover violetto
+                //        (UnityEngine.Events.UnityAction)(() => Application.OpenURL(BanMod.GitsiteUrl)),
+                //        "GitHub");
+                //}
 
-                if (websiteButton == null)
+                //if (GitButton != null)
+                //    GitButton.gameObject.SetActive(BanMod.ShowGitButton);
+
+                //if (websiteButton == null)
+                //{
+                //    websiteButton = CreateButton(
+                //        "WebsiteButton",
+                //        Vector3.zero,
+                //        new Color32(4, 72, 91, 255),       // BanMod Site petrolio
+                //        new Color32(0, 132, 158, 255),     // hover cyan
+                //        (UnityEngine.Events.UnityAction)(() => Application.OpenURL(BanMod.LobbysiteUrl)),
+                //        GetString("BanMod_Site"));
+                //}
+
+                //if (websiteButton != null)
+                //    websiteButton.gameObject.SetActive(BanMod.ShowWebsiteButton);
+
+                if (CommunityButton == null)
                 {
-                    websiteButton = CreateButton(
-                        "WebsiteButton",
-                        new(-2f, -1.1f, 1f),
-                        new Color32(70, 130, 180, 255),
-                        new Color32(65, 105, 225, 255),
-                        (UnityEngine.Events.UnityAction)(() => Application.OpenURL(BanMod.LobbysiteUrl)),
-                        GetString("BanMod_Site"));
+                    CommunityButton = CreateButton(
+                        "CommunityButton",
+                        Vector3.zero,
+                        new Color32(172, 38, 122, 255),     // Community magenta: spezza nettamente col resto
+                        new Color32(224, 72, 166, 255),     // hover fucsia acceso
+                        (UnityEngine.Events.UnityAction)(() => BanModCommunityBoard.OpenFromMainMenu()),
+                        GetString("CommunityButton"));
                 }
 
-                if (websiteButton != null)
-                    websiteButton.gameObject.SetActive(BanMod.ShowWebsiteButton);
-
-                if (UpdateButton == null)
-                {
-                    UpdateButton = CreateButton(
-                        "UpdateButton",
-                        new(-2f, -2.3f, 1f),
-                        new(251, 81, 44, byte.MaxValue),
-                        new(211, 77, 48, byte.MaxValue),
-                        (UnityEngine.Events.UnityAction)(() => ModUpdater.StartUpdate(ModUpdater.downloadUrl)),
-                        GetString("UpdateButton"));
-                }
-
-                if (UpdateButton != null)
-                    UpdateButton.gameObject.SetActive(BanMod.ShowUpdateButton);
+                if (CommunityButton != null)
+                    CommunityButton.gameObject.SetActive(BanMod.ShowCommunityButton);
 
                 if (KaitoButton == null)
                 {
                     KaitoButton = CreateButton(
                         "KaitoRunPreset",
-                        new(-2f, -1.9f, 1f),
-                        new Color32(70, 130, 180, 255),
-                        new Color32(65, 105, 225, 255),
+                        Vector3.zero,
+                        new Color32(74, 40, 98, 255),      // Kaito viola scuro
+                        new Color32(134, 69, 153, 255),    // hover viola
                         (UnityEngine.Events.UnityAction)(() => Application.OpenURL(BanMod.KaitositeUrl)),
                         GetString("KaitoRunPreset"));
                 }
@@ -364,12 +385,59 @@ namespace BanMod
                 if (KaitoButton != null)
                     KaitoButton.gameObject.SetActive(BanMod.ShowKaitoButton);
 
+                //if (discordButton == null)
+                //{
+                //    discordButton = CreateButton(
+                //        "discordButton",
+                //        Vector3.zero,
+                //        new Color32(70, 80, 190, 255),     // Discord blurple scuro
+                //        new Color32(88, 101, 242, 255),    // Discord blurple
+                //        (UnityEngine.Events.UnityAction)(() => Application.OpenURL(BanMod.DiscordInviteUrl)),
+                //        GetString("Discord"));
+                //}
+
+                //if (discordButton != null)
+                //    discordButton.gameObject.SetActive(BanMod.ShowDiscordButton);
+
+                if (policyPrivacyButton == null)
+                {
+                    policyPrivacyButton = CreateButton(
+                        "PolicyPrivacyButton",
+                        Vector3.zero,
+                        new Color32(150, 34, 34, 255),
+                        new Color32(205, 52, 52, 255),
+                        (UnityEngine.Events.UnityAction)(() =>
+                        {
+                            BanModPopup.CreatePolicyPrivacyPopup();
+                        }),
+                        "Policy & Privacy"
+                    );
+                }
+                if (contactsButton == null)
+                {
+                    contactsButton = CreateButton(
+                        "ContactsButton",
+                        Vector3.zero,
+
+                        new Color32(38, 92, 125, 255),
+                        new Color32(55, 145, 190, 255),
+
+                        (UnityEngine.Events.UnityAction)(() =>
+                        {
+                            BanModPopup.CreateContactsPopup();
+                        }),
+
+                        "Contacts"
+                    );
+                }
                 var nameUi = NameUI.Instance;
                 if (nameUi == null && __instance.gameObject != null)
                     nameUi = __instance.gameObject.AddComponent<NameUI>();
 
                 if (nameUi != null)
                     nameUi.Initialize(template);
+
+                RefreshSideButtonPositions(__instance);
             }
             catch (Exception e)
             {
@@ -847,6 +915,653 @@ namespace BanMod
             }
         }
 
+        internal static void RefreshSideButtonPositions(MainMenuManager menu)
+        {
+            if (menu == null || menu.quitButton == null)
+                return;
+
+            Transform quitTransform = menu.quitButton.transform;
+            Transform commonParent = quitTransform.parent;
+
+            if (commonParent == null)
+                return;
+
+            // Distanza REALE tra il bordo destro del pulsante vanilla
+            // e il bordo sinistro della colonna BanMod.
+            // 0.30f evita sia la sovrapposizione sia lo spostamento eccessivo a destra.
+            const float HorizontalGap = 0.30f;
+
+            // Spaziatura verticale della colonna BanMod.
+            const float VerticalGap = 0.05f;
+
+            if (!TryGetButtonColliderBounds(menu.quitButton, out Bounds quitBounds))
+                return;
+
+            float targetLeftEdge = quitBounds.max.x + HorizontalGap;
+
+            // Update fa da riferimento verticale in basso, alla stessa altezza di Quit.
+            float baseCenterY = quitBounds.center.y;
+
+            float normalHeight = GetButtonColliderHeight(CommunityButton, quitBounds.size.y);
+            float step = normalHeight + VerticalGap;
+
+            //PositionButtonFromLeftEdge(CommunityButton, targetLeftEdge, baseCenterY);
+            //PositionButtonFromLeftEdge(KaitoButton, targetLeftEdge, baseCenterY + step);
+            //PositionButtonFromLeftEdge(GitButton, targetLeftEdge, baseCenterY + step * 2f);
+            //PositionButtonFromLeftEdge(websiteButton, targetLeftEdge, baseCenterY + step * 3f);
+            //PositionButtonFromLeftEdge(discordButton, targetLeftEdge, baseCenterY + step * 4f);
+            // Il selettore nome deve stare più in alto rispetto alla colonna.
+            //var nameUi = NameUI.Instance;
+            //if (nameUi != null && nameUi.RootButton != null)
+            //{
+            //    const float NameExtraUp = 0.60f;
+            //    float nameY = baseCenterY + step * 4f + NameExtraUp;
+            //    PositionButtonFromLeftEdge(nameUi.RootButton, targetLeftEdge, nameY);
+            //}
+            // Dal basso verso l'alto:
+            // KaitoRun
+            // Contacts
+            // Policy & Privacy
+            // Community
+            // Name
+
+            PositionButtonFromLeftEdge(
+                KaitoButton,
+                targetLeftEdge,
+                baseCenterY
+            );
+
+            PositionButtonFromLeftEdge(
+                contactsButton,
+                targetLeftEdge,
+                baseCenterY + step
+            );
+
+            PositionButtonFromLeftEdge(
+                policyPrivacyButton,
+                targetLeftEdge,
+                baseCenterY + step * 2f
+            );
+
+            PositionButtonFromLeftEdge(
+                CommunityButton,
+                targetLeftEdge,
+                baseCenterY + step * 3f
+            );
+
+            var nameUi = NameUI.Instance;
+
+            if (nameUi != null && nameUi.RootButton != null)
+            {
+                const float NameExtraUp = 0.60f;
+
+                float nameY =
+                    baseCenterY +
+                    step * 3f +
+                    NameExtraUp;
+
+                PositionButtonFromLeftEdge(
+                    nameUi.RootButton,
+                    targetLeftEdge,
+                    nameY
+                );
+            }
+        }
+
+        private static void PositionButtonFromLeftEdge(
+            PassiveButton button,
+            float targetLeftEdge,
+            float targetCenterY)
+        {
+            if (button == null)
+                return;
+
+            if (!TryGetButtonColliderBounds(button, out Bounds bounds))
+                return;
+
+            Vector3 worldPosition = button.transform.position;
+
+            worldPosition.x += targetLeftEdge - bounds.min.x;
+            worldPosition.y += targetCenterY - bounds.center.y;
+
+            button.transform.position = worldPosition;
+        }
+
+        private static float GetButtonColliderHeight(PassiveButton button, float fallback)
+        {
+            if (button != null && TryGetButtonColliderBounds(button, out Bounds bounds))
+                return bounds.size.y;
+
+            return fallback;
+        }
+
+        private static bool TryGetButtonColliderBounds(PassiveButton button, out Bounds bounds)
+        {
+            bounds = new Bounds();
+
+            if (button == null)
+                return false;
+
+            // Usa PRIMA il BoxCollider2D: rappresenta il rettangolo vero del bottone
+            // e non include icone/testi che possono sporgere.
+            BoxCollider2D box = button.GetComponent<BoxCollider2D>();
+            if (box != null)
+            {
+                bounds = box.bounds;
+                return true;
+            }
+
+            Collider2D collider = button.GetComponent<Collider2D>();
+            if (collider != null)
+            {
+                bounds = collider.bounds;
+                return true;
+            }
+
+            SpriteRenderer renderer = button.GetComponent<SpriteRenderer>();
+            if (renderer != null)
+            {
+                bounds = renderer.bounds;
+                return true;
+            }
+
+            return false;
+        }
+
+        // ============================================================
+        // VISUAL STYLE - mix BanMod / EHR / TOHE
+        // Queste funzioni modificano esclusivamente colori/rendering.
+        // NON cambiano posizione, localPosition, anchoredPosition o layout.
+        // ============================================================
+
+        private static Sprite _banModButtonOverlaySprite;
+        private static Sprite _banModThinBorderSprite;
+
+        private static Sprite GetBanModButtonOverlaySprite()
+        {
+            if (_banModButtonOverlaySprite != null)
+                return _banModButtonOverlaySprite;
+
+            const int width = 512;
+            const int height = 128;
+
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.name = "BanMod_ButtonOverlayTexture";
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+
+            Color32[] pixels = new Color32[width * height];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    byte alpha = 0;
+
+                    // Riflesso molto leggero nella parte alta: deve sembrare
+                    // una lucidatura, non una texture appoggiata sopra il menu.
+                    float topT = Mathf.Clamp01((y - height * 0.58f) / (height * 0.42f));
+                    alpha = (byte)Mathf.Max(alpha, Mathf.RoundToInt(topT * 8f));
+
+                    // Due bande diagonali morbide in stile EHR/TOHE.
+                    float diagonal = x - y * 1.25f;
+
+                    if (diagonal > 128f && diagonal < 200f)
+                    {
+                        float center = 164f;
+                        float distance = Mathf.Abs(diagonal - center) / 36f;
+                        byte bandAlpha = (byte)Mathf.RoundToInt(Mathf.Lerp(36f, 10f, distance));
+                        alpha = (byte)Mathf.Max(alpha, bandAlpha);
+                    }
+
+                    if (diagonal > 246f && diagonal < 270f)
+                    {
+                        byte bandAlpha = 15;
+                        alpha = (byte)Mathf.Max(alpha, bandAlpha);
+                    }
+
+                    pixels[y * width + x] = new Color32(255, 255, 255, alpha);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+
+            _banModButtonOverlaySprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, width, height),
+                new Vector2(0.5f, 0.5f),
+                100f
+            );
+
+            _banModButtonOverlaySprite.name = "BanMod_ButtonOverlaySprite";
+            return _banModButtonOverlaySprite;
+        }
+
+        private static Sprite GetBanModThinBorderSprite()
+        {
+            if (_banModThinBorderSprite != null)
+                return _banModThinBorderSprite;
+
+            const int width = 512;
+            const int height = 128;
+            const int thickness = 4;
+            const int corner = 14;
+
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.name = "BanMod_ThinBorderTexture";
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+
+            Color32[] pixels = new Color32[width * height];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    bool outer = x >= 1 && x < width - 1 && y >= 1 && y < height - 1;
+                    bool inner = x >= thickness && x < width - thickness &&
+                                 y >= thickness && y < height - thickness;
+
+                    // Smussa leggermente gli angoli per seguire meglio il bottone vanilla.
+                    bool inCornerCut =
+                        (x < corner && y < corner && (corner - x) + (corner - y) > corner + 5) ||
+                        (x >= width - corner && y < corner && (x - (width - corner)) + (corner - y) > corner + 5) ||
+                        (x < corner && y >= height - corner && (corner - x) + (y - (height - corner)) > corner + 5) ||
+                        (x >= width - corner && y >= height - corner && (x - (width - corner)) + (y - (height - corner)) > corner + 5);
+
+                    byte alpha = (byte)(outer && !inner && !inCornerCut ? 255 : 0);
+                    pixels[y * width + x] = new Color32(255, 255, 255, alpha);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+
+            _banModThinBorderSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, width, height),
+                new Vector2(0.5f, 0.5f),
+                100f
+            );
+
+            _banModThinBorderSprite.name = "BanMod_ThinBorderSprite";
+            return _banModThinBorderSprite;
+        }
+
+        private static void AddThinButtonBorder(SpriteRenderer target, Color32 borderColor)
+        {
+            if (target == null || target.sprite == null)
+                return;
+
+            try
+            {
+                Transform existing = target.transform.Find("BanModThinBorder");
+                if (existing != null)
+                    Object.Destroy(existing.gameObject);
+
+                GameObject borderObject = new GameObject("BanModThinBorder");
+                borderObject.transform.SetParent(target.transform, false);
+                borderObject.transform.localRotation = Quaternion.identity;
+
+                SpriteRenderer border = borderObject.AddComponent<SpriteRenderer>();
+                border.sprite = GetBanModThinBorderSprite();
+                border.sortingLayerID = target.sortingLayerID;
+                border.sortingOrder = target.sortingOrder;
+                border.maskInteraction = target.maskInteraction;
+
+                if (target.sharedMaterial != null)
+                    border.sharedMaterial = target.sharedMaterial;
+
+                Vector2 visualSize = target.drawMode == SpriteDrawMode.Simple
+                    ? target.sprite.bounds.size
+                    : target.size;
+
+                Vector2 nativeSize = border.sprite.bounds.size;
+                if (nativeSize.x <= 0f || nativeSize.y <= 0f)
+                {
+                    Object.Destroy(borderObject);
+                    return;
+                }
+
+                borderObject.transform.localScale = new Vector3(
+                    visualSize.x / nativeSize.x,
+                    visualSize.y / nativeSize.y,
+                    1f
+                );
+
+                // Stesso sorting order del bottone: il piccolo Z serve solo a tenerlo sulla superficie.
+                borderObject.transform.localPosition = new Vector3(0f, 0f, -0.012f);
+                border.color = borderColor;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BanMod] Errore AddThinButtonBorder: " + e);
+            }
+        }
+
+        private static void AddVisualOverlay(
+            SpriteRenderer target,
+            float intensity,
+            bool keepRightSideClean = false)
+        {
+            if (target == null || target.sprite == null)
+                return;
+
+            try
+            {
+                Transform existing = target.transform.Find("BanModVisualOverlay");
+                if (existing != null)
+                    Object.Destroy(existing.gameObject);
+
+                GameObject overlayObject = new GameObject("BanModVisualOverlay");
+                overlayObject.transform.SetParent(target.transform, false);
+                overlayObject.transform.localRotation = Quaternion.identity;
+                overlayObject.transform.localScale = Vector3.one;
+
+                SpriteRenderer overlay = overlayObject.AddComponent<SpriteRenderer>();
+                overlay.sprite = GetBanModButtonOverlaySprite();
+                overlay.sortingLayerID = target.sortingLayerID;
+
+                // Stesso sortingOrder del bottone: evita che il riflesso finisca
+                // sopra popup, screen tint o altri elementi UI.
+                overlay.sortingOrder = target.sortingOrder;
+                overlay.maskInteraction = target.maskInteraction;
+
+                if (target.sharedMaterial != null)
+                    overlay.sharedMaterial = target.sharedMaterial;
+
+                // I bottoni possono essere SpriteRenderer Sliced:
+                // usa la dimensione visuale reale, non sprite.bounds in ogni caso.
+                Vector2 visualSize;
+                if (target.drawMode == SpriteDrawMode.Simple)
+                    visualSize = target.sprite.bounds.size;
+                else
+                    visualSize = target.size;
+
+                Vector2 overlayNativeSize = overlay.sprite.bounds.size;
+                if (overlayNativeSize.x <= 0f || overlayNativeSize.y <= 0f)
+                {
+                    Object.Destroy(overlayObject);
+                    return;
+                }
+
+                overlay.drawMode = SpriteDrawMode.Simple;
+
+                float scaleX = visualSize.x / overlayNativeSize.x;
+                float scaleY = visualSize.y / overlayNativeSize.y;
+
+                // Per GIOCA / INVENTARIO / NEGOZIO il riflesso resta più a sinistra,
+                // lasciando pulita la zona del testo sulla destra.
+                if (keepRightSideClean)
+                    scaleX *= 0.72f;
+
+                overlayObject.transform.localScale = new Vector3(
+                    scaleX,
+                    scaleY,
+                    1f
+                );
+
+                overlayObject.transform.localPosition = keepRightSideClean
+                    ? new Vector3(-0.42f, 0f, -0.01f)
+                    : new Vector3(0f, 0f, -0.01f);
+
+                float clampedIntensity = Mathf.Clamp01(intensity);
+                overlay.color = new Color(1f, 1f, 1f, clampedIntensity);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BanMod] Errore AddVisualOverlay: " + e);
+            }
+        }
+
+        private static void StylePassiveButton(
+            PassiveButton button,
+            Color32 normalColor,
+            Color32 hoverColor,
+            Color32 textColor,
+            float overlayIntensity = 1f,
+            bool keepRightSideClean = false,
+            float textOutlineWidth = 0.015f,
+            Color32? outlineColor = null,
+            float? fontSize = null,
+            bool thinWhiteButtonBorder = false,
+            bool boldText = false)
+        {
+            if (button == null)
+                return;
+
+            try
+            {
+                SpriteRenderer normalSprite = null;
+                SpriteRenderer hoverSprite = null;
+
+                if (button.inactiveSprites != null)
+                    normalSprite = button.inactiveSprites.GetComponent<SpriteRenderer>();
+
+                if (button.activeSprites != null)
+                    hoverSprite = button.activeSprites.GetComponent<SpriteRenderer>();
+
+                if (normalSprite != null)
+                {
+                    normalSprite.color = normalColor;
+                    AddVisualOverlay(normalSprite, overlayIntensity, keepRightSideClean);
+
+                    if (thinWhiteButtonBorder)
+                        AddThinButtonBorder(normalSprite, new Color32(255, 255, 255, 215));
+                }
+
+                if (hoverSprite != null)
+                {
+                    hoverSprite.color = hoverColor;
+                    AddVisualOverlay(
+                        hoverSprite,
+                        Mathf.Min(1f, overlayIntensity + 0.05f),
+                        keepRightSideClean
+                    );
+
+                    if (thinWhiteButtonBorder)
+                        AddThinButtonBorder(hoverSprite, new Color32(255, 255, 255, 245));
+                }
+
+                // Testo: un solo colore pieno e leggibile, senza outline/ombre.
+                // Applichiamo lo stile a TUTTI i TMP figli del bottone: alcuni pulsanti
+                // vanilla contengono piu' componenti testo e GetComponentInChildren
+                // puo' prendere quello sbagliato.
+                TMP_Text[] texts = button.GetComponentsInChildren<TMP_Text>(true);
+                if (texts != null)
+                {
+                    foreach (TMP_Text buttonText in texts)
+                    {
+                        if (buttonText == null)
+                            continue;
+
+                        buttonText.color = textColor;
+                        buttonText.outlineWidth = 0f;
+                        buttonText.outlineColor = new Color32(0, 0, 0, 0);
+
+                        if (fontSize.HasValue)
+                            buttonText.fontSize = fontSize.Value;
+
+                        buttonText.fontStyle = boldText ? FontStyles.Bold : FontStyles.Normal;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[BanMod] Errore StylePassiveButton {button.name}: {e}");
+            }
+        }
+
+        private static void StyleExistingMainMenuButtons(MainMenuManager menu)
+        {
+            if (menu == null || menu.mainMenuUI == null)
+                return;
+
+            try
+            {
+                PassiveButton[] buttons = menu.mainMenuUI.GetComponentsInChildren<PassiveButton>(true);
+                if (buttons == null)
+                    return;
+
+                foreach (PassiveButton button in buttons)
+                {
+                    if (button == null || string.IsNullOrEmpty(button.name))
+                        continue;
+
+                    string n = button.name.Replace(" ", "").Replace("_", "").ToLowerInvariant();
+
+                    // Usiamo nomi ESATTI invece di Contains("play").
+                    // Questo evita di applicare i riflessi ai pulsanti Local/Online,
+                    // alle card del pannello destro o ad altri elementi del menu.
+                    bool isPlay = n == "playbutton" || n == "play";
+                    bool isInventory = n == "inventorybutton" || n == "inventory";
+                    bool isShop = n == "shopbutton" || n == "shop";
+
+                    bool isNews = n == "newsbutton" || n == "news";
+                    bool isAccount = n == "myaccountbutton" || n == "accountbutton" || n == "myaccount";
+                    bool isSettings = n == "settingsbutton" || n == "settingbutton" || n == "settings";
+
+                    bool isCredits = n == "creditsbutton" || n == "creditbutton" || n == "credits";
+                    bool isQuit = n == "quitbutton" || n == "exitbutton" || n == "quit" || n == "exit";
+
+                    if (isPlay)
+                    {
+                        // GIOCA: celeste brillante. Sullo sprite vanilla questa tinta
+                        // resta pulita e visibile (l'arancione veniva moltiplicato dalla
+                        // texture originale e tendeva al verde).
+                        StylePassiveButton(
+                            button,
+                            new Color32(42, 187, 218, 255),        // celeste acceso
+                            new Color32(91, 220, 242, 255),        // hover celeste chiaro
+                            new Color32(18, 18, 18, 255),           // testo NERO SCURO fisso
+                            0.10f,
+                            true,
+                            0f,
+                            null,
+                            3.80f,
+                            false,
+                            false                                   // stile normale
+                        );
+                        continue;
+                    }
+
+                    if (isInventory || isShop)
+                    {
+                        // INVENTARIO / NEGOZIO: quasi neri, senza bordo, con testo giallo caldo
+                        // per avere contrasto forte ma restare coerenti con il menu.
+                        StylePassiveButton(
+                            button,
+                            new Color32(12, 17, 19, 255),          // nero grafite
+                            new Color32(27, 34, 37, 255),          // hover antracite
+                            new Color32(250, 250, 250, 255),       // testo BIANCO CHIARO fisso
+                            0.05f,                                 // riflesso appena percepibile
+                            true,
+                            0f,
+                            null,
+                            3.72f,
+                            false,                                  // nessun bordo bianco
+                            false                                   // stile normale
+                        );
+                        continue;
+                    }
+
+                    if (isNews || isAccount || isSettings)
+                    {
+                        StylePassiveButton(
+                            button,
+                            new Color32(0, 77, 74, 255),
+                            new Color32(0, 117, 110, 255),
+                            new Color32(255, 255, 255, 255),
+                            0.18f
+                        );
+                        continue;
+                    }
+
+                    if (isCredits)
+                    {
+                        // RICONOSCIMENTI: bronzo/ocra, distinto sia dal teal che dal rosso.
+                        StylePassiveButton(
+                            button,
+                            new Color32(126, 92, 24, 255),
+                            new Color32(166, 124, 35, 255),
+                            new Color32(255, 255, 255, 255),
+                            0.10f
+                        );
+                        continue;
+                    }
+
+                    if (isQuit)
+                    {
+                        // ESCI: rosso netto e immediatamente riconoscibile.
+                        StylePassiveButton(
+                            button,
+                            new Color32(150, 34, 34, 255),
+                            new Color32(205, 52, 52, 255),
+                            new Color32(255, 255, 255, 255),
+                            0.08f
+                        );
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BanMod] Errore StyleExistingMainMenuButtons: " + e);
+            }
+        }
+
+        internal static void EnforceFixedPrimaryTextStyles(MainMenuManager menu)
+        {
+            if (menu == null || menu.mainMenuUI == null)
+                return;
+
+            try
+            {
+                PassiveButton[] buttons = menu.mainMenuUI.GetComponentsInChildren<PassiveButton>(true);
+                if (buttons == null)
+                    return;
+
+                foreach (PassiveButton button in buttons)
+                {
+                    if (button == null || string.IsNullOrEmpty(button.name))
+                        continue;
+
+                    string n = button.name.Replace(" ", "").Replace("_", "").ToLowerInvariant();
+
+                    bool isPlay = n == "playbutton" || n == "play";
+                    bool isInventory = n == "inventorybutton" || n == "inventory";
+                    bool isShop = n == "shopbutton" || n == "shop";
+
+                    if (!isPlay && !isInventory && !isShop)
+                        continue;
+
+                    Color32 fixedColor = isPlay
+                        ? new Color32(18, 18, 18, 255)
+                        : new Color32(250, 250, 250, 255);
+
+                    TMP_Text[] texts = button.GetComponentsInChildren<TMP_Text>(true);
+                    if (texts == null)
+                        continue;
+
+                    foreach (TMP_Text text in texts)
+                    {
+                        if (text == null)
+                            continue;
+
+                        // Forzato ogni frame: hover, click e selezione non possono cambiarlo.
+                        text.color = fixedColor;
+                        text.fontStyle = FontStyles.Normal;
+                        text.outlineWidth = 0f;
+                        text.outlineColor = new Color32(0, 0, 0, 0);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BanMod] Errore EnforceFixedPrimaryTextStyles: " + e);
+            }
+        }
+
         public static PassiveButton CreateButton(
             string name,
             Vector3 localPosition,
@@ -861,13 +1576,7 @@ namespace BanMod
                 if (template == null)
                     return null;
 
-                Transform parent = null;
-
-                if (MainMenuManagerStartPatch.Logo != null)
-                    parent = MainMenuManagerStartPatch.Logo.transform;
-
-                if (parent == null && template.transform != null)
-                    parent = template.transform.parent;
+                Transform parent = LeftButtonsAnchor;
 
                 if (parent == null)
                     return null;
@@ -924,11 +1633,13 @@ namespace BanMod
                 if (button.activeSprites != null)
                     hoverSprite = button.activeSprites.GetComponent<SpriteRenderer>();
 
-                if (normalSprite != null)
-                    normalSprite.color = normalColor;
-
-                if (hoverSprite != null)
-                    hoverSprite.color = hoverColor;
+                StylePassiveButton(
+                    button,
+                    normalColor,
+                    hoverColor,
+                    new Color32(250, 252, 255, 255),
+                    0.34f
+                );
 
                 var buttonCollider = button.GetComponent<BoxCollider2D>();
                 if (buttonCollider != null)
@@ -1123,8 +1834,10 @@ public static class AccountTabFixPatch
 [HarmonyPatch(typeof(MainMenuManager), nameof(MainMenuManager.LateUpdate))]
 public static class MainMenuManagerUpdatePatch
 {
-    public static void Postfix()
+    public static void Postfix(MainMenuManager __instance)
     {
         Utils.MainMenuInfo.Update();
+        MainMenuManagerPatch.RefreshSideButtonPositions(__instance);
+        MainMenuManagerPatch.EnforceFixedPrimaryTextStyles(__instance);
     }
 }

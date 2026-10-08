@@ -59,19 +59,24 @@ namespace BanMod
         {
             ClearLastTokenBlockState();
 
-            string friendCode = BanModIdentity.GetFriendCode();
-            if (!string.IsNullOrWhiteSpace(friendCode))
+            bool ready = false;
+            string token = "";
+            yield return BanModCore.EnsureActivationTokenForApi((success, value) =>
             {
-                Token = friendCode.Replace("\r", "").Replace("\n", "").Trim();
-                callback?.Invoke(true, Token);
+                ready = success;
+                token = value ?? "";
+            });
+
+            Token = ready ? token : "";
+            if (!ready || string.IsNullOrWhiteSpace(Token))
+            {
+                LastTokenRequestWasBlocked = true;
+                LastTokenBlockReason = "BanMod client token unavailable.";
+                callback?.Invoke(false, "");
                 yield break;
             }
 
-            Token = "";
-            LastTokenRequestWasBlocked = true;
-            LastTokenBlockReason = "FriendCode unavailable.";
-            callback?.Invoke(false, "");
-            yield break;
+            callback?.Invoke(true, Token);
         }
 
         public static void ApplyAuthHeader(UnityWebRequest request)
@@ -80,8 +85,12 @@ namespace BanMod
                 return;
 
             string friendCode = BanModIdentity.GetFriendCode();
-            Token = friendCode ?? "";
+            string clientToken = BanModCore.GetCurrentClientToken();
+            Token = clientToken ?? "";
+
             TrySetHeader(request, "X-BANMOD-FriendCode", MakeHeaderSafe(friendCode, "Unknown"));
+            if (!string.IsNullOrWhiteSpace(clientToken))
+                TrySetHeader(request, "X-BANMOD-Client-Token", MakeHeaderSafe(clientToken, ""));
         }
 
         private static string MakeHeaderSafe(string value, string fallback)
@@ -158,6 +167,32 @@ namespace BanMod
                     .Replace("\\\\", "\\");
             }
             catch { return fallback; }
+        }
+    }
+
+    [HarmonyPatch(typeof(UnityWebRequest), nameof(UnityWebRequest.SendWebRequest))]
+    internal static class BanModUnityWebRequestAuthPatch
+    {
+        [HarmonyPrefix]
+        private static void Prefix(UnityWebRequest __instance)
+        {
+            if (__instance == null)
+                return;
+
+            try
+            {
+                string url = __instance.url ?? "";
+                string apiBase = BanModApiConfig.ApiBaseUrl ?? "";
+                if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(apiBase))
+                    return;
+
+                if (!url.StartsWith(apiBase.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(url, apiBase, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                BanModApiTokenManager.ApplyAuthHeader(__instance);
+            }
+            catch { }
         }
     }
 

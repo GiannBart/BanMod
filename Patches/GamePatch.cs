@@ -37,9 +37,6 @@ public static class GameEndPatch
         Guesser.ResetSpecialKiller();
         Jester.ResetJester();
         Exiler.ResetExiler();
-        Judge.ResetJudge();
-        Profiler.ResetProfiler();
-        Watcher.ResetWatcher();
         MurderPlayerCombinedPatch.misfireCountShape.Clear();
         BanMod.RoomZoneManagerInstance.ClearAllData();
         GuessManager.ResetForNewGame();
@@ -86,6 +83,7 @@ public static class GameStartPatch
         MatchSummary1.Reset();
         TaskTracker.Clear();
         KillTracker.Clear();
+        BanMod.EndGameForced = false;
         BanMod.InitiallyProtectedFriendCode = null;
 
         BanMod.IsFirstRound = true;
@@ -219,8 +217,7 @@ public static class GameStartPatch
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(
-                selectedPlayerName) ||
+        if (string.IsNullOrWhiteSpace(selectedPlayerName) ||
             string.Equals(
                 selectedPlayerName,
                 "None",
@@ -229,6 +226,28 @@ public static class GameStartPatch
         {
             BMLogger.Info(
                 "[ManualFirstProtection] Nessun giocatore selezionato."
+            );
+
+            return;
+        }
+
+        // Se il GM è attivo, il player locale non può
+        // ricevere la protezione manuale.
+        bool gmActive =
+            BanMod.GM.Value ||
+            ForcedRoleSystem.GM;
+
+        if (gmActive &&
+            PlayerControl.LocalPlayer != null &&
+            PlayerControl.LocalPlayer.Data != null &&
+            string.Equals(
+                selectedPlayerName,
+                PlayerControl.LocalPlayer.Data.PlayerName,
+                System.StringComparison.Ordinal
+            ))
+        {
+            BMLogger.Info(
+                "[ManualFirstProtection] Player locale escluso perché GM attivo."
             );
 
             return;
@@ -271,25 +290,23 @@ public static class GameStartPatch
             yield return null;
         }
 
-        ApplyProtectFirst();
-        ApplyManualFirstMeetingProtection();
-
         if (Options.Jester.GetBool())
         {
             Jester.SendJesterMessage();
         }
-        if (BanMod.GM.Value)
+        if (BanMod.GM.Value || ForcedRoleSystem.GM)
         {
+            while (!PlayerControl.LocalPlayer.roleAssigned || PlayerControl.LocalPlayer.Data.Role == null)
+            {
+                yield return null;
+            }
             PlayerControl.LocalPlayer.RpcSetRole(RoleTypes.CrewmateGhost, true);
-            HudManager.Instance.StartCoroutine(CheatUtils.CompletaTutteLeTaskConDelay(1f));
             BMLogger.Info("[BANMOD] GM Mode");
         }
-        if (ForcedRoleSystem.GM)
-        {
-            PlayerControl.LocalPlayer.RpcSetRole(RoleTypes.CrewmateGhost, true);
-            HudManager.Instance.StartCoroutine(CheatUtils.CompletaTutteLeTaskConDelay(1f));
-            BMLogger.Info("[BANMOD] GM Mode");
-        }
+
+        ApplyProtectFirst();
+        ApplyManualFirstMeetingProtection();
+
         if (Options.EngineerFixer.GetBool())
             Engineer.SendEngineerMessage();
 
@@ -318,27 +335,6 @@ public static class GameStartPatch
             Exiler.OnStart();
             Exiler.SendExilerMessage();
         }
-        if (Options.Judge.GetBool())
-        {
-            Judge.OnStart();
-            Judge.SendJudgeMessage();
-        }
-        if (Options.Profiler.GetBool())
-        {
-            Profiler.OnStart();
-            Profiler.SendProfilerMessage();
-        }
-        if (Options.Watcher.GetBool())
-        {
-            Watcher.OnStart();
-
-            if (Watcher.WatcherSelected && Watcher.WatcherId != 255)
-            {
-                Watcher.SelectWatcherLover();
-                Watcher.SendWatcherMessage();
-                Watcher.ApplyWatcherShield();
-            }
-        }
         PreviousMatchPopupTracker.ResetCurrentMatch();
         PreviousMatchPopupTracker.CaptureInitialRoles();
         Jester.ForcedJesterSelected = false;
@@ -357,6 +353,7 @@ public static class CheckEndCriteriaPatch
 
         if (BanMod.IsBanModDisabled) return true;
         if (!AmongUsClient.Instance.AmHost) return true;
+        PreviousMatchPopupTracker.CaptureFinalRole();
 
         if (gameMode == GameModeType.TaskRun)
         {
@@ -667,12 +664,18 @@ public static class EndCriteriaPatch
         if (__instance == null || __instance.Manager == null || AmongUsClient.Instance.IsGameOver)
             return false;
 
+        PreviousMatchPopupTracker.CaptureFinalRole();
+        TaskTracker.Clear();
+        ImpostorTracker.Clear();
+        ImpostorTracker.DetectImpostors();
+
         int totalSeekersNeeded = Options.NumSeekers.GetInt();
 
         if (totalSeekersNeeded == 1)
             return true;
 
         bool showAd = false;
+
 
         try
         {
@@ -721,7 +724,6 @@ public static class EndCriteriaPatch
             __instance.Manager.RpcEndGame(GameOverReason.HideAndSeek_CrewmatesByTimer, false);
             return false;
         }
-
         return false;
     }
 }

@@ -46,7 +46,7 @@ public sealed class DiscordAutomuteManager : MonoBehaviour
 
     public static DiscordAutomuteManager Instance { get; private set; }
 
-    private const string WebhookUrl = "https://discord.com/api/webhooks/1555951445566693428/BI_mBJ9h9w1T2jk9VFGDwxaKbbWFM0KyR6Udj_2l6nV-M1bMwfygx5Dd8MTtC_1gnORU";
+    private const string AutomuteApiUrl = BanModCore.PublicApiBaseUrl + "/api/discord/automute";
 
     private const float StateCheckInterval = 0.20f;
     private const float HeartbeatInterval = 20f;
@@ -503,13 +503,8 @@ public sealed class DiscordAutomuteManager : MonoBehaviour
             return;
         }
 
-        string requestJson =
-            "{\"content\":\"" +
-            EscapeJson(stateJson) +
-            "\",\"allowed_mentions\":{\"parse\":[]}}";
-
-        SendWebhook(
-            requestJson,
+        SendAutomuteState(
+            stateJson,
             RequestKind.State,
             seq,
             reason);
@@ -664,7 +659,7 @@ public sealed class DiscordAutomuteManager : MonoBehaviour
         }
     }
 
-    private void SendWebhook(
+    private void SendAutomuteState(
         string json,
         RequestKind kind,
         long sequence,
@@ -681,13 +676,15 @@ public sealed class DiscordAutomuteManager : MonoBehaviour
             byte[] body = Encoding.UTF8.GetBytes(json);
 
             UnityWebRequest request = new(
-                WebhookUrl,
+                AutomuteApiUrl,
                 UnityWebRequest.kHttpVerbPOST);
 
             request.uploadHandler = new UploadHandlerRaw(body);
             request.downloadHandler = new DownloadHandlerBuffer();
 
             request.SetRequestHeader("Content-Type", "application/json");
+            request.SetRequestHeader("Accept", "application/json");
+            BanModApiTokenManager.ApplyAuthHeader(request);
             request.timeout = 5;
 
             UnityWebRequestAsyncOperation operation = request.SendWebRequest();
@@ -710,7 +707,7 @@ public sealed class DiscordAutomuteManager : MonoBehaviour
 
             try
             {
-                Debug.LogError("[DiscordAutomute] SendWebhook failed: " + ex);
+                Debug.LogError("[DiscordAutomute] Automute API request failed: " + ex);
             }
             catch { }
         }

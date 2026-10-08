@@ -98,17 +98,8 @@ namespace BanMod
             if (Jester.JesterId != 255 && Jester.JesterId == playerId)
                 return GetString("Jester");
 
-            if (Watcher.WatcherId != 255 && Watcher.WatcherId == playerId)
-                return GetString("Watcher");
-
             if (Exiler.ExilerId != 255 && Exiler.ExilerId == playerId)
                 return GetString("Exiler");
-            
-            if (Judge.JudgeId != 255 && Judge.JudgeId == playerId)
-                return GetString("Judge");
-
-            if (Profiler.ProfilerId != 255 && Profiler.ProfilerId == playerId)
-                return GetString("Profiler");
 
             if (Guesser.SpecialKillerId != 255 && Guesser.SpecialKillerId == playerId)
                 return GetString("Guesser");
@@ -126,20 +117,8 @@ namespace BanMod
             if (Jester.JesterId != 255 && Jester.JesterId == playerId)
                 return GetString("JesterInfo");
 
-            if (Watcher.WatcherId != 255 && Watcher.WatcherId == playerId)
-            {
-                var lover = Watcher.GetWatcherLoverPlayer();
-
-            }
-
             if (Exiler.ExilerId != 255 && Exiler.ExilerId == playerId)
                 return GetString("ExilerInfo");
-
-            if (Judge.JudgeId != 255 && Judge.JudgeId == playerId)
-                return GetString("JudgeInfo");
-
-            if (Profiler.ProfilerId != 255 && Profiler.ProfilerId == playerId)
-                return GetString("ProfilerInfo");
 
             if (Guesser.SpecialKillerId != 255 && Guesser.SpecialKillerId == playerId)
                 return GetString("GuesserInfo");
@@ -157,16 +136,7 @@ namespace BanMod
             if (Jester.JesterId != 255 && Jester.JesterId == playerId)
                 return new Color32(255, 60, 60, 255);   
 
-            if (Watcher.WatcherId != 255 && Watcher.WatcherId == playerId)
-                return new Color32(120, 120, 255, 255);  
-
             if (Exiler.ExilerId != 255 && Exiler.ExilerId == playerId)
-                return new Color32(80, 180, 255, 255);
-
-            if (Judge.JudgeId != 255 && Judge.JudgeId == playerId)
-                return new Color32(80, 180, 255, 255);
-
-            if (Profiler.ProfilerId != 255 && Profiler.ProfilerId == playerId)
                 return new Color32(80, 180, 255, 255);
 
             if (Guesser.SpecialKillerId != 255 && Guesser.SpecialKillerId == playerId)
@@ -185,16 +155,7 @@ namespace BanMod
             if (Jester.JesterId != 255 && Jester.JesterId == playerId)
                 return "Neutral";
 
-            if (Watcher.WatcherId != 255 && Watcher.WatcherId == playerId)
-                return "Custom Crew";
-
             if (Exiler.ExilerId != 255 && Exiler.ExilerId == playerId)
-                return "Custom Crew";
-
-            if (Profiler.ProfilerId != 255 && Profiler.ProfilerId == playerId)
-                return "Custom Crew";
-
-            if (Judge.JudgeId != 255 && Judge.JudgeId == playerId)
                 return "Custom Crew";
 
             if (Guesser.SpecialKillerId != 255 && Guesser.SpecialKillerId == playerId)
@@ -212,9 +173,6 @@ namespace BanMod
 
             if (Jester.JesterId != 255 && Jester.JesterId == playerId)
                 return new Color32(80, 180, 255, 255);
-
-            if (Watcher.WatcherId != 255 && Watcher.WatcherId == playerId)
-                return new Color32(120, 120, 255, 255);
 
             return fallback;
         }

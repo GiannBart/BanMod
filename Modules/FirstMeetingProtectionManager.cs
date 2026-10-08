@@ -199,9 +199,6 @@ public static class FirstMeetingProtectionManager
         if (ImmortalManager.IsImmortal(playerId))
             return true;
 
-        if (Watcher.IsWatcher(playerId))
-            return true;
-
         if (PlayerControl.LocalPlayer != null &&
             PlayerControl.LocalPlayer.PlayerId == playerId &&
             Options.ProtectFirstHost.GetBool())

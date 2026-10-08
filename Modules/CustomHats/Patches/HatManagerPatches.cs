@@ -27,7 +27,7 @@ namespace BanMod.Modules.CustomHats.Patches
             {
                 EnsureCustomHatsCreated();
 
-                bool customSkinEnabled = Options.CustomSkin.GetBool();
+                bool customSkinEnabled = BanMod.CustomSkin.Value;
 
                 List<HatData> noHat = new List<HatData>();
                 List<HatData> originalHats = new List<HatData>();

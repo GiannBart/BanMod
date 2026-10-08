@@ -42,10 +42,6 @@ namespace BanMod
                 .Where(p => p.Data != null && !p.Data.IsDead
                             && Crewmate(p)
                             && p.PlayerId != Exiler.ExilerId
-                            && p.PlayerId != Judge.JudgeId
-                            && !Judge(p)
-                            && p.PlayerId != Profiler.ProfilerId
-                            && p.PlayerId != Watcher.WatcherId
                             && p.PlayerId != Guesser.SpecialKillerId)
                 .ToList();
 

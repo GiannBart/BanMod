@@ -66,8 +66,11 @@ namespace BanMod
         {
             public byte PlayerId;
             public string Name = "";
-            public string VanillaRole = "";
+
+            public string AliveRole = "";
             public string CustomRole = "";
+            public string DeadRole = "";
+
             public string Tasks = "";
             public string AssignedProtections = "";
             public string EffectiveProtections = "";
@@ -545,13 +548,14 @@ namespace BanMod
 
             return new float[]
             {
-                contentWidth * 0.15f,
-                contentWidth * 0.16f,
-                contentWidth * 0.15f,
-                contentWidth * 0.10f,
-                contentWidth * 0.16f,
-                contentWidth * 0.18f,
-                contentWidth * 0.08f
+        contentWidth * 0.14f, // Nome
+        contentWidth * 0.12f, // Vivo
+        contentWidth * 0.12f, // Custom
+        contentWidth * 0.13f, // Morto
+        contentWidth * 0.09f, // Tasks
+        contentWidth * 0.14f, // Assigned
+        contentWidth * 0.16f, // Effective
+        contentWidth * 0.10f  // Kills
             };
         }
 
@@ -681,57 +685,77 @@ namespace BanMod
                 {
                     PlayerId = id,
                     Name = name,
-                    VanillaRole = role != null && !string.IsNullOrWhiteSpace(role.VanillaRoleName)
-                        ? role.VanillaRoleName
-                        : "<color=#7F8795>-</color>",
+
+                    AliveRole = role != null && !string.IsNullOrWhiteSpace(role.VanillaRoleName)
+        ? role.VanillaRoleName
+        : "<color=#7F8795>-</color>",
+
                     CustomRole = role != null && !string.IsNullOrWhiteSpace(role.CustomRoleName)
-                        ? role.CustomRoleName
-                        : "<color=#7F8795>-</color>",
+        ? role.CustomRoleName
+        : "<color=#7F8795>-</color>",
+
+                    DeadRole = role != null && !string.IsNullOrWhiteSpace(role.DeadRoleName)
+        ? role.DeadRoleName
+        : "<color=#7F8795>-</color>",
+
                     Tasks = task != null
-                        ? $"{task.Done}/{task.Total}"
-                        : "<color=#7F8795>-</color>",
+        ? $"{task.Done}/{task.Total}"
+        : "<color=#7F8795>-</color>",
+
                     AssignedProtections = protection != null && protection.AssignedCount > 0
-                        ? protection.AssignedCount.ToString()
-                        : "<color=#7F8795>-</color>",
+        ? protection.AssignedCount.ToString()
+        : "<color=#7F8795>-</color>",
+
                     EffectiveProtections = protection != null && protection.EffectiveSaveCount > 0
-                        ? protection.EffectiveSaveCount.ToString()
-                        : "<color=#7F8795>-</color>",
+        ? protection.EffectiveSaveCount.ToString()
+        : "<color=#7F8795>-</color>",
+
                     Kills = kill != null && kill.KillCount > 0
-                        ? kill.KillCount.ToString()
-                        : "<color=#7F8795>-</color>"
+        ? kill.KillCount.ToString()
+        : "<color=#7F8795>-</color>"
                 });
             }
 
             return rows.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
         }
         [HideFromIl2Cpp]
-        private void DrawOverviewTable(PreviousMatchPopupTracker.MatchSnapshot snap)
+        private void DrawOverviewTable(
+    PreviousMatchPopupTracker.MatchSnapshot snap)
         {
             var rows = BuildOverviewRows(snap);
             var widths = GetTableColumnWidths();
 
             GUILayout.BeginHorizontal(tableHeaderRowStyle);
-            DrawHeaderCell("Nome", widths[0]);
+
+            DrawHeaderCell(GetString("Nome"), widths[0]);
             DrawHeaderCell(GetString("Roles"), widths[1]);
-            DrawHeaderCell("Custom", widths[2]);
-            DrawHeaderCell(GetString("PrevMatchBtnTasks"), widths[3]);
-            DrawHeaderCell(GetString("ProtectionAssignedHeader"), widths[4]);
-            DrawHeaderCell(GetString("ProtectionEffectiveHeader"), widths[5]);
-            DrawHeaderCell(GetString("KillsLabel"), widths[6]);
+            DrawHeaderCell(GetString("Custom"), widths[2]);
+            DrawHeaderCell(GetString("Roles_(Death)"), widths[3]);
+            DrawHeaderCell(GetString("PrevMatchBtnTasks"), widths[4]);
+            DrawHeaderCell(GetString("ProtectionAssignedHeader"), widths[5]);
+            DrawHeaderCell(GetString("ProtectionEffectiveHeader"), widths[6]);
+            DrawHeaderCell(GetString("KillsLabel"), widths[7]);
+
             GUILayout.EndHorizontal();
 
             for (int i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
 
-                GUILayout.BeginHorizontal(i % 2 == 0 ? tableRowStyle : tableRowAltStyle);
+                GUILayout.BeginHorizontal(
+                    i % 2 == 0
+                        ? tableRowStyle
+                        : tableRowAltStyle);
+
                 DrawCell(row.Name, widths[0]);
-                DrawCell(row.VanillaRole, widths[1]);
+                DrawCell(row.AliveRole, widths[1]);
                 DrawCell(row.CustomRole, widths[2]);
-                DrawCell(row.Tasks, widths[3]);
-                DrawCell(row.AssignedProtections, widths[4]);
-                DrawCell(row.EffectiveProtections, widths[5]);
-                DrawCell(row.Kills, widths[6]);
+                DrawCell(row.DeadRole, widths[3]);
+                DrawCell(row.Tasks, widths[4]);
+                DrawCell(row.AssignedProtections, widths[5]);
+                DrawCell(row.EffectiveProtections, widths[6]);
+                DrawCell(row.Kills, widths[7]);
+
                 GUILayout.EndHorizontal();
             }
         }

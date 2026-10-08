@@ -1399,12 +1399,6 @@ public static class MatchTextLogger
             return "Guesser";
         if (Exiler.ExilerId != byte.MaxValue && playerId == Exiler.ExilerId)
             return "Exiler";
-        if (Judge.JudgeId != byte.MaxValue && playerId == Judge.JudgeId)
-            return "Judge";
-        if (Profiler.ProfilerId != byte.MaxValue && playerId == Profiler.ProfilerId)
-            return "Profiler";
-        if (Watcher.WatcherId != byte.MaxValue && playerId == Watcher.WatcherId)
-            return "Watcher";
         if (ImmortalManager.ImmortalPlayerId.HasValue &&
             playerId == ImmortalManager.ImmortalPlayerId.Value)
         {

@@ -209,6 +209,9 @@ public static class FfaExternalBridge
                     GameModeType.FFA))
                 return 1;
 
+            if (Options.EnableFFA.GetBool() && GameManager.Instance.IsHideAndSeek())
+                return 1;
+
             if (Options.GameMode.GetValue(
                     GameModeType.FFATeam))
                 return 2;
@@ -307,59 +310,44 @@ public static class FfaExternalBridge
             );
         }
 
-        if (Options.FfaKillerRole != null)
+        int killerRole = 0;
+
+        switch (mode)
         {
-            SetValue(
-                KillerRoleField,
-                Mathf.Clamp(
-                    Options.FfaKillerRole.GetValue(),
-                    0,
-                    1
-                )
-            );
+            case 1:
+                killerRole =
+                    Options.FfaKillerRole != null
+                        ? Options.FfaKillerRole.GetValue()
+                        : 0;
+                break;
+
+            case 2:
+                killerRole =
+                    Options.FfaTeamKillerRole != null
+                        ? Options.FfaTeamKillerRole.GetValue()
+                        : 0;
+                break;
+
+            case 4:
+                killerRole =
+                    Options.AssassinKillerRole != null
+                        ? Options.AssassinKillerRole.GetValue()
+                        : 0;
+                break;
+
+            case 5:
+                killerRole =
+                    Options.KillRaceKillerRole != null
+                        ? Options.KillRaceKillerRole.GetValue()
+                        : 0;
+                break;
         }
-        if (Options.FfaTeamKillerRole != null)
+
+        if (mode != 3)
         {
             SetValue(
                 KillerRoleField,
-                Mathf.Clamp(
-                    Options.FfaTeamKillerRole.GetValue(),
-                    0,
-                    1
-                )
-            );
-        }
-        if (Options.KillRaceKillerRole != null)
-        {
-            SetValue(
-                KillerRoleField,
-                Mathf.Clamp(
-                    Options.KillRaceKillerRole.GetValue(),
-                    0,
-                    1
-                )
-            );
-        }
-        if (Options.AssassinKillerRole != null)
-        {
-            SetValue(
-                KillerRoleField,
-                Mathf.Clamp(
-                    Options.AssassinKillerRole.GetValue(),
-                    0,
-                    1
-                )
-            );
-        }
-        if (Options.HotPotatoKillerRole != null)
-        {
-            SetValue(
-                KillerRoleField,
-                Mathf.Clamp(
-                    Options.HotPotatoKillerRole.GetValue(),
-                    0,
-                    1
-                )
+                Mathf.Clamp(killerRole, 0, 1)
             );
         }
 

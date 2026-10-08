@@ -324,9 +324,8 @@ namespace BanMod
         public static OptionItem AutoVote;
         public static StringOptionItem AutoVoteAction;
         public static OptionItem sendInfocomand;
-        public static OptionItem buttonvisibile;
+        //public static OptionItem buttonvisibile;
         public static OptionItem EngineerFixer;
-        public static OptionItem Watcher;
         public static StringOptionItem ExilerAction;
         public static StringOptionItem KickLevelAction;
         public static StringOptionItem ActionTeamers;
@@ -397,18 +396,15 @@ namespace BanMod
         public static StringOptionItem FFAVentTeleportMode;
         public static OptionItem specialvote;
         public static List<StringOptionItem> SeekerSelections = new List<StringOptionItem>();
-        public static OptionItem CustomSkin;
+        //public static OptionItem CustomSkin;
         public static OptionItem DisableDevice;
         public static bool ForceOwnLanguage = true;
-        public static OptionItem Judge;
-        public static IntegerOptionItem JudgeEndUse;
-        public static OptionItem Profiler;
         public static StringOptionItem ProfilerHintMode;
         public static StringOptionItem ProtectFirstPlayer;
         public static StringOptionItem FfaKillerRole;
+        public static StringOptionItem HnSKillerRole;
         public static StringOptionItem FfaTeamKillerRole;
         public static StringOptionItem KillRaceKillerRole;
-        public static StringOptionItem HotPotatoKillerRole;
         public static StringOptionItem AssassinKillerRole;
         public static StringOptionItem FfaTeamCount;
         public static IntegerOptionItem HotPotatoModdedFirstDelaySeconds;
@@ -432,6 +428,11 @@ namespace BanMod
         private static bool _reOpenSettingsScheduled = false;
         private static bool syncingFirstSeeker = false;
         public static OptionItem AutoMuteForDiscord;
+        public static OptionItem EnableFFA;
+        public static OptionItem EnableSNS;
+        public static IntegerOptionItem Shapetimer;
+        public static IntegerOptionItem SnSPunizione;
+        public static IntegerOptionItem SnSError;
         public static bool IsZombieMode => GameMode != null && GameMode.Selected == GameModeType.ZombieMode;
 
         public static readonly GameModeType[] GameModeOrder =
@@ -513,6 +514,44 @@ namespace BanMod
                     );
                 }
             });
+            EnableFFA = BooleanOptionItem.Create("EnableFFA", false, OptionCategory.Seeker, false).SetColor(new Color32(0, 153, 255, 255));
+            EnableSNS = BooleanOptionItem.Create("EnableSNS", false, OptionCategory.Seeker, false).SetColor(new Color32(0, 153, 255, 255));
+            Shapetimer = (IntegerOptionItem)IntegerOptionItem.Create("Shapetimer", new(3, 120, 1), 10, OptionCategory.Seeker, true).SetParent(EnableSNS).SetColor(new Color32(255, 128, 0, 255));
+            SnSPunizione = (IntegerOptionItem)IntegerOptionItem.Create("SnSPunizione", new(0, 120, 5), 30, OptionCategory.Seeker, true).SetParent(EnableSNS).SetColor(new Color32(255, 128, 0, 255));
+            SnSError = (IntegerOptionItem)IntegerOptionItem.Create("SnSError", new(0, 2, 1), 1, OptionCategory.Seeker, true).SetParent(EnableSNS).SetColor(new Color32(255, 128, 0, 255));
+            bool syncingFfaSns = false;
+
+            EnableFFA.RegisterUpdateValueEvent((sender, args) =>
+            {
+                if (syncingFfaSns)
+                    return;
+
+                if (EnableFFA.GetBool() && EnableSNS.GetBool())
+                {
+                    syncingFfaSns = true;
+                    EnableSNS.SetValue(0, false);
+                    syncingFfaSns = false;
+                }
+
+                HnSKillerRole.SetEnabled(EnableFFA.GetBool());
+                ReOpenSettings();
+            });
+
+            EnableSNS.RegisterUpdateValueEvent((sender, args) =>
+            {
+                if (syncingFfaSns)
+                    return;
+
+                if (EnableSNS.GetBool() && EnableFFA.GetBool())
+                {
+                    syncingFfaSns = true;
+                    EnableFFA.SetValue(0, false);
+                    syncingFfaSns = false;
+                }
+
+                ReOpenSettings();
+            });
+            HnSKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.Seeker, true, false).SetParent(EnableFFA).SetColor(new Color32(255, 204, 0, 255));
             NumSeekers = (IntegerOptionItem)IntegerOptionItem.Create("NumSeekers", new(1, 14, 1), 1, OptionCategory.Seeker, true).SetColor(new Color32(0, 153, 255, 255));
             SeekerSelections.Clear();
 
@@ -602,6 +641,15 @@ namespace BanMod
 
             UpdateSeekerOptions();
 
+            EnableFFA.RegisterUpdateValueEvent((sender, args) =>
+            {
+                bool enabled = EnableFFA.GetBool();
+
+                HnSKillerRole.SetEnabled(enabled);
+
+                ReOpenSettings();
+            });
+
             GameMode = new GameModeOptionItem(
                 "GameMode",
                 GameModeOrder,
@@ -668,7 +716,6 @@ namespace BanMod
             FfaKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFA, true, false).SetColor(new Color32(255, 204, 0, 255));
             FfaTeamKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFATEAM, true, false).SetColor(new Color32(255, 204, 0, 255));
             KillRaceKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.KillRace, true, false).SetColor(new Color32(255, 204, 0, 255));
-            HotPotatoKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.HotPotato, true, false).SetColor(new Color32(255, 204, 0, 255));
             AssassinKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.Assassin, true, false).SetColor(new Color32(255, 204, 0, 255));
 
             FfaTeamCount = (StringOptionItem)StringOptionItem.Create("FfaTeamCount", new[] { "2 Team", "3 Team", "4 Team", "5 Team" }, 0, OptionCategory.FFATEAM, true, false ).SetColor(new Color32(255, 80, 80, 255));
@@ -686,6 +733,9 @@ namespace BanMod
             {
                 GameModeType selected =
                     GameMode.Selected;
+
+                bool HnS =
+                    Options.EnableFFA.GetBool();
 
                 bool ffa =
                     selected == GameModeType.FFA;
@@ -705,6 +755,10 @@ namespace BanMod
                 bool hotpotato =
                     selected == GameModeType.HotPotatoModded;
 
+                HnSKillerRole.SetEnabled(
+                    HnS
+                );
+
                 FfaKillerRole.SetEnabled(
                     ffa 
                 );
@@ -719,10 +773,6 @@ namespace BanMod
 
                 KillRaceKillerRole.SetEnabled(
                     killRace
-                );
-
-                HotPotatoKillerRole.SetEnabled(
-                    hotpotato
                 );
 
                 FfaTeamCount.SetEnabled(
@@ -745,68 +795,25 @@ namespace BanMod
                     killRace
                 );
             }
-            bool syncingKillerRole = false;
-
-            void SyncKillerRoles(StringOptionItem source)
-            {
-                if (syncingKillerRole)
-                    return;
-
-                syncingKillerRole = true;
-
-                try
-                {
-                    int value = source.GetInt();
-
-                    StringOptionItem[] options =
-                    {
-                        FfaKillerRole,
-                        FfaTeamKillerRole,
-                        KillRaceKillerRole,
-                        HotPotatoKillerRole,
-                        AssassinKillerRole
-                    };
-
-                    foreach (var option in options)
-                    {
-                        if (option == null || option == source)
-                            continue;
-
-                        if (option.GetInt() != value)
-                            option.SetValue(value, false);
-                    }
-
-                    FfaExternalBridge.SyncAll(true);
-                }
-                finally
-                {
-                    syncingKillerRole = false;
-                }
-            }
 
             FfaKillerRole.RegisterUpdateValueEvent(
                 (sender, args) =>
-                    SyncKillerRoles((StringOptionItem)sender)
+                    FfaExternalBridge.SyncAll(true)
             );
 
             FfaTeamKillerRole.RegisterUpdateValueEvent(
                 (sender, args) =>
-                    SyncKillerRoles((StringOptionItem)sender)
+                    FfaExternalBridge.SyncAll(true)
             );
 
             KillRaceKillerRole.RegisterUpdateValueEvent(
                 (sender, args) =>
-                    SyncKillerRoles((StringOptionItem)sender)
-            );
-
-            HotPotatoKillerRole.RegisterUpdateValueEvent(
-                (sender, args) =>
-                    SyncKillerRoles((StringOptionItem)sender)
+                    FfaExternalBridge.SyncAll(true)
             );
 
             AssassinKillerRole.RegisterUpdateValueEvent(
                 (sender, args) =>
-                    SyncKillerRoles((StringOptionItem)sender)
+                    FfaExternalBridge.SyncAll(true)
             );
 
             FfaTeamCount.RegisterUpdateValueEvent(
@@ -899,8 +906,8 @@ namespace BanMod
 
             AllowColorChangeAll = BooleanOptionItem.Create("AllowColorChangeAll", false, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
             AllowColorChangeModerator = BooleanOptionItem.Create("AllowColorChangeModerator", false, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
-            buttonvisibile = BooleanOptionItem.Create("QuickMenusVisible", false, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
-            CustomSkin = BooleanOptionItem.Create("CustomSkin", true, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
+            //buttonvisibile = BooleanOptionItem.Create("QuickMenusVisible", false, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
+            //CustomSkin = BooleanOptionItem.Create("CustomSkin", true, OptionCategory.Appearance, true).SetColor(new Color32(0, 153, 255, 255));
 
             Protection10Sec = BooleanOptionItem.Create("Protection10Sec", false, OptionCategory.Protection, true).SetColor(new Color32(0, 153, 255, 255));
             ProtectFirstHost = BooleanOptionItem.Create("ProtectFirstHost", false, OptionCategory.Protection, true).SetColor(new Color32(0, 153, 255, 255));
@@ -982,14 +989,6 @@ namespace BanMod
             DisableUploadData = BooleanOptionItem.Create("DisableUploadData", false, OptionCategory.Long, true).SetColor(new Color32(0, 153, 255, 255));
             DisableFuelEngines = BooleanOptionItem.Create("DisableFuelEngines", false, OptionCategory.Long, true).SetColor(new Color32(0, 153, 255, 255));
             DisableActivateWeatherNodes = BooleanOptionItem.Create("DisableActivateWeatherNodes", false, OptionCategory.Long, true).SetColor(new Color32(0, 153, 255, 255));
-
-            Profiler = BooleanOptionItem.Create("Profiler", false, OptionCategory.Profiler, true).SetColor(new Color32(0, 153, 255, 255));
-            ProfilerHintMode = (StringOptionItem)StringOptionItem.Create("ProfilerHintMode", new[] { "Lieve", "Medio", "Forte", "ConTask" }, 0, OptionCategory.Profiler, true, true).SetParent(Profiler).SetColor(new Color32(255, 204, 0, 255));
-
-            Judge = BooleanOptionItem.Create("Judge", false, OptionCategory.Judge, true).SetColor(new Color32(0, 153, 255, 255));
-            JudgeEndUse = (IntegerOptionItem)IntegerOptionItem.Create("JudgeEndUse", new(0, 5, 1), 3, OptionCategory.Judge, true).SetParent(Judge).SetColor(new Color32(0, 153, 255, 255));
-
-            Watcher = BooleanOptionItem.Create("Watcher", false, OptionCategory.Watcher, true).SetColor(new Color32(0, 153, 255, 255));
 
             Jester = BooleanOptionItem.Create("Jester", false, OptionCategory.Jester, true).SetColor(new Color32(0, 153, 255, 255));
             JesterVent = BooleanOptionItem.Create("JesterVent", false, OptionCategory.Jester, true).SetParent(Jester).SetColor(new Color32(0, 153, 255, 255));

@@ -96,8 +96,7 @@ public static class MeetingHudClosePatch
             if (PlayerControl.LocalPlayer != null &&
                 PlayerControl.LocalPlayer.Data != null &&
                 !PlayerControl.LocalPlayer.Data.IsDead &&
-                !ImmortalManager.IsImmortal(PlayerControl.LocalPlayer.PlayerId) &&
-                !Watcher.IsWatcher(PlayerControl.LocalPlayer.PlayerId))
+                !ImmortalManager.IsImmortal(PlayerControl.LocalPlayer.PlayerId))
             {
                 BanMod.ShieldedPlayers.Remove(PlayerControl.LocalPlayer.PlayerId);
                 PlayerControl.LocalPlayer.RemoveProtection();
@@ -146,11 +145,6 @@ public static class CombinedReportDeadBodyPatch
         if (Options.DisableMeetingsAndReports.GetBool())
             return false;
 
-        if (Watcher.IsWatcher(__instance))
-        {
-            BMLogger.Info($"[Watcher] Bloccato meeting/report da Watcher {__instance.PlayerId}.");
-            return false;
-        }
 
         GameModeType gameMode1 = Options.GameMode.Selected;
 

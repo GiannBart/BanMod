@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.9.3";
+    public static string modVersion = "3.9.7";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.9.3";
+    public const string PluginVersion = "3.9.7";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.9.29" };
@@ -72,6 +72,7 @@ public partial class BanMod : BasePlugin
     public static bool forceImpostor = false;
     public static bool _initialized = false;
     public static bool EveryRandomActive = false;
+    public static bool EndGameForced = false;
     public static float everyRandomTimer = 0f;
     public static float rainbowPlayerTimer = 0f;
     public static PlayerControl RainbowTarget = null;
@@ -115,11 +116,13 @@ public partial class BanMod : BasePlugin
     public static readonly bool premiumButton = true;
     public static readonly bool ShowlobbyButton = true;
     public static readonly bool ShowKaitoButton = true;
-    public static bool ShowUpdateButton = true;
+    public static readonly bool ShowDiscordButton = true;
+    public static bool ShowCommunityButton = true;
     public static readonly string GitsiteUrl = "https://github.com/GiannBart/BanMod";
     public static readonly string LobbysiteUrl = "https://banmod.online/";
     public static readonly string DiscordInviteUrl = "https://discord.gg/HGEBsm3vps";
     public static readonly string KaitositeUrl = "https://telegra.ph/KaitoRun-Fungle-Lobby-11-16";
+    public static readonly string DiscordUrl = "https://discord.com/users/1537337616775651389";
     public static bool hasSentHackWarning = false;
     public static bool hasKilled = false;
     public static RoomZoneManager RoomZoneManagerInstance = new RoomZoneManager();
@@ -383,7 +386,7 @@ public partial class BanMod : BasePlugin
     public static ConfigEntry<bool> AktiveLobby { get; private set; }
     public static ConfigEntry<bool> HalloweenDecorations { get; private set; }
     public static ConfigEntry<bool> AnniversaryDecorations { get; private set; }
-    public static ConfigEntry<bool> DleksEht { get; private set; }
+    public static ConfigEntry<bool> CustomSkin { get; private set; }
     public static ConfigEntry<bool> AktiveChat { get; private set; }
     public static ConfigEntry<bool> ChatOffIfImpostor { get; private set; }
     public static ConfigEntry<bool> Resize_Player { get; private set; }
@@ -427,8 +430,7 @@ public partial class BanMod : BasePlugin
             Options.Guess, Options.EnableImmortal,
             Options.EngineerFixer, Options.ViperGuess, Options.PhantomGuess,
             Options.ShapeGuess, Options.ImpostorGuess, Options.ScientistTime,
-            Options.ExilerExe, Options.Jester, Options.Watcher, Options.Judge,
-            Options.Profiler
+            Options.ExilerExe, Options.Jester
         };
 
         foreach (var role in rolesToDisable)
@@ -446,8 +448,7 @@ public partial class BanMod : BasePlugin
         OptionItem[] rolesToEnable = {
             Options.Guess, Options.EnableImmortal,
             Options.EngineerFixer, Options.ViperGuess, Options.PhantomGuess,
-            Options.ExilerExe, Options.Jester, Options.Watcher, Options.Judge,
-            Options.Profiler
+            Options.ExilerExe, Options.Jester
         };
 
         foreach (var role in rolesToEnable)
@@ -483,7 +484,7 @@ public partial class BanMod : BasePlugin
         SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", true);
         HalloweenDecorations = Config.Bind("Decorations", "HalloweenDecorations", false, "Enable Halloween decorations");
         AnniversaryDecorations = Config.Bind("Decorations", "AnniversaryDecorations", false, "Enable Anniversary decorations");
-        DleksEht = Config.Bind("Decorations", "DleksEht", false, "Mirror The Skeld (Dleks eht)");
+        CustomSkin = Config.Bind("Decorations", "CustomSkin", false, "Enable CustomSkin");
         SeasonalModeController.Normalize();
 
         CustomMouse = Config.Bind("Client Options", "CustomMouse", false, "Enable or Disable Custom_Cursor");
@@ -646,7 +647,6 @@ public partial class BanMod : BasePlugin
         {
             try
             {
-                DleksEhtController.Update();
                 bool modOptionsOpen =
                     GameSettingMenuPatch.SettingsTab != null &&
                     GameSettingMenuPatch.SettingsTab.gameObject != null &&
@@ -686,6 +686,11 @@ public partial class BanMod : BasePlugin
                     Options.GameMode.SetValue(GameModeType.Default);
                     Options.ReOpenSettings();
                     return;
+                }
+
+                if (DleksPickerPatch.DleksSelected)
+                {
+                    DleksEhtController.Apply();
                 }
 
                 if (Options.Jester != null &&

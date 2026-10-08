@@ -44,13 +44,7 @@ namespace BanMod
 
             bool canShowAsHost = AmongUsClient.Instance.AmHost;
 
-            bool canShowAsNonHostJudge =
-                PlayerControl.LocalPlayer != null &&
-                Judge.JudgeSelected &&
-                PlayerControl.LocalPlayer.PlayerId == Judge.JudgeId &&
-                Judge.JudgeCanUseEnd;
-
-            if (!canShowAsHost && !canShowAsNonHostJudge)
+            if (!canShowAsHost)
                 return;
 
             CreateMainCloseMeetingButton(__instance);

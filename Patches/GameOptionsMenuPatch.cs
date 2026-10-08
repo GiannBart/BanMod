@@ -2,6 +2,7 @@
 // credits and licenses in the resources folder
 
 using AmongUs.GameOptions;
+using BanMod;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -1177,93 +1178,83 @@ namespace BanMod
                 );
         }
     }
+}
 
 
 
-    [HarmonyPatch(typeof(StringOption))]
-    public static class StringOptionFixPatch
+[HarmonyPatch(typeof(StringOption))]
+public static class StringOptionFixPatch
+{
+    private static OptionItem GetCustomOption(StringOption instance)
     {
+        return OptionItem.AllOptions.FirstOrDefault(
+            opt =>
+                opt != null &&
+                opt.OptionBehaviour == instance
+        );
+    }
 
-        [HarmonyPatch(nameof(StringOption.Initialize))]
-        [HarmonyPrefix]
-        public static bool InitializePrefix(
-            StringOption __instance)
-        {
-            return __instance.data != null;
-        }
+    [HarmonyPatch(nameof(StringOption.Initialize))]
+    [HarmonyPrefix]
+    public static bool InitializePrefix(
+        StringOption __instance)
+    {
+        OptionItem option = GetCustomOption(__instance);
 
+        if (option == null)
+            return true;
 
+        option.Refresh();
+        return false;
+    }
 
-        [HarmonyPatch(nameof(StringOption.Increase))]
-        [HarmonyPrefix]
-        public static bool IncreasePrefix(
-            StringOption __instance)
-        {
-            OptionItem option =
-                OptionItem.AllOptions.FirstOrDefault(
-                    opt =>
-                        opt.OptionBehaviour ==
-                        __instance
-                );
+    [HarmonyPatch(nameof(StringOption.Increase))]
+    [HarmonyPrefix]
+    public static bool IncreasePrefix(
+        StringOption __instance)
+    {
+        OptionItem option = GetCustomOption(__instance);
 
+        if (option == null)
+            return true;
 
-            if (option == null)
-                return true;
+        int amount =
+            Input.GetKey(KeyCode.LeftShift)
+                ? 5
+                : 1;
 
+        option.SetValue(
+            option.CurrentValue + amount
+        );
 
-            int amount =
-                Input.GetKey(KeyCode.LeftShift)
-                    ? 5
-                    : 1;
+        __instance.ValueText.text =
+            option.GetString();
 
+        return false;
+    }
 
-            option.SetValue(
-                option.CurrentValue + amount
-            );
+    [HarmonyPatch(nameof(StringOption.Decrease))]
+    [HarmonyPrefix]
+    public static bool DecreasePrefix(
+        StringOption __instance)
+    {
+        OptionItem option = GetCustomOption(__instance);
 
+        if (option == null)
+            return true;
 
-            __instance.ValueText.text =
-                option.GetString();
+        int amount =
+            Input.GetKey(KeyCode.LeftShift)
+                ? 5
+                : 1;
 
+        option.SetValue(
+            option.CurrentValue - amount
+        );
 
-            return false;
-        }
+        __instance.ValueText.text =
+            option.GetString();
 
-
-
-        [HarmonyPatch(nameof(StringOption.Decrease))]
-        [HarmonyPrefix]
-        public static bool DecreasePrefix(
-            StringOption __instance)
-        {
-            OptionItem option =
-                OptionItem.AllOptions.FirstOrDefault(
-                    opt =>
-                        opt.OptionBehaviour ==
-                        __instance
-                );
-
-
-            if (option == null)
-                return true;
-
-
-            int amount =
-                Input.GetKey(KeyCode.LeftShift)
-                    ? 5
-                    : 1;
-
-
-            option.SetValue(
-                option.CurrentValue - amount
-            );
-
-
-            __instance.ValueText.text =
-                option.GetString();
-
-
-            return false;
-        }
+        return false;
     }
 }

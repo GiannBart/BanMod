@@ -67,22 +67,22 @@ namespace BanMod
             if (banMenu == null) return;
 
             bool menuIsActive = banMenu.gameObject.activeInHierarchy;
-            bool buttonsVisible = Options.buttonvisibile.GetBool();
+            //bool buttonsVisible = Options.buttonvisibile.GetBool();
 
-            if (menuIsActive && buttonsVisible)
-            {
-                if (customButton3Instance == null || customButton4Instance == null || customButton5Instance == null)
-                {
-                    AddCustomButtons();
-                }
+            //if (menuIsActive && buttonsVisible)
+            //{
+            //    if (customButton3Instance == null || customButton4Instance == null || customButton5Instance == null)
+            //    {
+            //        AddCustomButtons();
+            //    }
 
-                customButton3Instance?.gameObject.SetActive(true);
-                customButton4Instance?.gameObject.SetActive(true);
-                customButton5Instance?.gameObject.SetActive(true);
+            //    customButton3Instance?.gameObject.SetActive(true);
+            //    customButton4Instance?.gameObject.SetActive(true);
+            //    customButton5Instance?.gameObject.SetActive(true);
 
-                RecalculateButtonPositions();
-            }
-            else
+            //    RecalculateButtonPositions();
+            //}
+            //else
             {
                 customButton3Instance?.gameObject.SetActive(false);
                 customButton4Instance?.gameObject.SetActive(false);

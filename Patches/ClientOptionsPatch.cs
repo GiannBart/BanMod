@@ -29,7 +29,7 @@ public static class OptionsMenuBehaviourStartPatch
 
     private static ClientOptionItem AnniversaryDecorations;
     private static ClientOptionItem HalloweenDecorations;
-    private static ClientOptionItem DleksEht;
+    private static ClientOptionItem CustomSkin;
 
     public static void Postfix(OptionsMenuBehaviour __instance)
     {
@@ -86,21 +86,6 @@ public static class OptionsMenuBehaviourStartPatch
         if (VoteLockEnabled == null || VoteLockEnabled.ToggleButton == null)
             VoteLockEnabled = ClientOptionItem.Create("Opt_VoteLockEnabled", BanMod.VoteLockEnabled, __instance);
 
-        if (SwitchVanilla == null || SwitchVanilla.ToggleButton == null)
-        {
-            SwitchVanilla = ClientOptionItem.Create(
-                "SwitchVanilla",
-                BanMod.SwitchVanilla,
-                __instance,
-                SwitchVanillaButtonToggle
-            );
-
-            static void SwitchVanillaButtonToggle()
-            {
-                Harmony.UnpatchAll();
-                BanMod.Instance.Unload();
-            }
-        }
         if (AnniversaryDecorations == null || AnniversaryDecorations.ToggleButton == null)
         {
             AnniversaryDecorations = ClientOptionItem.Create(
@@ -139,18 +124,21 @@ public static class OptionsMenuBehaviourStartPatch
             }
         }
 
-        if (DleksEht == null || DleksEht.ToggleButton == null)
+        if (CustomSkin == null || CustomSkin.ToggleButton == null)
+            CustomSkin = ClientOptionItem.Create("CustomSkin", BanMod.CustomSkin, __instance);
+        if (SwitchVanilla == null || SwitchVanilla.ToggleButton == null)
         {
-            DleksEht = ClientOptionItem.Create(
-                "EnableDleks",
-                BanMod.DleksEht,
+            SwitchVanilla = ClientOptionItem.Create(
+                "SwitchVanilla",
+                BanMod.SwitchVanilla,
                 __instance,
-                DleksToggle
+                SwitchVanillaButtonToggle
             );
 
-            static void DleksToggle()
+            static void SwitchVanillaButtonToggle()
             {
-                DleksEhtController.ApplyNow();
+                Harmony.UnpatchAll();
+                BanMod.Instance.Unload();
             }
         }
     }

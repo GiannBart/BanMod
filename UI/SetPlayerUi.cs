@@ -164,17 +164,8 @@ namespace BanMod
                 if (ForcedRoleSystem.TryGetForcedRole(player.PlayerId, out var forcedRole))
                     assignedRoles.Add(forcedRole.ToString().ToUpper());
 
-                if (Judge.JudgeSelected && Judge.JudgeId == player.PlayerId)
-                    assignedRoles.Add("JUDGE");
-
-                if (Profiler.ProfilerSelected && Profiler.ProfilerId == player.PlayerId)
-                    assignedRoles.Add("PROFILER");
-
                 if (Exiler.ExilerSelected && Exiler.ExilerId == player.PlayerId)
                     assignedRoles.Add("EXILER");
-
-                if (Watcher.WatcherSelected && Watcher.WatcherId == player.PlayerId)
-                    assignedRoles.Add("WatcherTitle");
 
                 if (Guesser.SpecialKillerSelected && Guesser.SpecialKillerId == player.PlayerId)
                     assignedRoles.Add("GUESSER");
@@ -305,54 +296,6 @@ namespace BanMod
                         AmongUsClient.Instance.FinishRpcImmediately(writer);
                     }
                     
-                    if (GUILayout.Button(GetString("PUI_SetJudge"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
-                    {
-                        Judge.JudgeId = selectedPlayer.PlayerId;
-                        Judge.JudgeSelected = true;
-                        ChatCommands.ShowChat($"Judge: {selectedPlayer.name}");
-
-                        var writer = AmongUsClient.Instance.StartRpcImmediately(
-                            PlayerControl.LocalPlayer.NetId,
-                            (byte)CustomRPC.SetJudge,
-                            SendOption.Reliable,
-                            -1
-                        );
-
-                        writer.Write(selectedPlayer.PlayerId);
-                        AmongUsClient.Instance.FinishRpcImmediately(writer);
-                    }
-                    if (GUILayout.Button(GetString("PUI_SetProfiler"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
-                    {
-                        Profiler.ProfilerId = selectedPlayer.PlayerId;
-                        Profiler.ProfilerSelected = true;
-                        ChatCommands.ShowChat($"Profiler: {selectedPlayer.name}");
-
-                        var writer = AmongUsClient.Instance.StartRpcImmediately(
-                            PlayerControl.LocalPlayer.NetId,
-                            (byte)CustomRPC.SetProfiler,
-                            SendOption.Reliable,
-                            -1
-                        );
-
-                        writer.Write(selectedPlayer.PlayerId);
-                        AmongUsClient.Instance.FinishRpcImmediately(writer);
-                    }
-                    if (GUILayout.Button(GetString("WatcherTitle"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
-                    {
-                        Watcher.WatcherId = selectedPlayer.PlayerId;
-                        Watcher.WatcherSelected = true;
-                        ChatCommands.ShowChat($"Watcher: {selectedPlayer.name}");
-
-                        var writer = AmongUsClient.Instance.StartRpcImmediately(
-                            PlayerControl.LocalPlayer.NetId,
-                            (byte)CustomRPC.SetWatcher,
-                            SendOption.Reliable,
-                            -1
-                        );
-
-                        writer.Write(selectedPlayer.PlayerId);
-                        AmongUsClient.Instance.FinishRpcImmediately(writer);
-                    }
                     if (GUILayout.Button(GetString("PUI_SetGuesser"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
                     {
                         Guesser.SpecialKillerId = selectedPlayer.PlayerId;
@@ -431,29 +374,12 @@ namespace BanMod
                         Jester.ForcedJesterSelected = false;
                     }
 
-                    if (Judge.JudgeSelected && Judge.JudgeId == selectedId)
-                    {
-                        Judge.JudgeId = 255;
-                        Judge.JudgeSelected = false;
-                    }
-
-                    if (Profiler.ProfilerSelected && Profiler.ProfilerId == selectedId)
-                    {
-                        Profiler.ProfilerId = 255;
-                        Profiler.ProfilerSelected = false;
-                    }
-
                     if (Exiler.ExilerSelected && Exiler.ExilerId == selectedId)
                     {
                         Exiler.ExilerId = 255;
                         Exiler.ExilerSelected = false;
                     }
 
-                    if (Watcher.WatcherSelected && Watcher.WatcherId == selectedId)
-                    {
-                        Watcher.WatcherId = 255;
-                        Watcher.WatcherSelected = false;
-                    }
                     ChatCommands.ShowChat($"Removed: {selectedPlayer.name}");
                 }
             }

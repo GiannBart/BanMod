@@ -133,7 +133,6 @@ namespace BanMod
 
 
 
-        private const string PrivateChatInstallationIdKey = "CHAT_INSTALLATION_ID";
         private const float PrivateChatPresenceIntervalSeconds = 20f;
         private const float PrivateChatOpenPollIntervalSeconds = 2f;
         private const float PrivateChatClosedPollIntervalSeconds = 5f;
@@ -167,7 +166,7 @@ namespace BanMod
         private static string _privateActiveFriendCode = "";
         private static string _privateActiveName = "";
         private static int _selectedPrivateMessageIndex = -1;
-        private static string _privateChatToken = "";
+        private static string _privateBanModToken = "";
         private static long _privateChatSessionStartedAt;
         private static long _privateLastMessageId;
         private static bool _privateInitialSyncDone;
@@ -194,8 +193,8 @@ namespace BanMod
         private static Vector2 _launcherDragOffset;
         private static Vector2 _launcherDragStartMouse;
         private static float _launcherSuppressClickUntil;
-        private const string LauncherPosXKey = "BANMOD_COMMUNITY_ICON_X_V1";
-        private const string LauncherPosYKey = "BANMOD_COMMUNITY_ICON_Y_V1";
+        private const string LauncherPosXKey = "BANMOD_COMMUNITY_ICON_X_V2";
+        private const string LauncherPosYKey = "BANMOD_COMMUNITY_ICON_Y_V2";
         private static bool _publicCommunityUnread;
         private static readonly List<BoxCollider2D> BlockedMainMenuColliders = new List<BoxCollider2D>();
         private static readonly List<bool> BlockedMainMenuColliderStates = new List<bool>();
@@ -361,7 +360,7 @@ namespace BanMod
 
             try
             {
-                BuildCommunityMainMenuButton(menu, stockNews);
+                // BuildCommunityMainMenuButton(menu, stockNews); // disabilitato: niente pulsante COMMUNITY accanto a NEWS
             }
             catch (Exception ex)
             {
@@ -2849,7 +2848,7 @@ namespace BanMod
             _composeKind = "suggestion";
             _titleInput = CreateInput(_composePanel.transform, "TitleInput", "Suggestion title...", false, new Vector2(0f, 195f), new Vector2(900f, 58f), 120);
             _messageInput = CreateInput(_composePanel.transform, "MessageInput", "Describe your suggestion...", true, new Vector2(0f, 20f), new Vector2(900f, 240f), 4000);
-            CreateLabel(_composePanel.transform, "AnonInfo", "Your Community name is shown publicly. Your real FriendCode/name/IP are visible only to moderators.", 14, TextAlignmentOptions.Left, new Color(0.72f, 0.76f, 0.86f, 1f), new Vector2(0f, -135f), new Vector2(900f, 42f));
+            CreateLabel(_composePanel.transform, "AnonInfo", "Your Community name is shown publicly. Your FriendCode/account identity is visible only to moderators.", 14, TextAlignmentOptions.Left, new Color(0.72f, 0.76f, 0.86f, 1f), new Vector2(0f, -135f), new Vector2(900f, 42f));
             CreateButton(_composePanel.transform, "Publish", "PUBLISH", new Vector2(125f, -265f), new Vector2(210f, 54f), new Color(0.14f, 0.44f, 0.25f, 1f), SubmitPost);
             CreateButton(_composePanel.transform, "Cancel", "CANCEL", new Vector2(-125f, -265f), new Vector2(210f, 54f), new Color(0.27f, 0.28f, 0.34f, 1f), delegate { _composePanel.SetActive(false); });
             _composePanel.SetActive(false);
@@ -3445,30 +3444,34 @@ namespace BanMod
 
         private static void NotifyIncomingPrivateMessage()
         {
-
             try
             {
                 ChatController chat = null;
 
                 try
                 {
-                    chat = HudManager.Instance != null ? HudManager.Instance.Chat : null;
+                    chat = HudManager.Instance != null
+                        ? HudManager.Instance.Chat
+                        : null;
                 }
                 catch { }
-
-
 
                 if (chat == null)
                 {
                     try
                     {
-                        var chats = Resources.FindObjectsOfTypeAll(Il2CppType.Of<ChatController>());
+                        var chats = Resources.FindObjectsOfTypeAll(
+                            Il2CppType.Of<ChatController>());
+
                         if (chats != null)
                         {
                             for (int i = 0; i < chats.Length; i++)
                             {
                                 ChatController candidate = chats[i] as ChatController;
-                                if (candidate == null) continue;
+
+                                if (candidate == null)
+                                    continue;
+
                                 chat = candidate;
                                 break;
                             }
@@ -3477,21 +3480,35 @@ namespace BanMod
                     catch { }
                 }
 
-                if (chat != null)
+                if (chat != null &&
+                    chat.messageSound != null &&
+                    SoundManager.Instance != null)
                 {
-                    AudioClip messageSound =
-                        AccessTools.Field(typeof(ChatController), "messageSound")?.GetValue(chat) as AudioClip;
-
-                    if (messageSound != null && SoundManager.Instance != null)
-                        SoundManager.Instance.PlaySound(messageSound, false, 1f, null);
+                    SoundManager.Instance.PlaySoundImmediate(
+                        chat.messageSound,
+                        false,
+                        1f,
+                        1f,
+                        SoundManager.Instance.SfxChannel
+                    );
                 }
             }
-            catch { }
-
+            catch (Exception ex)
+            {
+                try
+                {
+                    BMLogger.Warn(
+                        $"[PrivateChat] NotifyIncomingPrivateMessage sound failed: {ex}",
+                        "PrivateChat");
+                }
+                catch { }
+            }
 
             try
             {
-                BanMod.FlashColor(new Color(0f, 0.45f, 1f, 0.30f), 1.1f);
+                BanMod.FlashColor(
+                    new Color(0f, 0.45f, 1f, 0.30f),
+                    1.1f);
             }
             catch { }
         }
@@ -4693,12 +4710,12 @@ namespace BanMod
             try
             {
                 return new Vector2(
-                    PlayerPrefs.GetFloat(LauncherPosXKey, -850f),
-                    PlayerPrefs.GetFloat(LauncherPosYKey, 470f));
+                    PlayerPrefs.GetFloat(LauncherPosXKey, -920f),
+                    PlayerPrefs.GetFloat(LauncherPosYKey, 508f));
             }
             catch
             {
-                return new Vector2(-850f, 470f);
+                return new Vector2(-920f, 508f);
             }
         }
 
@@ -4777,7 +4794,7 @@ namespace BanMod
         {
             float now = Time.unscaledTime;
 
-            if (string.IsNullOrWhiteSpace(_privateChatToken))
+            if (string.IsNullOrWhiteSpace(_privateBanModToken))
             {
                 if (!_privateSessionRequestRunning && now >= _privateNextSessionAttemptTime)
                 {
@@ -4855,7 +4872,17 @@ namespace BanMod
 
         private static IEnumerator EnsurePrivateChatSessionCoroutine()
         {
-            if (_privateSessionRequestRunning || !string.IsNullOrWhiteSpace(_privateChatToken))
+            try
+            {
+                if (PlayerPrefs.HasKey("CHAT_INSTALLATION_ID"))
+                {
+                    PlayerPrefs.DeleteKey("CHAT_INSTALLATION_ID");
+                    PlayerPrefs.Save();
+                }
+            }
+            catch { }
+
+            if (_privateSessionRequestRunning || !string.IsNullOrWhiteSpace(_privateBanModToken))
                 yield break;
 
             string friendCode = "";
@@ -4868,10 +4895,23 @@ namespace BanMod
                 yield break;
             }
 
+            bool tokenReady = false;
+            string clientToken = "";
+            yield return BanModApiTokenManager.EnsureTokenCoroutine((success, token) =>
+            {
+                tokenReady = success;
+                clientToken = token ?? "";
+            });
+
+            if (!tokenReady || string.IsNullOrWhiteSpace(clientToken))
+            {
+                _privateNextSessionAttemptTime = Time.unscaledTime + 5f;
+                yield break;
+            }
+
             _privateSessionRequestRunning = true;
             string json = "{" +
                 "\"friend_code\":" + PrivateJsonString(friendCode) + "," +
-                "\"installation_id\":" + PrivateJsonString(GetPrivateChatInstallationId()) + "," +
                 "\"platform\":" + PrivateJsonString(Application.platform.ToString()) +
                 "}";
 
@@ -4880,6 +4920,7 @@ namespace BanMod
             request.downloadHandler = new DownloadHandlerBuffer();
             request.timeout = 25;
             request.SetRequestHeader("Content-Type", "application/json");
+            BanModApiTokenManager.ApplyAuthHeader(request);
             yield return request.SendWebRequest();
 
             string body = request.downloadHandler != null ? request.downloadHandler.text : "";
@@ -4890,42 +4931,37 @@ namespace BanMod
                     using (JsonDocument doc = JsonDocument.Parse(body))
                     {
                         JsonElement root = doc.RootElement;
-                        string token = PrivateReadString(root, "token");
                         string loginUsername = PrivateReadString(root, "username");
                         if (!string.IsNullOrWhiteSpace(loginUsername))
                             _privateLoginUsername = loginUsername.Trim();
-                        if (!string.IsNullOrWhiteSpace(token))
-                        {
-                            _privateChatToken = token.Trim();
-                            _privateChatSessionStartedAt = PrivateUnixNowSeconds();
-                            _privateLastMessageId = 0;
-                            _privateInitialSyncDone = false;
-
-                            PrivateKnownMessageIds.Clear();
-                            PrivateChatMessages.Clear();
-                            PrivateUnreadMessageIds.Clear();
-                            PrivatePendingDeliveryAckIds.Clear();
-                            PrivateChatTranslations.Clear();
-
-                            _privateNextPresenceTime = 0f;
-                            _privateNextPlayersPollTime = 0f;
-                            _privateNextMessagesPollTime = 0f;
-
-                            RequestPrivateChatImmediateRefresh();
-
-                            StartRuntimeRoutine(SendPrivatePresenceCoroutine());
-                            StartRuntimeRoutine(PollPrivatePlayersCoroutine());
-                            StartRuntimeRoutine(PollPrivateMessagesCoroutine());
-
-                            RefreshCombinedUnread();
-                            TryUseLoginUsernameAsDefault();
-                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     Debug.LogWarning("[BANMOD Community] Private Chat session parse failed: " + ex.Message);
                 }
+
+                _privateBanModToken = clientToken;
+                _privateChatSessionStartedAt = PrivateUnixNowSeconds();
+                _privateLastMessageId = 0;
+                _privateInitialSyncDone = false;
+
+                PrivateKnownMessageIds.Clear();
+                PrivateChatMessages.Clear();
+                PrivateUnreadMessageIds.Clear();
+                PrivatePendingDeliveryAckIds.Clear();
+                PrivateChatTranslations.Clear();
+
+                _privateNextPresenceTime = 0f;
+                _privateNextPlayersPollTime = 0f;
+                _privateNextMessagesPollTime = 0f;
+
+                RequestPrivateChatImmediateRefresh();
+                StartRuntimeRoutine(SendPrivatePresenceCoroutine());
+                StartRuntimeRoutine(PollPrivatePlayersCoroutine());
+                StartRuntimeRoutine(PollPrivateMessagesCoroutine());
+                RefreshCombinedUnread();
+                TryUseLoginUsernameAsDefault();
             }
             else
             {
@@ -4939,7 +4975,7 @@ namespace BanMod
 
         private static void ClearPrivateChatSession()
         {
-            _privateChatToken = "";
+            _privateBanModToken = "";
             _privateChatSessionStartedAt = 0;
             _privateLastMessageId = 0;
             _privateInitialSyncDone = false;
@@ -4950,7 +4986,7 @@ namespace BanMod
 
         private static IEnumerator SendPrivatePresenceCoroutine()
         {
-            if (_privatePresenceRequestRunning || string.IsNullOrWhiteSpace(_privateChatToken))
+            if (_privatePresenceRequestRunning || string.IsNullOrWhiteSpace(_privateBanModToken))
                 yield break;
 
             _privatePresenceRequestRunning = true;
@@ -4968,7 +5004,7 @@ namespace BanMod
 
         private static IEnumerator PollPrivatePlayersCoroutine()
         {
-            if (_privatePlayersRequestRunning || string.IsNullOrWhiteSpace(_privateChatToken))
+            if (_privatePlayersRequestRunning || string.IsNullOrWhiteSpace(_privateBanModToken))
                 yield break;
 
             _privatePlayersRequestRunning = true;
@@ -5001,7 +5037,7 @@ namespace BanMod
 
         private static IEnumerator PollPrivateMessagesCoroutine()
         {
-            if (_privateMessagesRequestRunning || string.IsNullOrWhiteSpace(_privateChatToken))
+            if (_privateMessagesRequestRunning || string.IsNullOrWhiteSpace(_privateBanModToken))
                 yield break;
 
             _privateMessagesRequestRunning = true;
@@ -5113,7 +5149,7 @@ namespace BanMod
         {
             if (_privateAckRunning ||
                 PrivatePendingDeliveryAckIds.Count == 0 ||
-                string.IsNullOrWhiteSpace(_privateChatToken))
+                string.IsNullOrWhiteSpace(_privateBanModToken))
             {
                 return;
             }
@@ -5916,10 +5952,10 @@ namespace BanMod
             if (_privateSendRunning) yield break;
             _privateSendRunning = true;
 
-            if (string.IsNullOrWhiteSpace(_privateChatToken))
+            if (string.IsNullOrWhiteSpace(_privateBanModToken))
             {
                 yield return EnsurePrivateChatSessionCoroutine();
-                if (string.IsNullOrWhiteSpace(_privateChatToken))
+                if (string.IsNullOrWhiteSpace(_privateBanModToken))
                 {
                     _privateSendRunning = false;
                     SetStatus("Private Chat session is unavailable.");
@@ -6048,8 +6084,7 @@ namespace BanMod
             }
 
             request.timeout = 25;
-            if (!string.IsNullOrWhiteSpace(_privateChatToken))
-                request.SetRequestHeader("Authorization", "Bearer " + _privateChatToken);
+            BanModApiTokenManager.ApplyAuthHeader(request);
             return request;
         }
 
@@ -6219,23 +6254,6 @@ namespace BanMod
         {
             try { return DateTimeOffset.UtcNow.ToUnixTimeSeconds(); }
             catch { return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds; }
-        }
-
-        private static string GetPrivateChatInstallationId()
-        {
-            try
-            {
-                string value = PlayerPrefs.GetString(PrivateChatInstallationIdKey, "");
-                if (!string.IsNullOrWhiteSpace(value)) return value.Trim();
-                value = Guid.NewGuid().ToString("N");
-                PlayerPrefs.SetString(PrivateChatInstallationIdKey, value);
-                PlayerPrefs.Save();
-                return value;
-            }
-            catch
-            {
-                return Guid.NewGuid().ToString("N");
-            }
         }
 
         private static bool PrivateChatIsInLobbyOrGame()

@@ -362,22 +362,56 @@ public static class ModdedOriginalChatManager
     {
         try
         {
-            ChatController chat = HudManager.Instance != null ? HudManager.Instance.Chat : null;
+            ChatController chat =
+                HudManager.Instance != null
+                    ? HudManager.Instance.Chat
+                    : null;
 
             if (chat == null)
                 return;
 
-            AudioClip messageSound =
-                AccessTools.Field(typeof(ChatController), "messageSound")?.GetValue(chat) as AudioClip;
+            AudioClip clip = chat.messageSound;
 
-            if (messageSound == null)
+            if (clip == null)
+            {
+                BMLogger.Warn(
+                    "[ModdedOriginalChat] chat.messageSound is null",
+                    "ModdedChat");
                 return;
+            }
 
-            SoundManager.Instance.PlaySound(messageSound, false, 1f, null).pitch =
-                0.5f + senderId / 15f;
+            SoundManager soundManager = SoundManager.Instance;
+
+            if (soundManager == null)
+            {
+                BMLogger.Warn(
+                    "[ModdedOriginalChat] SoundManager.Instance is null",
+                    "ModdedChat");
+                return;
+            }
+
+            float pitch = 0.5f + senderId / 15f;
+
+            AudioSource source = soundManager.PlaySoundImmediate(
+                clip,
+                false,
+                1f,
+                pitch,
+                soundManager.SfxChannel
+            );
+
+            if (source == null)
+            {
+                BMLogger.Warn(
+                    "[ModdedOriginalChat] PlaySoundImmediate returned null",
+                    "ModdedChat");
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            BMLogger.Warn(
+                $"[ModdedOriginalChat] PlayOriginalChatSound failed: {ex}",
+                "ModdedChat");
         }
     }
 }

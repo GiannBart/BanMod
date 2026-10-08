@@ -30,7 +30,6 @@ public static class ImmortalManager
         if (Utils.SpiritGuide(player)) return;
         if (Utils.Noisemaker(player)) return;
         if (player.PlayerId == Guesser.SpecialKillerId) return;
-        if (player.PlayerId == Watcher.WatcherId) return;
         if (player.PlayerId == Jester.JesterId) return;
 
         if (PlayerTask.AllTasksCompleted(player))

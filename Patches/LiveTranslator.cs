@@ -1589,9 +1589,9 @@ namespace BanMod
         }
 
         private static async Task<string> TranslateWithGoogleWeb(
-            string text,
-            string sourceLang,
-            string targetLang)
+                 string text,
+                 string sourceLang,
+                 string targetLang)
         {
             try
             {

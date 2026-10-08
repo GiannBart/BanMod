@@ -42,7 +42,6 @@ namespace BanMod
                 .Where(p => p.Data != null && !p.Data.IsDead
                             && p.PlayerId != Guesser.SpecialKillerId
                             && p.PlayerId != Jester.JesterId
-                            && p.PlayerId != Watcher.WatcherId
                             && !Scientist(p)
                             && !Engineer(p)
                             && !Tracker(p)
