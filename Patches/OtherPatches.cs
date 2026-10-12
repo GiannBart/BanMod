@@ -950,3 +950,24 @@ public static class LogicPingsHnSFFAPatch
         }
     }
 }
+[HarmonyPatch(typeof(ShhhBehaviour), nameof(ShhhBehaviour.PlayAnimation))]
+class PlayShhhAnimation
+{
+    static bool Prefix()
+    {
+        HudManager.Instance.shhhEmblem.gameObject.SetActive(false);
+        return false;
+    }
+}
+[HarmonyPatch(typeof(ReactorSystemType), "get_Countdown")]
+public static class ReactorCountdownGetterFix
+{
+    [HarmonyPrefix]
+    public static bool Prefix(
+        ReactorSystemType __instance,
+        ref float __result)
+    {
+        __result = __instance._Countdown_k__BackingField;
+        return false;
+    }
+}

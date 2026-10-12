@@ -61,6 +61,7 @@ namespace BanMod
             OptionCategory.Appearance,
             OptionCategory.Protection,
 
+            OptionCategory.GameMode1,
             OptionCategory.GameMode,
             OptionCategory.SNS,
             OptionCategory.PNS,
@@ -426,6 +427,9 @@ namespace BanMod
             string fallbackDescription,
             PassiveButton selectedButton)
         {
+            if (menu == null || SettingsTab == null)
+                return;
+
             menu.ChangeTab(-1, false);
 
             HideCustomTab();
@@ -701,72 +705,56 @@ namespace BanMod
 
 
 
-        public static bool ShouldShowOption(
-            OptionItem option)
+        public static bool ShouldShowOption(OptionItem option)
         {
             if (option == null)
                 return false;
 
-
             if (!option.IsVisibleByParent())
                 return false;
-
 
             if (option.MainTab != CurrentMainTab)
                 return false;
 
-
+            bool isHideAndSeek =
+                GameOptionsManager.Instance != null &&
+                GameOptionsManager.Instance.CurrentGameOptions != null &&
+                GameOptionsManager.Instance.CurrentGameOptions.GameMode ==
+                    GameModes.HideNSeek;
 
             if (option.Category == OptionCategory.Seeker)
             {
-                return GameManager.Instance.IsHideAndSeek();
+                return isHideAndSeek;
             }
 
-            if (option.Category == OptionCategory.GameMode && GameManager.Instance.IsHideAndSeek())
+            if (option.Category == OptionCategory.GameMode && isHideAndSeek)
             {
                 return false;
             }
 
             if (option.Category == OptionCategory.Zombie && !IsZombieMode())
-            {
                 return false;
-            }
 
             if (option.Category == OptionCategory.HotPotato && !IsHotPotatoMode())
-            {
                 return false;
-            }
 
             if (option.Category == OptionCategory.Assassin && !IsAssassinMode())
-            {
                 return false;
-            }
 
             if (option.Category == OptionCategory.SNS && !IsSnSMode())
-            {
                 return false;
-            }
 
             if (option.Category == OptionCategory.PNS && !IsPnSMode())
-            {
                 return false;
-            }
-
 
             if (option.Category == OptionCategory.FFA && !IsFFAMode())
-            {
                 return false;
-            }
 
             if (option.Category == OptionCategory.FFATEAM && !IsFFATEAMMode())
-            {
                 return false;
-            }
 
             if (option.Category == OptionCategory.KillRace && !IsKillRaceMode())
-            {
                 return false;
-            }
 
             return true;
         }
@@ -775,6 +763,9 @@ namespace BanMod
 
         public static void ApplyCurrentTabVisibility()
         {
+            if (SettingsTab == null)
+                return;
+
             foreach (
                 var header
                 in CategoryHeaders.Values
@@ -1046,6 +1037,12 @@ namespace BanMod
         public static void RefreshLayout(
             GameOptionsMenu __instance)
         {
+            if (__instance == null)
+                return;
+
+            if (GameSettingMenuPatch.SettingsTab == null)
+                return;
+
             float offset = 2.6f;
 
 

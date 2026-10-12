@@ -139,10 +139,75 @@ static class ExtendedPlayerControl
         var sendOption = SendOption.Reliable;
 
         ushort newSid = (ushort)(netTransform.lastSequenceId + 8);
-        MessageWriter messageWriter = AmongUsClient.Instance.StartRpcImmediately(netTransform.NetId, (byte)RpcCalls.SnapTo, sendOption);
+        MessageWriter messageWriter = AmongUsClient.Instance.StartRpcImmediately(
+            netTransform.NetId,
+            (byte)RpcCalls.SnapTo,
+            sendOption
+        );
+
         NetHelpers.WriteVector2(position, messageWriter);
         messageWriter.Write(newSid);
         AmongUsClient.Instance.FinishRpcImmediately(messageWriter);
+    }
+    public static void SetChatVisible(this PlayerControl player, bool visible)
+    {
+        if (!AmongUsClient.Instance.AmHost ||
+            player == null ||
+            player.Data == null)
+            return;
+
+        bool wasDead = player.Data.IsDead;
+
+        MessageWriter writer = MessageWriter.Get(SendOption.Reliable);
+
+        writer.StartMessage(6);
+        writer.Write(AmongUsClient.Instance.GameId);
+        writer.WritePacked(player.OwnerId);
+
+        writer.StartMessage(4);
+        writer.WritePacked(HudManager.Instance.MeetingPrefab.SpawnId);
+        writer.WritePacked(-2);
+        writer.Write((byte)SpawnFlags.None);
+        writer.WritePacked(1);
+
+        uint meetingNetId = AmongUsClient.Instance.NetIdCnt;
+        AmongUsClient.Instance.NetIdCnt = meetingNetId + 1U;
+
+        writer.WritePacked(meetingNetId);
+
+        writer.StartMessage(1);
+        writer.WritePacked(0);
+        writer.EndMessage();
+
+        writer.EndMessage();
+
+        player.Data.IsDead = visible;
+
+        writer.StartMessage(1);
+        writer.WritePacked(player.Data.NetId);
+        player.Data.Serialize(writer, true);
+        writer.EndMessage();
+
+        writer.StartMessage(2);
+        writer.WritePacked(meetingNetId);
+        writer.Write((byte)RpcCalls.CloseMeeting);
+        writer.EndMessage();
+
+        player.Data.IsDead = wasDead;
+
+        writer.StartMessage(1);
+        writer.WritePacked(player.Data.NetId);
+        player.Data.Serialize(writer, true);
+        writer.EndMessage();
+
+        writer.StartMessage(5);
+        writer.WritePacked(meetingNetId);
+        writer.EndMessage();
+
+        writer.EndMessage();
+
+        AmongUsClient.Instance.SendOrDisconnect(writer);
+        writer.Recycle();
     }
 }
 
@@ -756,7 +821,69 @@ public static class FixedUpdateUnifiedPatch
             text.text = final;
     }
 }
+public static class ChatUtils
+{
+    public static bool IgnoreNextReEnableGameplay;
 
+    public static void EnableAllChat()
+    {
+        if (!AmongUsClient.Instance.AmHost)
+            return;
+
+        if (!BanMod.EnableAllChat.Value)
+            return;
+
+        if (BanModServerSelection.IsModded25)
+        {
+            EnableModdedChat();
+            return;
+        }
+
+        if (BanModServerSelection.IsVanilla)
+        {
+            EnableVanillaChat();
+            return;
+        }
+    }
+
+    private static void EnableModdedChat()
+    {
+        foreach (PlayerControl player in PlayerControl.AllPlayerControls)
+        {
+            if (player == null ||
+                player.Data == null ||
+                player.Data.Disconnected ||
+                player.Data.IsDead)
+                continue;
+
+            player.SetChatVisible(true);
+        }
+    }
+
+    private static void EnableVanillaChat()
+    {
+        PlayerControl localPlayer = PlayerControl.LocalPlayer;
+
+        if (localPlayer == null ||
+            localPlayer.Data == null ||
+            localPlayer.Data.Disconnected)
+            return;
+
+        try
+        {
+            BanMod.UnlockingAllChat = true;
+
+            localPlayer.CmdReportDeadBody(null);
+            IgnoreNextReEnableGameplay = true;
+            MeetingHud.Instance.RpcClose();
+            
+        }
+        finally
+        {
+            BanMod.UnlockingAllChat = false;
+        }
+    }
+}
 [HarmonyPatch(typeof(HudManager), nameof(HudManager.OnGameStart))]
 public static class DetectorRuntimeOnGameStartPatch
 {
@@ -779,22 +906,12 @@ public static class DetectorRuntimeOnGameStartPatch
             return;
         }
 
-        if (AmongUsClient.Instance.AmHost && BanMod.EnableAllChat.Value)
+        if (AmongUsClient.Instance.AmHost &&
+            BanMod.EnableAllChat.Value)
         {
-            try
-            {
-                BanMod.UnlockingAllChat = true;
-
-                PlayerControl.LocalPlayer.CmdReportDeadBody(null);
-
-                if (MeetingHud.Instance != null)
-                    MeetingHud.Instance.RpcClose();
-            }
-            finally
-            {
-                BanMod.UnlockingAllChat = false;
-            }
+            ChatUtils.EnableAllChat();
         }
+
         PlayerWarningMessenger.ResetAll();
 
         if (Options.EnableDetector != null && Options.EnableDetector.GetBool())

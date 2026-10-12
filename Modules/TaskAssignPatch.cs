@@ -25,6 +25,7 @@ namespace BanMod
         public static bool Prefix(NetworkedPlayerInfo __instance, ref Il2CppStructArray<byte> taskTypeIds)
         {
             if (!AmongUsClient.Instance.AmHost) return true;
+            if (GameManager.Instance.IsHideAndSeek()) return true;
 
             PlayerControl pc = __instance.Object;
             if (pc == null) return true;

@@ -919,8 +919,6 @@ namespace BanMod
         private int lastScreenWidth;
         private int lastScreenHeight;
         private bool lastLobbyState;
-
-        private string newListName = "";
         private string renameListName = "";
         private string renameSourceList = "";
 

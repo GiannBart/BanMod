@@ -89,19 +89,11 @@ namespace BanMod
             if (AmongUsClient.Instance == null || PlayerControl.LocalPlayer == null)
                 return;
 
-            var writer = AmongUsClient.Instance.StartRpcImmediately(
-                PlayerControl.LocalPlayer.NetId,
-                (byte)CustomRPC.SyncPlayerVisual,
-                SendOption.Reliable,
-                -1
-            );
-
-            writer.Write(targetPlayerId);
-            writer.Write(scale);
-            writer.Write(bodyType);
-            writer.Write(selfOverride);
-
-            AmongUsClient.Instance.FinishRpcImmediately(writer);
+            BanModSyncApi.SendSyncPlayerVisual(
+                targetPlayerId,
+                scale,
+                bodyType,
+                selfOverride);
         }
 
         private void SetSelectedPlayerVisual(float scale, PlayerBodyTypes bodyType)
@@ -293,13 +285,30 @@ namespace BanMod
             if (reader == null)
                 return;
 
+            byte targetId = reader.ReadByte();
+            float scale = reader.ReadSingle();
+            byte bodyType = reader.ReadByte();
+            bool selfOverride = reader.ReadBoolean();
+
+            ReceiveSyncPlayerVisualServer(
+                targetId,
+                scale,
+                bodyType,
+                selfOverride,
+                senderId);
+        }
+
+        public static void ReceiveSyncPlayerVisualServer(
+            byte targetId,
+            float scale,
+            byte bodyType,
+            bool selfOverride,
+            int senderId)
+        {
             if (AmongUsClient.Instance == null)
                 return;
 
-            byte targetId = reader.ReadByte();
-            float scale = Mathf.Clamp(reader.ReadSingle(), 0.25f, 2.0f);
-            byte bodyType = reader.ReadByte();
-            bool selfOverride = reader.ReadBoolean();
+            scale = Mathf.Clamp(scale, 0.25f, 2.0f);
 
             PlayerControl target = BanMod.AllPlayerControls
                 .FirstOrDefault(p => p != null && p.PlayerId == targetId);
@@ -316,15 +325,14 @@ namespace BanMod
                     .FirstOrDefault(p => p != null && p.GetClientId() == senderId);
 
                 if (senderPlayer == null || senderPlayer.PlayerId != targetId)
-                {
                     return;
-                }
 
                 HostScales[targetId] = scale;
                 HostBodies[targetId] = bodyType;
 
                 ApplyVisual(target, scale, bodyType);
 
+                // L'host ritrasmette via server agli altri BanMod.
                 SendVisualRpc(targetId, scale, bodyType, true);
                 return;
             }
@@ -336,7 +344,10 @@ namespace BanMod
 
                 if (isLocalTarget && LocalVisualOverride)
                 {
-                    ApplyVisual(PlayerControl.LocalPlayer, LocalOverrideScale, LocalOverrideBody);
+                    ApplyVisual(
+                        PlayerControl.LocalPlayer,
+                        LocalOverrideScale,
+                        LocalOverrideBody);
                     return;
                 }
 

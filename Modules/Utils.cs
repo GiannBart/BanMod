@@ -5,6 +5,7 @@ using AmongUs.GameOptions;
 using AmongUs.InnerNet.GameDataMessages;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP.Utils;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Hazel;
 using Il2CppInterop.Runtime;
@@ -98,7 +99,7 @@ public static class Utils
         if (lobby != null)
         {
             (lobby as InnerNetObject)?.Despawn();
-            LobbyBehaviour.Instance = null; 
+            LobbyBehaviour.Instance = null;
             BMLogger.Info("[MapCheats] LobbyBehaviour rimosso e singleton azzerato.");
         }
 
@@ -483,13 +484,13 @@ public static class Utils
     {
 
         if (!string.IsNullOrEmpty(platformStr))
-        { 
+        {
 
             try
             {
                 platform = (Platforms)System.Enum.Parse(typeof(Platforms), platformStr, true);
 
-                return true; 
+                return true;
 
             }
             catch { }
@@ -497,7 +498,7 @@ public static class Utils
         }
 
         platform = null;
-        return false; 
+        return false;
     }
 
     public static string PlatformTypeToString(Platforms platform)
@@ -668,7 +669,7 @@ public static class Utils
             player.Data.MarkDirty();
 
         }
-        
+
         public static void BypassScanner(bool value)
         {
             try
@@ -718,7 +719,7 @@ public static class Utils
         {
             BypassScanner(true);
             yield return new WaitForSeconds(duration);
-            BypassScanner(false); 
+            BypassScanner(false);
         }
         public static void PlayAnimation(byte animationType)
         {
@@ -1310,7 +1311,7 @@ public static class Utils
         NotificationPopper_AddInfoMessagePatch.AddInfoMessage(HudManager.Instance.Notifier, $"[NetworkBan] Player {playerId} banned for spamming.");
         BMLogger.LogWarning($"[NetworkBan] Player {playerId} banned for spamming.");
         AmongUsClient.Instance.KickPlayer(playerId, true);
-        SpamDetector.ResetPlayer(playerId); 
+        SpamDetector.ResetPlayer(playerId);
     }
     public static class RpcMap
     {
@@ -1505,7 +1506,27 @@ public static class Utils
         {
             lobbymode = "DeathRun";
         }
-        else 
+        else if (Normal && gameMode == GameModeType.FFATeam)
+        {
+            lobbymode = "FFA_Team";
+        }
+        else if (Normal && gameMode == GameModeType.ZombieMode)
+        {
+            lobbymode = "ZombieMode";
+        }
+        else if (Normal && gameMode == GameModeType.HotPotatoModded)
+        {
+            lobbymode = "HotPotato";
+        }
+        else if (Normal && gameMode == GameModeType.Assassin)
+        {
+            lobbymode = "FFA_Assassin";
+        }
+        else if (Normal && gameMode == GameModeType.KillRace)
+        {
+            lobbymode = "FFA_KillRace";
+        }
+        else
         {
             lobbymode = "UnkNow";
         }
@@ -1541,7 +1562,7 @@ public static class Utils
             case 0: return MapNames.Skeld;
             case 1: return MapNames.MiraHQ;
             case 2: return MapNames.Polus;
-            case 3: return MapNames.Dleks;     
+            case 3: return MapNames.Dleks;
             case 4: return MapNames.Airship;
             case 5: return MapNames.Fungle;
             default:
@@ -1622,8 +1643,8 @@ public static class Utils
 
     public class ButtonData
     {
-        public string Title { get; set; } 
-        public string Message { get; set; } 
+        public string Title { get; set; }
+        public string Message { get; set; }
     }
     public static string ColorString(UnityEngine.Color c, string s)
     {
@@ -1651,7 +1672,7 @@ public static class Utils
                 if (fancyMap.ContainsKey(upper))
                     sb.Append(fancyMap[upper]);
                 else
-                    sb.Append(c); 
+                    sb.Append(c);
             }
 
             return sb.ToString();
@@ -1905,7 +1926,7 @@ public static class Utils
             case 0: return MapNames.Skeld;
             case 1: return MapNames.MiraHQ;
             case 2: return MapNames.Polus;
-            case 3: return MapNames.Dleks;    
+            case 3: return MapNames.Dleks;
             case 4: return MapNames.Airship;
             case 5: return MapNames.Fungle;
             default:
@@ -1969,9 +1990,9 @@ public static class Utils
                 {
                     sb.Append(normalizedChar);
                 }
-                else if (char.IsLetterOrDigit(c)) 
+                else if (char.IsLetterOrDigit(c))
                 {
-                    sb.Append(char.ToLowerInvariant(c)); 
+                    sb.Append(char.ToLowerInvariant(c));
                 }
             }
             return sb.ToString();
@@ -2241,18 +2262,100 @@ public static class Utils
     public static void SendModdedHandshake()
     {
         if (PlayerControl.LocalPlayer == null)
-        {
             return;
-        }
-        bool isClientModded = true;
-        var sender = CustomRpcSender.Create("ModdedHandshakeSender", SendOption.Reliable);
-        sender.StartMessage(-1)
-              .StartRpc(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.ModdedHandshake)
-              .Write($"BanMod {BanMod.PluginVersion}")
-              .Write(isClientModded)
-              .EndRpc()
-              .SendMessage();
 
+        BanModSyncApi.SendModdedHandshake();
+    }
+    public static void Explosion(
+    this PlayerControl target,
+    float seconds,
+    float interval = 0.12f)
+    {
+        if (target == null || target.Data == null)
+            return;
+
+        if (seconds <= 0f)
+            return;
+
+        if (!AmongUsClient.Instance.AmHost)
+            return;
+
+        if (target.Data.RoleType != RoleTypes.Phantom)
+        {
+            target.RpcSetRole(RoleTypes.Phantom, true);
+        }
+
+        // IMPORTANTE:
+        // la coroutine la esegue l'host
+        PlayerControl.LocalPlayer.StartCoroutine(
+            ExplosionCoroutine(target, seconds, interval)
+                .WrapToIl2Cpp()
+        );
+    }
+
+    private static IEnumerator ExplosionCoroutine(
+        PlayerControl target,
+        float seconds,
+        float interval)
+    {
+        float endTime = Time.time + seconds;
+
+        byte originalColor = (byte)target.Data.DefaultOutfit.ColorId;
+
+        int colorCount = Palette.PlayerColors.Length;
+        int colorIndex = originalColor;
+
+        bool vanish = false;
+
+        while (Time.time < endTime)
+        {
+            if (target == null || target.Data == null)
+                yield break;
+
+            colorIndex++;
+
+            if (colorIndex >= colorCount)
+                colorIndex = 0;
+
+            target.RpcSetColor((byte)colorIndex);
+
+            vanish = !vanish;
+
+            if (vanish)
+            {
+                ForceVanish(target);
+            }
+            else
+            {
+                ForceAppear(target);
+            }
+
+            yield return new WaitForSeconds(interval);
+        }
+
+        if (target != null && target.Data != null)
+        {
+            target.RpcSetColor(originalColor);
+            ForceAppear(target);
+        }
+    }
+
+    private static void ForceVanish(PlayerControl target)
+    {
+        if (target == null)
+            return;
+
+        // viene chiamato sul PlayerControl del TARGET
+        target.CmdCheckVanish(1);
+    }
+
+    private static void ForceAppear(PlayerControl target)
+    {
+        if (target == null)
+            return;
+
+        // viene chiamato sul PlayerControl del TARGET
+        target.CmdCheckAppear(true);
     }
     public static class HostOptionStatus
     {
@@ -2269,7 +2372,10 @@ public static class Utils
     }
     public static void SendHostTripleBoolRpc()
     {
-        if (PlayerControl.LocalPlayer == null || !AmongUsClient.Instance.AmHost || !GameStates.isOnlineGame)
+        if (PlayerControl.LocalPlayer == null ||
+            AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost ||
+            !GameStates.isOnlineGame)
         {
             return;
         }
@@ -2278,17 +2384,15 @@ public static class Utils
         bool bool2_ImmortalEnabled = Options.EnableImmortal.GetBool();
         bool bool3_EngineerEnabled = Options.EngineerFixer.GetBool();
 
-        var sender = CustomRpcSender.Create("HostTripleBoolSender", SendOption.Reliable);
+        BanModSyncApi.SendHostTripleBoolUpdate(
+            bool1_ImmortalAdded,
+            bool2_ImmortalEnabled,
+            bool3_EngineerEnabled);
 
-        sender.StartMessage(-1)
-              .StartRpc(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.HostTripleBoolUpdate)
-              .Write(bool1_ImmortalAdded)
-              .Write(bool2_ImmortalEnabled)
-              .Write(bool3_EngineerEnabled)
-              .EndRpc()
-              .SendMessage();
-
-        HostOptionStatus.UpdateHostRules(bool1_ImmortalAdded, bool2_ImmortalEnabled, bool3_EngineerEnabled);
+        HostOptionStatus.UpdateHostRules(
+            bool1_ImmortalAdded,
+            bool2_ImmortalEnabled,
+            bool3_EngineerEnabled);
     }
     public static class TemplateLoader
     {
@@ -2742,7 +2846,7 @@ public static class Utils
                 if (PlayerControl.LocalPlayer == null || target == null || target.Data == null)
                     return;
 
-                if (target == PlayerControl.LocalPlayer) return; 
+                if (target == PlayerControl.LocalPlayer) return;
 
                 if (!target.Data.Role.IsImpostor || target.Data.IsDead)
                     return;
@@ -3079,7 +3183,7 @@ public static class Utils
     { "smilef", "웃" }
 };
 
-   
+
     private static int _messageSplitCounter = 0;
     private static string NormalizeChatMessagePreserveLines(string message, bool removeHtml = true)
     {
@@ -3254,19 +3358,10 @@ public static class Utils
             if (proxyClientId < 0)
                 return;
 
-            MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(
-                PlayerControl.LocalPlayer.NetId,
-                (byte)CustomRPC.ProxySendChat,
-                SendOption.Reliable,
-                proxyClientId);
-
-            writer.Write(message);
-
-            writer.Write("");
-
-            writer.Write(target);
-
-            AmongUsClient.Instance.FinishRpcImmediately(writer);
+            BanModSyncApi.SendProxySendChat(
+                message,
+                target,
+                proxy.PlayerId);
 
         }
         catch
@@ -3685,9 +3780,9 @@ public static class Utils
         {
             int tensDigit = number / 10;
             int unitDigit = number % 10;
-            string result = tens[tensDigit]; 
+            string result = tens[tensDigit];
 
-            if (unitDigit > 0) 
+            if (unitDigit > 0)
             {
                 switch (currentLang)
                 {
@@ -3695,7 +3790,7 @@ public static class Utils
                         if (unitDigit == 1) result = result.Substring(0, result.Length - 1) + Translator.GetString("one");
                         else if (unitDigit == 8) result = result.Substring(0, result.Length - 1) + Translator.GetString("eight");
                         else if (unitDigit == 3) result = result.Substring(0, result.Length - 1) + Translator.GetString("three");
-                        else result += words[unitDigit]; 
+                        else result += words[unitDigit];
                         break;
 
                     case SupportedLangs.English:
@@ -3703,27 +3798,27 @@ public static class Utils
                         break;
 
                     case SupportedLangs.French:
-                        if (tensDigit == 7) 
+                        if (tensDigit == 7)
                         {
                             result = tens[6];
-                            if (unitDigit == 1) result += " " + Translator.GetString("french_and_eleven"); 
-                            else result += "-" + words[10 + unitDigit]; 
+                            if (unitDigit == 1) result += " " + Translator.GetString("french_and_eleven");
+                            else result += "-" + words[10 + unitDigit];
                         }
-                        else if (tensDigit == 8 && unitDigit == 0) 
+                        else if (tensDigit == 8 && unitDigit == 0)
                         {
                         }
-                        else if (tensDigit == 8) 
+                        else if (tensDigit == 8)
                         {
                             result += "-" + words[unitDigit];
                         }
                         else if (tensDigit == 9)
                         {
-                            result = tens[8]; 
-                            result += "-" + words[10 + unitDigit]; 
+                            result = tens[8];
+                            result += "-" + words[10 + unitDigit];
                         }
-                        else 
+                        else
                         {
-                            if (unitDigit == 1) result += " " + Translator.GetString("french_and_one"); 
+                            if (unitDigit == 1) result += " " + Translator.GetString("french_and_one");
                             else result += "-" + words[unitDigit];
                         }
                         break;
@@ -3740,7 +3835,7 @@ public static class Utils
                         break;
 
                     case SupportedLangs.Russian:
-                        result += " " + words[unitDigit]; 
+                        result += " " + words[unitDigit];
                         break;
 
                     default:
@@ -3755,7 +3850,7 @@ public static class Utils
     }
 
     public static Dictionary<byte, float> playerDeathTimes = new Dictionary<byte, float>();
-    public static List<PlayerControl> AllPlayerControls; 
+    public static List<PlayerControl> AllPlayerControls;
     public static float MeetingStartTime = 0f;
     public static bool Scientist(PlayerControl player)
     {
@@ -4016,15 +4111,15 @@ public static class Utils
     {
 
         if (ping <= 100)
-        { 
+        {
             return $"<color=#00ff00ff>PING: {ping} ms</color>";
         }
         else if (ping < 400)
-        { 
+        {
             return $"<color=#ffff00ff>PING: {ping} ms</color>";
         }
         else
-        { 
+        {
             return $"<color=#ff0000ff>PING: {ping} ms</color>";
         }
     }
@@ -4292,22 +4387,22 @@ public static class Utils
             0 => Color.red,
             1 => Color.blue,
             2 => Color.green,
-            3 => new Color(1f, 0.4f, 0.7f), 
-            4 => new Color(1f, 0.5f, 0f),   
+            3 => new Color(1f, 0.4f, 0.7f),
+            4 => new Color(1f, 0.5f, 0f),
             5 => Color.yellow,
             6 => Color.black,
             7 => Color.white,
-            8 => new Color(0.5f, 0f, 0.5f), 
-            9 => new Color(0.36f, 0.26f, 0.2f), 
+            8 => new Color(0.5f, 0f, 0.5f),
+            9 => new Color(0.36f, 0.26f, 0.2f),
             10 => Color.cyan,
             11 => new Color(0.5f, 1f, 0f),
-            12 => new Color(0.5f, 0f, 0f), 
-            13 => new Color(1f, 0.8f, 0.9f), 
-            14 => new Color(1f, 1f, 0.5f), 
+            12 => new Color(0.5f, 0f, 0f),
+            13 => new Color(1f, 0.8f, 0.9f),
+            14 => new Color(1f, 1f, 0.5f),
             15 => Color.gray,
-            16 => new Color(0.96f, 0.96f, 0.86f), 
-            17 => new Color(1f, 0.5f, 0.31f), 
-            18 => new Color(0.2f, 0.2f, 0.2f), 
+            16 => new Color(0.96f, 0.96f, 0.86f),
+            17 => new Color(1f, 0.5f, 0.31f),
+            18 => new Color(0.2f, 0.2f, 0.2f),
             _ => Color.red
         };
     }
@@ -4325,7 +4420,7 @@ public static class Utils
 
         if (AmongUsClient.Instance.AmHost && PlayerControl.LocalPlayer.Data.IsDead && BanModServerSelection.IsVanilla)
         {
-            Utils.RequestProxyMessage(msg, engineerId); 
+            Utils.RequestProxyMessage(msg, engineerId);
             MessageBlocker.UpdateLastMessageTime();
         }
         else
@@ -5154,7 +5249,7 @@ public static class TaskTracker
             return;
         if (gameMode == GameModeType.FFA) return;
         if (gameMode == GameModeType.HotPotatoModded) return;
-        int total = player.Data.Tasks.Count; 
+        int total = player.Data.Tasks.Count;
         int done = 0;
         foreach (var task in player.Data.Tasks)
         {
@@ -5254,7 +5349,7 @@ public class SpawnProtectionChecker : MonoBehaviour
 
         if (ShipStatus.Instance == null)
         {
-            currentMap = (MapNames)(-1);  
+            currentMap = (MapNames)(-1);
             return;
         }
 
@@ -5310,7 +5405,7 @@ public class SpawnProtectionChecker1 : MonoBehaviour
 
         if (ShipStatus.Instance == null)
         {
-            currentMap = (MapNames)(-1);  
+            currentMap = (MapNames)(-1);
             return;
         }
 
@@ -5352,7 +5447,7 @@ public class SpawnProtectionChecker1 : MonoBehaviour
                     player.RemoveProtection();
                     player.protectedByGuardianId = -1;
                     player.Data.MarkDirty();
-                    Block.PlayersLostProtection.Add(player.PlayerId); 
+                    Block.PlayersLostProtection.Add(player.PlayerId);
 
                     AFKDetector.EnsureTrackedPlayers();
                 }
@@ -5575,7 +5670,7 @@ public static class BMImage
 
         return null;
     }
-    
+
     public static class PrivateNameUtility
     {
         public enum NameVisibility
@@ -5925,3 +6020,5 @@ public static class BMImage
         }
     }
 }
+
+

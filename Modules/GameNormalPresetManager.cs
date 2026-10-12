@@ -2327,7 +2327,6 @@ namespace BanMod
             "Preset 3"
         };
 
-        private static bool _wasOpen;
         private static string _status = "";
 
         private static int _editingSlot = 0;
@@ -2360,7 +2359,6 @@ namespace BanMod
             MenuRouter.OnPanelChanged -= HandlePanelChanged;
 
             showMenu = false;
-            _wasOpen = false;
             _editingSlot = 0;
             _editingGameMode = (GameModeType)(-1);
             _renameBuffer = "";
@@ -2383,11 +2381,9 @@ namespace BanMod
                 RefreshNames();
                 _scrollPosition = Vector2.zero;
                 _status = "";
-                _wasOpen = true;
             }
             else
             {
-                _wasOpen = false;
                 _editingSlot = 0;
                 _editingGameMode = (GameModeType)(-1);
                 _renameBuffer = "";

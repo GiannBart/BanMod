@@ -19,7 +19,31 @@ namespace BanMod
 
     public static class BanModServerSelection
     {
-        public static BanModServerMode Mode = BanModServerMode.Vanilla;
+        private static BanModServerMode _mode = BanModServerMode.Vanilla;
+
+        public static BanModServerMode Mode
+        {
+            get => _mode;
+            set
+            {
+                if (_mode == value)
+                    return;
+
+                _mode = value;
+
+                try
+                {
+                    Options.UpdateGameModesForServer();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning(
+                        "[BanMod] UpdateGameModesForServer error: " + ex
+                    );
+                }
+            }
+        }
+
         public static bool VanillaAcknowledged = false;
         public static bool VanillaCreateBypassOnce = false;
 
@@ -235,7 +259,7 @@ namespace BanMod
                         return id.ToLowerInvariant();
                 }
             }
-            catch (Exception ex)
+            catch
             {
             }
 
@@ -895,7 +919,7 @@ namespace BanMod
                     options
                 );
             }
-            catch (Exception ex)
+            catch
             {
             }
         }
@@ -1272,7 +1296,7 @@ namespace BanMod
                     );
                 }
             }
-            catch (Exception ex)
+            catch
             {
             }
             finally
@@ -1604,7 +1628,7 @@ namespace BanMod
             {
                 createGame.Confirm();
             }
-            catch (Exception ex)
+            catch
             {
             }
         }
@@ -1727,7 +1751,7 @@ namespace BanMod
 
                 Refresh();
             }
-            catch (Exception ex)
+            catch
             {
             }
         }
@@ -2052,7 +2076,7 @@ namespace BanMod
                         isVanilla
                     );
                 }
-                catch (Exception ex)
+                catch
                 {
                 }
             }
@@ -2094,7 +2118,7 @@ namespace BanMod
                 );
 
             }
-            catch (Exception ex)
+            catch
             {
             }
         }
@@ -2123,7 +2147,7 @@ namespace BanMod
                         ? texts.VanillaDescription
                         : texts.ModdedDescription;
             }
-            catch (Exception ex)
+            catch
             {
             }
         }
@@ -2313,7 +2337,7 @@ namespace BanMod
 
                 return best;
             }
-            catch (Exception ex)
+            catch
             {
 
                 return null;
@@ -2593,9 +2617,6 @@ namespace BanMod
 
             BanModServerSelection.VanillaCreateBypassOnce =
                 false;
-
-            Options.UpdateGameModesForServer();
-
 
             Refresh();
         }

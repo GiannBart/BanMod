@@ -27,12 +27,17 @@ internal static class RandomVentSpawnManager
 
             bool randomVentSpawnEnabled =
                 Options.RandomVentSpawn != null &&
-                Options.RandomVentSpawn.GetBool();
+                Options.RandomVentSpawn.GetBool() || 
+                Options.RandomVentSpawn1 != null &&
+                Options.RandomVentSpawn1.GetBool();
 
             bool randomVentSpawnFfaEnabled =
                 Options.RandomVentSpawnffa != null &&
                 Options.RandomVentSpawnffa.GetBool() &&
-                Options.GameMode.GetValue(GameModeType.FFA);
+                Options.GameMode.GetValue(GameModeType.FFA) ||
+                Options.RandomVentSpawnffa1 != null &&
+                Options.RandomVentSpawnffa1.GetBool() &&
+                Options.GameMode.GetValue(GameModeType.FFATeam);
 
             if (!randomVentSpawnEnabled &&
                 !randomVentSpawnFfaEnabled)
@@ -953,8 +958,10 @@ internal static class RandomVentSpawnManager
                 return;
 
 
-            if (Options.RandomVentSpawnffa == null ||
-                !Options.RandomVentSpawnffa.GetBool())
+            if ((Options.RandomVentSpawnffa == null ||
+                !Options.RandomVentSpawnffa.GetBool()) ||
+                (Options.RandomVentSpawnffa1 == null ||
+                !Options.RandomVentSpawnffa1.GetBool()))
             {
                 return;
             }

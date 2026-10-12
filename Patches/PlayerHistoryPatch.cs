@@ -62,9 +62,9 @@ internal static class PlayerHistory
         RoundRunning = true;
     }
 
-    internal static void RememberLeaver(ClientData? client)
+    internal static void RememberLeaver(ClientData client)
     {
-        NetworkedPlayerInfo? player = client?.Character?.Data;
+        NetworkedPlayerInfo player = client?.Character?.Data;
         if (player == null || IsLocalPlayer(player))
             return;
 
@@ -110,7 +110,7 @@ internal static class PlayerHistory
 
     private static HistoryEntry MakeHistoryEntry(
         NetworkedPlayerInfo player,
-        ClientData? client = null)
+        ClientData client = null)
     {
         FriendsListManager.RecentPlayedWithPlayer recent = MakeRecentPlayer(player);
 
@@ -154,7 +154,7 @@ internal static class PlayerHistory
 
     private static string GetPlatformDisplayName(
         Platforms platform,
-        string? originalName)
+        string originalName)
     {
         if (!string.IsNullOrWhiteSpace(originalName))
             return originalName;
@@ -205,7 +205,15 @@ internal static class PlayerHistory
         try
         {
             string host = AmongUsClient.Instance.GetNetworkAddress();
-            uint address = (uint)IPAddress.Parse(host).Address;
+
+            IPAddress ip = IPAddress.Parse(host);
+            byte[] bytes = ip.GetAddressBytes();
+
+            if (bytes.Length != 4)
+                return string.Empty;
+
+            uint address = BitConverter.ToUInt32(bytes, 0);
+
             return $"{address}:{AmongUsClient.Instance.GetNetworkPort()}";
         }
         catch

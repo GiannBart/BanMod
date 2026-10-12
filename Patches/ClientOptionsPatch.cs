@@ -18,6 +18,7 @@ public static class OptionsMenuBehaviourStartPatch
     private static ClientOptionItem SeeRoleMeeting;
     private static ClientOptionItem EnableZoom;
     private static ClientOptionItem AktiveChat;
+    private static ClientOptionItem EnableGhostChat;
     private static ClientOptionItem ChatOffIfImpostor;
     private static ClientOptionItem Resize_Player;
     private static ClientOptionItem EnableAllChat;
@@ -65,6 +66,9 @@ public static class OptionsMenuBehaviourStartPatch
         if (AktiveChat == null || AktiveChat.ToggleButton == null)
             AktiveChat = ClientOptionItem.Create("Vis_EnableChat", BanMod.AktiveChat, __instance);
 
+        if (EnableGhostChat == null || EnableGhostChat.ToggleButton == null)
+            EnableGhostChat = ClientOptionItem.Create("EnableGhostChat", BanMod.EnableGhostChat, __instance);
+        
         if (EnableAllChat == null || EnableAllChat.ToggleButton == null)
             EnableAllChat = ClientOptionItem.Create("EnableAllChat", BanMod.EnableAllChat, __instance);
 

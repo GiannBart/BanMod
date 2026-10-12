@@ -95,17 +95,52 @@ namespace BanMod
                 return;
             }
 
-            var writer = AmongUsClient.Instance.StartRpcImmediately(
-                PlayerControl.LocalPlayer.NetId,
-                (byte)CustomRPC.ModeratorAction,
-                SendOption.Reliable,
-                AmongUsClient.Instance.HostId
-            );
+            BanModSyncApi.SendModeratorAction(
+                action,
+                targetPlayerId);
+        }
 
-            writer.Write((byte)action);
-            writer.Write(targetPlayerId);
+        public static void ReceiveServer(
+            byte senderPlayerId,
+            ModeratorAction action,
+            byte targetPlayerId)
+        {
+            if (AmongUsClient.Instance == null ||
+                !AmongUsClient.Instance.AmHost)
+            {
+                return;
+            }
 
-            AmongUsClient.Instance.FinishRpcImmediately(writer);
+            PlayerControl sender = BanMod.AllPlayerControls.FirstOrDefault(
+                p => p != null &&
+                     p.Data != null &&
+                     !p.Data.Disconnected &&
+                     p.PlayerId == senderPlayerId);
+
+            if (sender == null)
+                return;
+
+            if (!IsActualModerator(sender))
+            {
+                BMLogger.Warn(
+                    $"Moderator server request rejected: unauthorized sender | PlayerId={senderPlayerId}",
+                    LogTag);
+                return;
+            }
+
+            if (!Enum.IsDefined(typeof(ModeratorAction), action))
+            {
+                BMLogger.Warn(
+                    $"Moderator server request rejected: unknown action {(byte)action}",
+                    LogTag);
+                return;
+            }
+
+            ExecuteHost(
+                sender,
+                action,
+                targetPlayerId,
+                true);
         }
 
         public static void Receive(PlayerControl sender, MessageReader reader)
@@ -558,19 +593,11 @@ namespace BanMod
                         target.transform.localScale = new Vector3(scale, scale, 1f);
                         Utils.SetPlayerBodyType(target, nextBody);
 
-                        var writer = AmongUsClient.Instance.StartRpcImmediately(
-                            PlayerControl.LocalPlayer.NetId,
-                            (byte)CustomRPC.SyncPlayerVisual,
-                            SendOption.Reliable,
-                            -1
-                        );
-
-                        writer.Write(target.PlayerId);
-                        writer.Write(scale);
-                        writer.Write((byte)nextBody);
-                        writer.Write(false);
-
-                        AmongUsClient.Instance.FinishRpcImmediately(writer);
+                        BanModSyncApi.SendSyncPlayerVisual(
+                            target.PlayerId,
+                            scale,
+                            (byte)nextBody,
+                            false);
                         break;
                     }
 

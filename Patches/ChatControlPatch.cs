@@ -530,10 +530,10 @@ public static class TextBoxTMP_IsCharAllowed_Patch
 {
     public static bool Prefix(char __0, ref bool __result)
     {
-        if (!BanModServerSelection.IsVanilla)
+        if (BanModServerSelection.IsModded25)
             return true;
 
-        if (__0 == '<' || __0 == '>' || __0 == '[' || __0 == ']')
+        if ((__0 == '<' || __0 == '>' || __0 == '[' || __0 == ']') && (BanModServerSelection.IsVanilla))
         {
             __result = false;
             return false;
@@ -543,6 +543,144 @@ public static class TextBoxTMP_IsCharAllowed_Patch
             return true;
 
         __result = true;
+        return false;
+    }
+}
+[HarmonyPatch(typeof(ChatController), nameof(ChatController.AddChat))]
+public static class ChatController_AddChat_GhostChatPatch
+{
+    private static bool CanSeeGhostChat()
+    {
+        if (!BanMod.EnableGhostChat.Value)
+            return false;
+
+        switch (Options.GameMode.Selected)
+        {
+            case GameModeType.SnS:
+            case GameModeType.TaskRun:
+            case GameModeType.FFA:
+            case GameModeType.FFATeam:
+            case GameModeType.ZombieMode:
+            case GameModeType.PnS:
+            case GameModeType.HotPotatoModded:
+            case GameModeType.RoomRush:
+            case GameModeType.Assassin:
+            case GameModeType.KillRace:
+            case GameModeType.DeathRun:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    public static bool Prefix(
+        PlayerControl sourcePlayer,
+        string chatText,
+        bool censor,
+        ChatController __instance)
+    {
+        if (!CanSeeGhostChat())
+            return true;
+
+        if (!sourcePlayer || !PlayerControl.LocalPlayer)
+            return true;
+
+        NetworkedPlayerInfo localData = PlayerControl.LocalPlayer.Data;
+        NetworkedPlayerInfo sourceData = sourcePlayer.Data;
+
+        if (sourceData == null || localData == null)
+            return true;
+
+        if (localData.IsDead)
+            return true;
+
+        if (!sourceData.IsDead)
+            return true;
+
+
+        ChatBubble pooledBubble = __instance.GetPooledBubble();
+
+        try
+        {
+            pooledBubble.transform.SetParent(__instance.scroller.Inner);
+            pooledBubble.transform.localScale = Vector3.one;
+
+            bool isLocal = sourcePlayer == PlayerControl.LocalPlayer;
+
+            if (isLocal)
+            {
+                pooledBubble.SetRight();
+            }
+            else
+            {
+                pooledBubble.SetLeft();
+            }
+
+            bool didVote =
+                MeetingHud.Instance &&
+                MeetingHud.Instance.DidVote(sourcePlayer.PlayerId);
+
+            pooledBubble.SetCosmetics(sourceData);
+
+            __instance.SetChatBubbleName(
+                pooledBubble,
+                sourceData,
+                sourceData.IsDead,
+                didVote,
+                PlayerNameColor.Get(sourceData),
+                null
+            );
+
+            if (censor &&
+                AmongUs.Data.DataManager.Settings.Multiplayer.CensorChat)
+            {
+                chatText = BlockedWords.CensorWords(chatText, false);
+            }
+
+            pooledBubble.SetText(chatText);
+            pooledBubble.AlignChildren();
+
+            __instance.AlignAllBubbles();
+
+            if (!__instance.IsOpenOrOpening &&
+                __instance.notificationRoutine == null)
+            {
+                __instance.notificationRoutine =
+                    __instance.StartCoroutine(__instance.BounceDot());
+            }
+
+            if (!isLocal && !__instance.IsOpenOrOpening)
+            {
+                SoundManager.Instance
+                    .PlaySound(__instance.messageSound, false)
+                    .pitch = 0.5f + sourcePlayer.PlayerId / 15f;
+
+                __instance.chatNotification.SetUp(
+                    sourcePlayer,
+                    chatText
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                ChatController.Logger.Error(ex.ToString(), null);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                __instance.chatBubblePool.Reclaim(pooledBubble);
+            }
+            catch
+            {
+            }
+        }
+
         return false;
     }
 }

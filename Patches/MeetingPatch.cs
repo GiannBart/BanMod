@@ -718,3 +718,35 @@ public static class ExileControllerWrapUpPatch
         }
     }
 }
+[HarmonyPatch(
+    typeof(ExileController),
+    nameof(ExileController.ReEnableGameplay)
+)]
+public static class ReEnableGameplayChatPatch
+{
+    public static void Postfix()
+    {
+        if (!AmongUsClient.Instance.AmHost)
+            return;
+
+        if (!BanMod.EnableAllChat.Value)
+            return;
+
+        if (BanModServerSelection.IsVanilla &&
+            ChatUtils.IgnoreNextReEnableGameplay)
+        {
+            ChatUtils.IgnoreNextReEnableGameplay = false;
+            return;
+        }
+
+        LateTask.New(() =>
+        {
+            if (!AmongUsClient.Instance.AmHost ||
+                !BanMod.EnableAllChat.Value)
+                return;
+
+            ChatUtils.EnableAllChat();
+
+        }, 0.5f);
+    }
+}

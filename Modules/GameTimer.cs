@@ -32,7 +32,6 @@ public static class GameTimeLimit
     private static float MeetingStartedAt;
 
     private static bool EndGameSent;
-    private static bool TimerWinMessageSent;
     private static bool EndGamePendingAfterMeeting;
 
     public static void Start()
@@ -53,7 +52,6 @@ public static class GameTimeLimit
         EndGamePendingAfterMeeting = false;
 
         EndedByTimer = false;
-        TimerWinMessageSent = false;
 
         WinnerByTimer = TimerWinner.None;
 
@@ -286,7 +284,6 @@ public static class GameTimeLimit
         EndGamePendingAfterMeeting = false;
 
         EndedByTimer = false;
-        TimerWinMessageSent = false;
 
         WinnerByTimer = TimerWinner.None;
 

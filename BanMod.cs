@@ -31,9 +31,9 @@ public partial class BanMod : BasePlugin
 {
     public static BanMod Instance;
     public Harmony Harmony { get; } = new(PluginGuid);
-    public static string modVersion = "3.9.7";
+    public static string modVersion = "3.9.8";
     public const string PluginGuid = "com.GianniBart.BanMod";
-    public const string PluginVersion = "3.9.7";
+    public const string PluginVersion = "3.9.8";
     public const string VersionRequired = PluginVersion;
     public static Version version = Version.Parse(PluginVersion);
     public static List<string> supportedAU = new List<string> { "2026.9.29" };
@@ -77,7 +77,6 @@ public partial class BanMod : BasePlugin
     public static float rainbowPlayerTimer = 0f;
     public static PlayerControl RainbowTarget = null;
     private readonly List<UnityEngine.Component> _banModComponents = new();
-    private bool _disableAlreadyStarted = false;
     public static bool instantstart = false;
 
     private static readonly string saveFilePath = Path.Combine(Application.persistentDataPath, "host_setimp_times.txt");
@@ -388,6 +387,8 @@ public partial class BanMod : BasePlugin
     public static ConfigEntry<bool> AnniversaryDecorations { get; private set; }
     public static ConfigEntry<bool> CustomSkin { get; private set; }
     public static ConfigEntry<bool> AktiveChat { get; private set; }
+    public static ConfigEntry<bool> EnableGhostChat { get; private set; }
+    
     public static ConfigEntry<bool> ChatOffIfImpostor { get; private set; }
     public static ConfigEntry<bool> Resize_Player { get; private set; }
     public static ConfigEntry<bool> ExcludeFriends { get; private set; }
@@ -472,6 +473,7 @@ public partial class BanMod : BasePlugin
         DisableLobbyMusic = Config.Bind("Client Options", "DisableLobbyMusic", false);
         AktiveLobby = Config.Bind("Client Options", "EnableCustomDecorations", true);
         AktiveChat = Config.Bind("Client Options", "AktiveChat", false);
+        EnableGhostChat = Config.Bind("Client Options", "EnableGhostChat", false);
         ChatOffIfImpostor = Config.Bind("Client Options", "ChatOffIfImpostor", true);
         Resize_Player = Config.Bind("Client Options", "Resize_Player", false);
         ExcludeFriends = Config.Bind("Client Options", "ExcludeFriends", false);
@@ -481,7 +483,7 @@ public partial class BanMod : BasePlugin
         EnableAllChat = Config.Bind("Client Options", "EnableAllChat", false);
         SeeRoleMeeting = Config.Bind("Client Options", "SeeRoleMeeting", true);
         VoteLockEnabled = Config.Bind("Client Options", "VoteLockEnabled", true);
-        SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", true);
+        SwitchVanilla = Config.Bind("Client Options", "SwitchVanilla", false);
         HalloweenDecorations = Config.Bind("Decorations", "HalloweenDecorations", false, "Enable Halloween decorations");
         AnniversaryDecorations = Config.Bind("Decorations", "AnniversaryDecorations", false, "Enable Anniversary decorations");
         CustomSkin = Config.Bind("Decorations", "CustomSkin", false, "Enable CustomSkin");
@@ -524,6 +526,8 @@ public partial class BanMod : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<ServerSelectionMenu>();
         ClassInjector.RegisterTypeInIl2Cpp<AutoFriendInviteUi>();
         ClassInjector.RegisterTypeInIl2Cpp<LiveTranslatorMenu>();
+        ClassInjector.RegisterTypeInIl2Cpp<EvidenceMenu>();
+
 
         TemplateLoader.InitTemplates();
         TemplateLoader.LoadWelcomeTemplate("WelcomeTemplate");
@@ -612,7 +616,7 @@ public partial class BanMod : BasePlugin
         AddComponent<ServerSelectionMenu>();
         AddComponent<AutoFriendInviteUi>();
         AddComponent<LiveTranslatorMenu>();
-
+        AddComponent<EvidenceMenu>();
         LiveTranslator.Initialize(Config);
 
         BMLogger.LogInfo("[BanMod] BanModManager creato e avviato correttamente ✅");
@@ -662,7 +666,10 @@ public partial class BanMod : BasePlugin
                         BanMod.DisableAllRoles();
                     }
                 }
-
+                if (GameStates.isLobby)
+                {
+                    DleksEhtController.Apply();
+                }
                 if (GameStates.isLobby &&
                     Options.GameMode != null &&
                     !Options.GameMode.GetValue(GameModeType.Default) &&
@@ -686,11 +693,6 @@ public partial class BanMod : BasePlugin
                     Options.GameMode.SetValue(GameModeType.Default);
                     Options.ReOpenSettings();
                     return;
-                }
-
-                if (DleksPickerPatch.DleksSelected)
-                {
-                    DleksEhtController.Apply();
                 }
 
                 if (Options.Jester != null &&

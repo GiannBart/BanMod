@@ -28,7 +28,7 @@ namespace BanMod
         private const string CommunityLastSeenReplyKey = "BANMOD_Community_LastSeenReplyId_v2";
         private const string CommunityLastSeenChatKey = "BANMOD_Community_LastSeenChatId_v1";
         private const string CommunityDisplayNameCacheKey = "BANMOD_Community_DisplayName_v1";
-        private const float CommunityMentionPollIntervalSeconds = 4f;
+        private const float CommunityMentionPollIntervalSeconds = 10f;
         private const string CommunityApiBase = BanModApiConfig.ApiBaseUrl;
 
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -47,6 +47,7 @@ namespace BanMod
         private static bool _communityMentionPollRunning;
         private static int _communityMentionLastMessageId;
         private static float _communityNextMentionPollTime;
+        private static float _communityMentionFailureBackoff = 10f;
 
 
         private static GameObject _root;
@@ -55,7 +56,6 @@ namespace BanMod
         private static GameObject _detailPanel;
         private static GameObject _composePanel;
         private static GameObject _chatPanel;
-        private static TextMeshProUGUI _chatText;
         private static RectTransform _chatContent;
         private static ScrollRect _chatScroll;
         private static GameObject _chatListRoot;
@@ -212,13 +212,10 @@ namespace BanMod
         private static TMP_InputField _replyInput;
         private static Button _starButton;
         private static Button _suggestionTranslateButton;
-        private static TextMeshProUGUI _composeCategoryText;
         private static readonly List<GameObject> ListButtons = new List<GameObject>();
         private static readonly List<CommunityPost> Posts = new List<CommunityPost>();
         private static readonly List<CommunityReply> Replies = new List<CommunityReply>();
         private static CommunityPost _selected;
-        private static int _page;
-        private static string _composeKind = "suggestion";
         private static bool _requestRunning;
 
 
@@ -2845,7 +2842,6 @@ namespace BanMod
         {
             _composePanel = CreatePanel(_window.transform, "ComposePanel", new Vector2(0f, -55f), new Vector2(1180f, 660f), BanModUiStyles.PanelColor);
             CreateLabel(_composePanel.transform, "ComposeTitle", "NEW SUGGESTION", 30, TextAlignmentOptions.Left, Color.white, new Vector2(-325f, 280f), new Vector2(520f, 46f));
-            _composeKind = "suggestion";
             _titleInput = CreateInput(_composePanel.transform, "TitleInput", "Suggestion title...", false, new Vector2(0f, 195f), new Vector2(900f, 58f), 120);
             _messageInput = CreateInput(_composePanel.transform, "MessageInput", "Describe your suggestion...", true, new Vector2(0f, 20f), new Vector2(900f, 240f), 4000);
             CreateLabel(_composePanel.transform, "AnonInfo", "Your Community name is shown publicly. Your FriendCode/account identity is visible only to moderators.", 14, TextAlignmentOptions.Left, new Color(0.72f, 0.76f, 0.86f, 1f), new Vector2(0f, -135f), new Vector2(900f, 42f));
@@ -2879,7 +2875,6 @@ namespace BanMod
         private static void ShowCompose()
         {
             if (_composePanel == null) return;
-            _composeKind = "suggestion";
             SetInputText(_titleInput, "");
             SetInputText(_messageInput, "");
             _composePanel.SetActive(true);
@@ -3394,13 +3389,6 @@ namespace BanMod
             }));
         }
 
-        private static void SetComposeKind(string kind)
-        {
-            if (kind != "bug" && kind != "suggestion" && kind != "other") kind = "other";
-            _composeKind = kind;
-            if (_composeCategoryText != null) _composeCategoryText.text = "Selected: " + kind.ToUpperInvariant();
-        }
-
         private static IEnumerator ChatPollingLoop()
         {
             _chatPolling = true;
@@ -3663,7 +3651,7 @@ namespace BanMod
 
             yield return SendRequest(
                 "GET",
-                CommunityUrl("/chat?limit=120"),
+                CommunityUrl("/chat?limit=20"),
                 null,
                 delegate (bool success, string response)
                 {
@@ -3671,32 +3659,52 @@ namespace BanMod
                     body = response ?? "";
                 });
 
-            if (ok)
+            if (!ok)
+            {
+                _communityNextMentionPollTime =
+                    Time.unscaledTime + _communityMentionFailureBackoff;
+
+                _communityMentionFailureBackoff =
+                    Mathf.Min(_communityMentionFailureBackoff * 2f, 60f);
+
+                _communityMentionPollRunning = false;
+                yield break;
+            }
+
+            _communityMentionFailureBackoff = 10f;
+
+            try
+            {
+                List<CommunityChatMessage> messages = ParseChatMessages(body);
+                ProcessIncomingCommunityMentions(messages);
+
+                int highest = HighestChatId(messages);
+                _latestKnownCommunityChatId =
+                    Math.Max(_latestKnownCommunityChatId, highest);
+
+                int seenChat = 0;
+                try
+                {
+                    seenChat = PlayerPrefs.GetInt(
+                        CommunityLastSeenChatKey,
+                        0
+                    );
+                }
+                catch { }
+
+                if (highest > seenChat)
+                    SetCommunityUnreadVisible(true);
+            }
+            catch (Exception ex)
             {
                 try
                 {
-                    List<CommunityChatMessage> messages = ParseChatMessages(body);
-                    ProcessIncomingCommunityMentions(messages);
-
-                    int highest = HighestChatId(messages);
-                    _latestKnownCommunityChatId =
-                        Math.Max(_latestKnownCommunityChatId, highest);
-
-
-
-                    int seenChat = 0;
-                    try { seenChat = PlayerPrefs.GetInt(CommunityLastSeenChatKey, 0); } catch { }
-                    if (highest > seenChat)
-                        SetCommunityUnreadVisible(true);
+                    Debug.LogWarning(
+                        "[BANMOD Community] Mention poll parse failed: " +
+                        ex.Message
+                    );
                 }
-                catch (Exception ex)
-                {
-                    try
-                    {
-                        Debug.LogWarning("[BANMOD Community] Mention poll parse failed: " + ex.Message);
-                    }
-                    catch { }
-                }
+                catch { }
             }
 
             _communityMentionPollRunning = false;
@@ -4098,7 +4106,6 @@ namespace BanMod
                     Posts.Clear();
                     Posts.AddRange(ParsePosts(body));
                     _latestKnownCommunityPostId = Math.Max(_latestKnownCommunityPostId, HighestPostId(Posts));
-                    _page = 0;
                     _selected = Posts.Count > 0 ? Posts[0] : null;
                     RenderList();
                     if (_selected != null) FetchReplies(_selected.Id); else { Replies.Clear(); RenderSelected(); }

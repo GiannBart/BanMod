@@ -268,17 +268,31 @@ public static class RoleCommandActionRpc
             return;
         }
 
-        MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(
-            localPlayer.NetId,
-            (byte)CustomRPC.RoleCommandAction,
-            SendOption.Reliable,
-            AmongUsClient.Instance.HostId
-        );
+        BanModSyncApi.SendRoleCommandAction(
+            srcPlayerId,
+            targetPlayerId);
+    }
 
-        writer.Write(srcPlayerId);
-        writer.Write(targetPlayerId);
+    public static void ReceiveServer(
+        byte senderPlayerId,
+        byte srcPlayerId,
+        byte targetPlayerId)
+    {
+        if (AmongUsClient.Instance == null ||
+            !AmongUsClient.Instance.AmHost)
+        {
+            return;
+        }
 
-        AmongUsClient.Instance.FinishRpcImmediately(writer);
+        if (senderPlayerId != srcPlayerId)
+        {
+            BMLogger.Warn(
+                $"RoleCommandAction server spoof bloccato. Sender={senderPlayerId} Src={srcPlayerId}",
+                "RoleCommandAction");
+            return;
+        }
+
+        ExecuteOnHost(srcPlayerId, targetPlayerId);
     }
 
     public static void Receive(PlayerControl senderObject, MessageReader reader)

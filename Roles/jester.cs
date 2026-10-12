@@ -1,6 +1,5 @@
 //credits and licenses in the resources folder
 using AmongUs.GameOptions;
-using Hazel;
 using System.Linq;
 using UnityEngine;
 using static BanMod.Translator;
@@ -80,14 +79,7 @@ namespace BanMod
 
             if (AmongUsClient.Instance.AmHost)
             {
-                var writer = AmongUsClient.Instance.StartRpcImmediately(
-                    PlayerControl.LocalPlayer.NetId,
-                    (byte)CustomRPC.SetJester,
-                    SendOption.Reliable,
-                    -1
-                );
-                writer.Write(JesterId);
-                AmongUsClient.Instance.FinishRpcImmediately(writer);
+                BanModSyncApi.SendSetJester(JesterId);
             }
 
             ForcedJesterId = 255;

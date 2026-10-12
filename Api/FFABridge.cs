@@ -398,6 +398,30 @@ public static class FfaExternalBridge
                 )
             );
         }
+
+        if (Options.FfaVentMaxSeconds1 != null)
+        {
+            SetValue(
+                MaxVentSecondsField,
+                Mathf.Clamp(
+                    Options.FfaVentMaxSeconds1.GetInt(),
+                    1,
+                    30
+                )
+            );
+        }
+
+        if (Options.FFAVentTeleportMode1 != null)
+        {
+            SetValue(
+                VentBootModeField,
+                Mathf.Clamp(
+                    Options.FFAVentTeleportMode1.GetValue(),
+                    0,
+                    2
+                )
+            );
+        }
     }
 
     public static void SyncGameMode()

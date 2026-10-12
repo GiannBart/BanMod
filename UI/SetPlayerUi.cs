@@ -1,6 +1,5 @@
 //credits and licenses in the resources folder
 using AmongUs.GameOptions;
-using Hazel;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -285,15 +284,7 @@ namespace BanMod
                         Exiler.ExilerSelected = true;
                         ChatCommands.ShowChat($"Exiler: {selectedPlayer.name}");
 
-                        var writer = AmongUsClient.Instance.StartRpcImmediately(
-                            PlayerControl.LocalPlayer.NetId,
-                            (byte)CustomRPC.SetExiler,
-                            SendOption.Reliable,
-                            -1
-                        );
-
-                        writer.Write(selectedPlayer.PlayerId);
-                        AmongUsClient.Instance.FinishRpcImmediately(writer);
+                        BanModSyncApi.SendSetExiler(selectedPlayer.PlayerId);
                     }
                     
                     if (GUILayout.Button(GetString("PUI_SetGuesser"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)
@@ -302,15 +293,7 @@ namespace BanMod
                         Guesser.SpecialKillerSelected = true;
                         ChatCommands.ShowChat($"Guesser: {selectedPlayer.name}");
 
-                        var writer = AmongUsClient.Instance.StartRpcImmediately(
-                            PlayerControl.LocalPlayer.NetId,
-                            (byte)CustomRPC.SetSpecialKiller,
-                            SendOption.Reliable,
-                            -1
-                        );
-
-                        writer.Write(selectedPlayer.PlayerId);
-                        AmongUsClient.Instance.FinishRpcImmediately(writer);
+                        BanModSyncApi.SendSetSpecialKiller(selectedPlayer.PlayerId);
                     }
 
                     if (GUILayout.Button(GetString("PUI_SetJester"), buttonStyle, GUILayout.Height(45)) && AmongUsClient.Instance.AmHost)

@@ -10,7 +10,7 @@ namespace BanMod
 {
     internal static class BanModBepInExVersionGuard
     {
-        private const string RequiredVersion = "6.0.0-be.735";
+        private const string RequiredVersion = "6.0.0-be.785";
         private static bool _checked;
 
         internal static void CheckAndWarn()

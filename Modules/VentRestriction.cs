@@ -11,11 +11,8 @@ public static class VentRestriction
         bool modeBlocksVents =
             Options.GameMode.GetValue(GameModeType.SnS) ||
             Options.GameMode.GetValue(GameModeType.PnS) ||
-            (
-                Options.GameMode.GetValue(GameModeType.FFA) &&
-                Options.NoVent != null &&
-                Options.NoVent.GetBool()
-            );
+            (Options.GameMode.GetValue(GameModeType.FFA) &&  Options.NoVent != null && Options.NoVent.GetBool()) ||
+            (Options.GameMode.GetValue(GameModeType.FFATeam) && Options.NoVent1 != null && Options.NoVent1.GetBool());
 
         if (!modeBlocksVents)
             return false;

@@ -147,7 +147,6 @@ namespace BanMod
             private Vector3 pushOffset = new(1.2f, -2.2f, 0f);
 
             private bool fadingOut;
-            private bool isGreeting;
             private float runPhase;
             private float runAmplitude = 0.15f;
             private float runSpeed = 15f;
@@ -201,11 +200,6 @@ namespace BanMod
 
                     if (!fadingOut)
                     {
-                        if (isGreeting)
-                        {
-                            transform.localPosition = panel.localPosition + pullOffset;
-                            return;
-                        }
 
                         runPhase += Time.deltaTime * runSpeed;
                         float runOffset = Mathf.Sin(runPhase) * runAmplitude;
@@ -461,7 +455,7 @@ namespace BanMod
 
                 Vector3 shown = RightPanelOp;
                 Vector3 hidden = RightPanelOp + new Vector3(10f, 0f, 0f);
-                float speed = 8f;
+                float speed = 20f;
 
                 switch (panelState)
                 {

@@ -4,7 +4,6 @@ using System;
 using UnityEngine;
 
 namespace BanMod
-
 {
     public static class HostRoleOptionsRpc
     {
@@ -20,52 +19,50 @@ namespace BanMod
                 if (PlayerControl.LocalPlayer == null)
                     return;
 
-                byte exilerId = Exiler.ExilerSelected ? Exiler.ExilerId : byte.MaxValue;
-                byte guesserId = Guesser.SpecialKillerSelected ? Guesser.SpecialKillerId : byte.MaxValue;
-                byte jesterId = Jester.JesterSelected ? Jester.JesterId : byte.MaxValue;
+                bool exilerEnabled = Options.ExilerExe.GetBool();
+                bool guesserEnabled = Options.Guess.GetBool();
+                bool jesterEnabled = Options.Jester.GetBool();
 
-                MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(
-                    PlayerControl.LocalPlayer.NetId,
-                    (byte)CustomRPC.HostRoleOptionsUpdate,
-                    SendOption.Reliable,
-                    -1
-                );
+                bool phantomGuessEnabled = Options.PhantomGuess.GetBool();
+                bool viperGuessEnabled = Options.ViperGuess.GetBool();
+                bool shapeGuessEnabled = Options.ShapeGuess.GetBool();
+                bool impostorGuessEnabled = Options.ImpostorGuess.GetBool();
 
-                writer.Write(Options.ExilerExe.GetBool());
-                writer.Write(Options.Guess.GetBool());
-                writer.Write(Options.Jester.GetBool());
+                byte exilerId =
+                    Exiler.ExilerSelected ? Exiler.ExilerId : byte.MaxValue;
 
-                writer.Write(Options.PhantomGuess.GetBool());
-                writer.Write(Options.ViperGuess.GetBool());
-                writer.Write(Options.ShapeGuess.GetBool());
-                writer.Write(Options.ImpostorGuess.GetBool());
+                byte guesserId =
+                    Guesser.SpecialKillerSelected ? Guesser.SpecialKillerId : byte.MaxValue;
 
-                writer.Write(exilerId);
-                writer.Write(guesserId);
-                writer.Write(jesterId); 
+                byte jesterId =
+                    Jester.JesterSelected ? Jester.JesterId : byte.MaxValue;
 
-                AmongUsClient.Instance.FinishRpcImmediately(writer);
-
-                HostRoleOptionsStatus.Update(
-                    Options.ExilerExe.GetBool(),
-                    Options.Guess.GetBool(),
-                    Options.Jester.GetBool(),
-                    Options.PhantomGuess.GetBool(),
-                    Options.ViperGuess.GetBool(),
-                    Options.ShapeGuess.GetBool(),
-                    Options.ImpostorGuess.GetBool(),
+                // NUOVO TRASPORTO SERVER: nessun CustomRPC.
+                BanModSyncApi.SendHostRoleOptionsUpdate(
+                    exilerEnabled,
+                    guesserEnabled,
+                    jesterEnabled,
+                    phantomGuessEnabled,
+                    viperGuessEnabled,
+                    shapeGuessEnabled,
+                    impostorGuessEnabled,
                     exilerId,
                     guesserId,
-                    jesterId
-                );
+                    jesterId);
 
-                try
-                {
-                    RoleButtonRefresh.RefreshNow();
-                }
-                catch
-                {
-                }
+                HostRoleOptionsStatus.Update(
+                    exilerEnabled,
+                    guesserEnabled,
+                    jesterEnabled,
+                    phantomGuessEnabled,
+                    viperGuessEnabled,
+                    shapeGuessEnabled,
+                    impostorGuessEnabled,
+                    exilerId,
+                    guesserId,
+                    jesterId);
+
+                try { RoleButtonRefresh.RefreshNow(); } catch { }
             }
             catch (Exception ex)
             {
@@ -73,6 +70,50 @@ namespace BanMod
             }
         }
 
+        // Receiver del nuovo canale server.
+        public static void ReceiveServer(
+            bool exilerEnabled,
+            bool guesserEnabled,
+            bool jesterEnabled,
+            bool phantomGuessEnabled,
+            bool viperGuessEnabled,
+            bool shapeGuessEnabled,
+            bool impostorGuessEnabled,
+            byte exilerId,
+            byte guesserId,
+            byte jesterId)
+        {
+            try
+            {
+                HostRoleOptionsStatus.Update(
+                    exilerEnabled,
+                    guesserEnabled,
+                    jesterEnabled,
+                    phantomGuessEnabled,
+                    viperGuessEnabled,
+                    shapeGuessEnabled,
+                    impostorGuessEnabled,
+                    exilerId,
+                    guesserId,
+                    jesterId);
+
+                BMLogger.Info(
+                    $"HostRoleOptionsUpdate ricevuto via server | " +
+                    $"Exiler={exilerEnabled} ExilerId={exilerId} | " +
+                    $"Guesser={guesserEnabled} GuesserId={guesserId} | " +
+                    $"Jester={jesterEnabled} JesterId={jesterId}",
+                    LogTag);
+
+                try { RoleButtonRefresh.RefreshNow(); } catch { }
+            }
+            catch (Exception ex)
+            {
+                BMLogger.Warn($"ReceiveServer failed: {ex}", LogTag);
+            }
+        }
+
+        // Legacy receiver: può restare per compatibilità con vecchie versioni.
+        // Non viene usato dai nuovi sender.
         public static void Receive(PlayerControl senderObject, MessageReader reader)
         {
             try
@@ -87,15 +128,11 @@ namespace BanMod
                 {
                     BMLogger.Warn(
                         $"HostRoleOptionsUpdate ignorato: sender non host | PlayerId={senderObject.PlayerId}",
-                        LogTag
-                    );
+                        LogTag);
                     return;
                 }
 
-                bool watcherEnabled = reader.ReadBoolean();
                 bool exilerEnabled = reader.ReadBoolean();
-                bool judgeEnabled = reader.ReadBoolean();
-                bool profilerEnabled = reader.ReadBoolean();
                 bool guesserEnabled = reader.ReadBoolean();
                 bool jesterEnabled = reader.ReadBoolean();
 
@@ -105,14 +142,10 @@ namespace BanMod
                 bool impostorGuessEnabled = reader.ReadBoolean();
 
                 byte exilerId = reader.ReadByte();
-                byte judgeId = reader.ReadByte();
-                byte profilerId = reader.ReadByte();
-                byte watcherId = reader.ReadByte();
                 byte guesserId = reader.ReadByte();
                 byte jesterId = reader.ReadByte();
 
-
-                HostRoleOptionsStatus.Update(
+                ReceiveServer(
                     exilerEnabled,
                     guesserEnabled,
                     jesterEnabled,
@@ -122,24 +155,7 @@ namespace BanMod
                     impostorGuessEnabled,
                     exilerId,
                     guesserId,
-                    jesterId
-                );
-
-                BMLogger.Info(
-                    $"HostRoleOptionsUpdate ricevuto | Watcher={watcherEnabled} WatcherId={watcherId} | " +
-                    $"Exiler={exilerEnabled} ExilerId={exilerId} | " +
-                    $"Judge={judgeEnabled} JudgeId={judgeId} | Profiler={profilerEnabled} ProfilerId={profilerId} | " +
-                    $"Guesser={guesserEnabled} GuesserId={guesserId} | Jester={jesterEnabled} JesterId={jesterId}",
-                    LogTag
-                );
-
-                try
-                {
-                    RoleButtonRefresh.RefreshNow();
-                }
-                catch
-                {
-                }
+                    jesterId);
             }
             catch (Exception ex)
             {
@@ -157,7 +173,8 @@ namespace BanMod
                 if (senderObject.OwnerId == AmongUsClient.Instance.HostId)
                     return true;
 
-                if (senderObject.Data != null && senderObject.Data.ClientId == AmongUsClient.Instance.HostId)
+                if (senderObject.Data != null &&
+                    senderObject.Data.ClientId == AmongUsClient.Instance.HostId)
                     return true;
             }
             catch
@@ -167,6 +184,7 @@ namespace BanMod
             return false;
         }
     }
+
     public static class HostRoleOptionsStatus
     {
         public static bool ReceivedFromHost = false;
@@ -237,7 +255,6 @@ namespace BanMod
 
             Jester.JesterId = jesterId;
             Jester.JesterSelected = jesterId != byte.MaxValue && jesterId != 255;
-
         }
     }
 }

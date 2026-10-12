@@ -125,10 +125,14 @@ public static class LobbyGameModeOptionPatch
         }
 
         yield return null;
+        yield return null;
 
+        Options.SyncLobbyGameModeFromVanilla();
+        TaskVisibilityController.UpdateTaskVisibility();
         OptionItem.SyncAllOptions();
         FfaExternalBridge.SyncGameMode();
         FfaExternalBridge.SyncAll();
+        Options.ReOpenSettings();
 
         Debug.Log(
             $"[BanMod] Lobby mode switched -> {target} | " +

@@ -2,7 +2,6 @@
 using AmongUs.Data;
 using AmongUs.QuickChat;
 using HarmonyLib;
-using Hazel;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using InnerNet;
 using System;
@@ -89,27 +88,7 @@ public static class ModdedOriginalChatManager
         if (text.Length > MaxInputChars)
             text = text.Substring(0, MaxInputChars);
 
-        List<PlayerControl> targets = GetModdedTargets(false);
-
-        foreach (PlayerControl target in targets)
-        {
-            int targetClientId = target.GetClientId();
-
-            if (targetClientId < 0)
-                continue;
-
-            MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(
-                local.NetId,
-                (byte)CustomRPC.ModdedAllChat,
-                SendOption.Reliable,
-                targetClientId);
-
-            writer.Write(local.PlayerId);
-            writer.Write(text);
-
-            AmongUsClient.Instance.FinishRpcImmediately(writer);
-        }
-
+        BanModSyncApi.SendModdedAllChat(text);
         ReceiveAll(local.PlayerId, text);
     }
 

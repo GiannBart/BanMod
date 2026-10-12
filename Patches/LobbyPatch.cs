@@ -21,6 +21,8 @@ public class LobbyStartPatch
 
     public static void Postfix(LobbyBehaviour __instance)
     {
+        Options.SyncLobbyGameModeFromVanilla();
+
         GameModeType gameMode = Options.GameMode.Selected;
 
         if (BanMod.AktiveLobby.Value)

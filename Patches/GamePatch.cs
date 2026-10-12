@@ -38,6 +38,7 @@ public static class GameEndPatch
         Jester.ResetJester();
         Exiler.ResetExiler();
         MurderPlayerCombinedPatch.misfireCountShape.Clear();
+        MurderPlayerCombinedPatch.ClearTemporaryNames();
         BanMod.RoomZoneManagerInstance.ClearAllData();
         GuessManager.ResetForNewGame();
         ExilerManager.ResetForNewGame();

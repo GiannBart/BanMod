@@ -394,6 +394,8 @@ namespace BanMod
         public static IntegerOptionItem SabotageCooldown;
         public static IntegerOptionItem FfaVentMaxSeconds;
         public static StringOptionItem FFAVentTeleportMode;
+        public static IntegerOptionItem FfaVentMaxSeconds1;
+        public static StringOptionItem FFAVentTeleportMode1;
         public static OptionItem specialvote;
         public static List<StringOptionItem> SeekerSelections = new List<StringOptionItem>();
         //public static OptionItem CustomSkin;
@@ -414,6 +416,9 @@ namespace BanMod
         public static OptionItem RandomVentSpawn;
         public static OptionItem RandomVentSpawnffa;
         public static OptionItem NoVent;
+        public static OptionItem RandomVentSpawn1;
+        public static OptionItem RandomVentSpawnffa1;
+        public static OptionItem NoVent1;
         public static IntegerOptionItem ZombieTouchesToInfect;
         public static FloatOptionItem ZombieTouchDurationSeconds;
         public static IntegerOptionItem ZombieInitialInfectionDelay;
@@ -487,18 +492,59 @@ namespace BanMod
             if (GameStates.isLobby)
                 ReOpenSettings();
         }
+
+        private static bool syncingLobbyGameMode = false;
+
+        public static void SyncLobbyGameModeFromVanilla()
+        {
+            if (LobbyGameMode == null)
+                return;
+
+            var manager = GameOptionsManager.Instance;
+
+            if (manager == null ||
+                manager.CurrentGameOptions == null)
+            {
+                return;
+            }
+
+            int wantedValue =
+                manager.CurrentGameOptions.GameMode == GameModes.HideNSeek
+                    ? 1
+                    : 0;
+
+            if (LobbyGameMode.GetInt() == wantedValue)
+                return;
+
+            try
+            {
+                syncingLobbyGameMode = true;
+
+                LobbyGameMode.SetValue(wantedValue, false);
+            }
+            finally
+            {
+                syncingLobbyGameMode = false;
+            }
+        }
+
         public static void Load()
         {
             if (IsLoaded) return;
-            LobbyGameMode = (StringOptionItem)StringOptionItem.Create("LobbyGameMode", new[] { "Classic", "Hide N Seek" }, 0, OptionCategory.Lobby, false, false).SetColor(new Color32(255, 80, 80, 255));
+            LobbyGameMode = (StringOptionItem)StringOptionItem.Create("LobbyGameMode", new[] { "Classic", "Hide N Seek" }, 0, OptionCategory.GameMode1, false, false).SetColor(new Color32(255, 80, 80, 255));
             LobbyGameMode.RegisterUpdateValueEvent((sender, args) =>
             {
+                if (syncingLobbyGameMode)
+                    return;
+
                 if (!GameStates.isLobby)
                     return;
 
                 if (AmongUsClient.Instance == null ||
                     !AmongUsClient.Instance.AmHost)
+                {
                     return;
+                }
 
                 int value = LobbyGameMode.GetInt();
 
@@ -506,6 +552,12 @@ namespace BanMod
                     value == 0
                         ? GameModes.Normal
                         : GameModes.HideNSeek;
+
+                if (GameOptionsManager.Instance?.CurrentGameOptions != null &&
+                    GameOptionsManager.Instance.CurrentGameOptions.GameMode == target)
+                {
+                    return;
+                }
 
                 if (HudManager.Instance != null)
                 {
@@ -686,6 +738,7 @@ namespace BanMod
             NoVent = BooleanOptionItem.Create("BlockVent", false, OptionCategory.FFA, false).SetColor(new Color32(0, 153, 255, 255));
             FfaVentMaxSeconds = (IntegerOptionItem)IntegerOptionItem.Create("FfaVentMaxSeconds", new(1, 30, 1), 5, OptionCategory.FFA, true).SetColor(new Color32(0, 153, 255, 255));
             FFAVentTeleportMode = (StringOptionItem)StringOptionItem.Create("FFAVentTeleportMode", new[] { "Always", "RandomEvery15Seconds", "Never" }, 0, OptionCategory.FFA, true, true).SetColor(new Color32(255, 204, 0, 255));
+            FfaKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFA, true, false).SetColor(new Color32(255, 204, 0, 255));
 
             void UpdateFfaVentOptions(bool noVent)
             {
@@ -713,12 +766,41 @@ namespace BanMod
                 FfaExternalBridge.SyncAll();
             });
 
-            FfaKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFA, true, false).SetColor(new Color32(255, 204, 0, 255));
-            FfaTeamKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFATEAM, true, false).SetColor(new Color32(255, 204, 0, 255));
             KillRaceKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.KillRace, true, false).SetColor(new Color32(255, 204, 0, 255));
             AssassinKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.Assassin, true, false).SetColor(new Color32(255, 204, 0, 255));
 
             FfaTeamCount = (StringOptionItem)StringOptionItem.Create("FfaTeamCount", new[] { "2 Team", "3 Team", "4 Team", "5 Team" }, 0, OptionCategory.FFATEAM, true, false ).SetColor(new Color32(255, 80, 80, 255));
+            RandomVentSpawnffa1 = BooleanOptionItem.Create("RandomVentSpawn", false, OptionCategory.FFATEAM, true).SetColor(new Color32(0, 153, 255, 255));
+            NoVent1 = BooleanOptionItem.Create("BlockVent", false, OptionCategory.FFATEAM, false).SetColor(new Color32(0, 153, 255, 255));
+            FfaVentMaxSeconds1 = (IntegerOptionItem)IntegerOptionItem.Create("FfaVentMaxSeconds", new(1, 30, 1), 5, OptionCategory.FFATEAM, true).SetColor(new Color32(0, 153, 255, 255));
+            FFAVentTeleportMode1 = (StringOptionItem)StringOptionItem.Create("FFAVentTeleportMode", new[] { "Always", "RandomEvery15Seconds", "Never" }, 0, OptionCategory.FFATEAM, true, true).SetColor(new Color32(255, 204, 0, 255));
+            FfaTeamKillerRole = (StringOptionItem)StringOptionItem.Create("FfaKillerRole", new[] { "Viper", "Impostor" }, 0, OptionCategory.FFATEAM, true, false).SetColor(new Color32(255, 204, 0, 255));
+
+            void UpdateFfaVentOptions1(bool noVent1)
+            {
+                FfaVentMaxSeconds1.SetEnabled(!noVent1);
+                FFAVentTeleportMode1.SetEnabled(!noVent1);
+            }
+
+            UpdateFfaVentOptions1(NoVent1.GetBool());
+
+            NoVent1.RegisterUpdateValueEvent((sender, args) =>
+            {
+                bool noVent1 = ((OptionItem)sender).GetBool();
+                UpdateFfaVentOptions1(noVent1);
+                FfaExternalBridge.SyncAll();
+                ReOpenSettings();
+            });
+
+            FfaVentMaxSeconds1.RegisterUpdateValueEvent((sender, args) =>
+            {
+                FfaExternalBridge.SyncAll();
+            });
+
+            FFAVentTeleportMode1.RegisterUpdateValueEvent((sender, args) =>
+            {
+                FfaExternalBridge.SyncAll();
+            });
 
             HotPotatoModdedFirstDelaySeconds = (IntegerOptionItem)IntegerOptionItem.Create("HotPotatoFirstDelaySeconds", new(0, 30, 1), 3, OptionCategory.HotPotato, true).SetColor(new Color32(255, 128, 0, 255));
 

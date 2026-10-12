@@ -112,7 +112,6 @@ namespace BanMod
         private static Vector2 _gameLauncherDragStartScreen;
         private static Vector2 _gameLauncherDragOffsetCanvas;
         private static float _gameLauncherSuppressClickUntil;
-        private static float _gameLauncherNextDragLogTime;
 
         private static Action<string> _insertAction;
         private static Func<bool> _colorAllowed;
@@ -130,8 +129,6 @@ namespace BanMod
 
         private static Func<bool> _gameModdedResolver = delegate { return false; };
         private static bool _hasExplicitGameModdedResolver;
-        private static Func<bool> _autoGameModdedResolver;
-        private static bool _autoResolverDiscoveryAttempted;
 
         internal static bool IsOpen
         {
@@ -1137,7 +1134,6 @@ namespace BanMod
                 _gameLauncherManualPosition = true;
                 _gameLauncherDragStartScreen = mouseScreen;
                 _gameLauncherDragOffsetCanvas = launcherRect.anchoredPosition - pointerLocal;
-                _gameLauncherNextDragLogTime = 0f;
 
             }
 

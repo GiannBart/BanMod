@@ -2,6 +2,7 @@
 using AmongUs.GameOptions;
 using AmongUs.InnerNet.GameDataMessages;
 using BanMod;
+using BanMod.Modules.CustomHats;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP.Utils;
@@ -550,7 +551,12 @@ namespace BanMod
 
         public static void PlayerControlReceiveRpc(PlayerControl pc, byte callId, MessageReader reader)
         {
-            if (callId == 218 || callId == 219) return;
+            if (Enum.IsDefined(typeof(CustomRPC), callId))
+                return;
+
+            if (callId == (byte)CustomHatSync.RpcId)
+                return;
+
             if (!AmongUsClient.Instance.AmHost) return;
             if (pc == null || reader == null) return;
             if (pc == PlayerControl.LocalPlayer) return;

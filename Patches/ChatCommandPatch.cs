@@ -175,11 +175,33 @@ internal class ChatCommands
 
         switch (command)
         {
+            case "/test":
+                {
+                    if (!AmongUsClient.Instance.AmHost)
+                        return true;
+
+                    if (args.Length < 2)
+                    {
+                        ShowChat("Uso: /test <id|color>");
+                        return true;
+                    }
+
+                    PlayerControl targetPlayer = FindPlayerByIdOrColor(args[1]);
+
+                    if (targetPlayer == null)
+                    {
+                        ShowChat($"Player '{args[1]}' not found.");
+                        return true;
+                    }
+                    Utils.Explosion(targetPlayer, 3);
+
+                    return true;
+                }
 
             case "/rename":
                 if (!AmongUsClient.Instance.AmHost)
                 {
-                    return true; 
+                    return true;
                 }
                 if (GameStates.isLobby && BanModServerSelection.IsModded25)
                 {
@@ -281,8 +303,8 @@ internal class ChatCommands
                 }
                 return true;
 
-            case "/s": 
-            case "/d": 
+            case "/s":
+            case "/d":
                 if (GameStates.isLobby && BanModServerSelection.IsModded25)
                     if (args.Length > 1)
                     {
@@ -1846,9 +1868,7 @@ internal class ChatCommands
 
                         if (AmongUsClient.Instance.AmHost)
                         {
-                            var writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetSpecialKiller, SendOption.Reliable, -1);
-                            writer.Write(targetId1);
-                            AmongUsClient.Instance.FinishRpcImmediately(writer);
+                            BanModSyncApi.SendSetSpecialKiller(targetId1);
                         }
                         else
                         {
@@ -1886,9 +1906,7 @@ internal class ChatCommands
 
                         if (AmongUsClient.Instance.AmHost)
                         {
-                            var writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetJester, SendOption.Reliable, -1);
-                            writer.Write(targetId3);
-                            AmongUsClient.Instance.FinishRpcImmediately(writer);
+                            BanModSyncApi.SendSetJester(targetId3);
                         }
                         else
                         {
@@ -1925,9 +1943,7 @@ internal class ChatCommands
 
                         if (AmongUsClient.Instance.AmHost)
                         {
-                            var writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetExiler, SendOption.Reliable, -1);
-                            writer.Write(targetId2);
-                            AmongUsClient.Instance.FinishRpcImmediately(writer);
+                            BanModSyncApi.SendSetExiler(targetId2);
                         }
                         else
                         {
@@ -1995,10 +2011,10 @@ internal class ChatCommands
 
                     return result;
                 }
-            case "/dw": return AppendToFile("BanWords.txt",string.Join(" ", args.Skip(1)),"AddedtoDenyWordlist");
-            case "/ddw":return RemoveFromFile("BanWords.txt",string.Join(" ", args.Skip(1)),"DeletedtoDenyWord");
-            case "/ds":return AppendToFile("SpamStart.txt",string.Join(" ", args.Skip(1)),"AddedtoDenystartlistlist");
-            case "/dds":return RemoveFromFile("SpamStart.txt",string.Join(" ", args.Skip(1)),"DeletedtoDenystartlist");
+            case "/dw": return AppendToFile("BanWords.txt", string.Join(" ", args.Skip(1)), "AddedtoDenyWordlist");
+            case "/ddw": return RemoveFromFile("BanWords.txt", string.Join(" ", args.Skip(1)), "DeletedtoDenyWord");
+            case "/ds": return AppendToFile("SpamStart.txt", string.Join(" ", args.Skip(1)), "AddedtoDenystartlistlist");
+            case "/dds": return RemoveFromFile("SpamStart.txt", string.Join(" ", args.Skip(1)), "DeletedtoDenystartlist");
             case "/addvip": return AllowedManager.ManageVip(subArgs, add: true);
             case "/deletevip": return AllowedManager.ManageVip(subArgs, add: false);
             case "/addmod": return AllowedManager.ManageModerator(subArgs, add: true);
@@ -2369,8 +2385,8 @@ internal class ChatCommands
         return FadeTagAndName(
             hostText,
             realName,
-            "#800080", 
-            "#FF0000"  
+            "#800080",
+            "#FF0000"
         );
     }
     public static void ClearLocalPlayerNameData()
@@ -2976,8 +2992,8 @@ internal class ChatCommands
                 ApplyFade(player, args);
                 return;
 
-            case "/s": 
-            case "/d": 
+            case "/s":
+            case "/d":
                 if (GameStates.isLobby && BanModServerSelection.IsModded25)
                     if (args.Length > 1)
                     {

@@ -33,7 +33,8 @@ namespace BanMod
                     => MainTab.Host,
 
 
-                OptionCategory.GameMode
+                OptionCategory.GameMode1
+                    or OptionCategory.GameMode
                     or OptionCategory.SNS
                     or OptionCategory.PNS
                     or OptionCategory.FFA
@@ -104,6 +105,7 @@ namespace BanMod
                 OptionCategory.Protection => "TabGroup.Protection",
 
                 // GAME MODES
+                OptionCategory.GameMode1 => "TabGroup.GameMode",
                 OptionCategory.GameMode => "TabGroup.GameMode",
                 OptionCategory.SNS => "TabGroup.SNS",
                 OptionCategory.PNS => "TabGroup.PNS",
@@ -201,6 +203,8 @@ namespace BanMod
 
 
 
+        public static IReadOnlyList<OptionItem> GameMode1Options
+            => GetOptions(OptionCategory.GameMode1);
         public static IReadOnlyList<OptionItem> GameModeOptions
             => GetOptions(OptionCategory.GameMode);
 
@@ -772,6 +776,12 @@ namespace BanMod
             if (Options.GameMode == null)
                 return;
 
+            if (BanMod.AllPlayerControls == null ||
+                BanMod.AllPlayerControls.Count() <= 0)
+            {
+                return;
+            }
+
             GameModeType gameMode =
                 Options.GameMode.Selected;
 
@@ -788,9 +798,13 @@ namespace BanMod
             if (PlayerControl.LocalPlayer == null)
                 return;
 
+            bool isHideAndSeek =
+                GameOptionsManager.Instance != null &&
+                GameOptionsManager.Instance.CurrentGameOptions != null &&
+                GameOptionsManager.Instance.CurrentGameOptions.GameMode ==
+                    GameModes.HideNSeek;
 
-            if (
-                GameManager.Instance.IsHideAndSeek() ||
+            if (isHideAndSeek ||
                 gameMode == GameModeType.SnS ||
                 gameMode == GameModeType.PnS ||
                 gameMode == GameModeType.TaskRun ||
@@ -879,6 +893,7 @@ namespace BanMod
         Protection,
 
         // GAME MODES
+        GameMode1,
         GameMode,
         SNS,
         PNS,

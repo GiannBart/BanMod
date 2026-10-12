@@ -63,14 +63,12 @@ namespace BanMod
         private static bool _selfRoleAssignedInCurrentGame = false;
         private static byte _assignedSelfRolePlayerId = byte.MaxValue;
         private static RoleTypes _assignedSelfRole = default;
-        private static bool _selfRoleCommitSucceeded = false;
         private static void ClearGameAssignmentState()
         {
             _selfRoleAssignedInCurrentGame = false;
             _assignedSelfRolePlayerId = byte.MaxValue;
             _assignedSelfRole = default;
             _selfRoleCommitStarted = false;
-            _selfRoleCommitSucceeded = false;
         }
 
         private static void ClearSelfRoleAuthorizationState(bool clearAttemptId)
@@ -1099,7 +1097,6 @@ namespace BanMod
 
             if (committed)
             {
-                _selfRoleCommitSucceeded = true;
                 _serverSelfRoleAllowed = commit.self_allowed || commit.premium;
                 _serverPermanentUnlock = commit.premium;
 

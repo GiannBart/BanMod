@@ -1,6 +1,5 @@
 //credits and licenses in the resources folder
 using BepInEx.Unity.IL2CPP.Utils;
-using Hazel;
 using Rewired.UI.ControlMapper;
 using System.Collections;
 using System.Collections.Generic;
@@ -68,15 +67,7 @@ namespace BanMod
 
             if (AmongUsClient.Instance.AmHost)
             {
-                var writer = AmongUsClient.Instance.StartRpcImmediately(
-                    PlayerControl.LocalPlayer.NetId,
-                    (byte)CustomRPC.SetExiler,
-                    SendOption.Reliable,
-                    -1);
-
-                writer.Write(ExilerId);
-
-                AmongUsClient.Instance.FinishRpcImmediately(writer);
+                BanModSyncApi.SendSetExiler(ExilerId);
             }
 
             try

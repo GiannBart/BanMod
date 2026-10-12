@@ -20,10 +20,6 @@ namespace BanMod
         SetSpecialKiller = 214,
         SetExiler = 215,
         SetJester = 216,
-        SetWatcher = 222,
-        SetJudge = 224,
-        SetProfiler = 225,
-        SetSheriff = 226,
         ModeratorAction = 227,
         HostTripleBoolUpdate = 217,
         RoleCommandAction = 218,
@@ -31,10 +27,7 @@ namespace BanMod
         ModdedAllChat = 220,
         HostRoleOptionsUpdate = 221,
         SyncPlayerVisual = 223,
-        Sicko = 164,
-        KillNet = 154,
-        FfaSettings = 253,
-        CREWMODIMPOSTORFORCE = 255
+        FfaSettings = 253
     }
 
     [HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.HandleRpc))]
@@ -63,7 +56,30 @@ namespace BanMod
         private static readonly Dictionary<int, Queue<float>> GlobalRpcRateByClient = new();
         private static readonly Dictionary<int, Dictionary<int, Queue<float>>> RpcRateByClientAndCall = new();
         private static readonly Dictionary<int, Queue<float>> ChatRateByClient = new();
-
+        private static readonly Dictionary<byte, string> KnownCheatRpcSignatures = new()
+        {
+            { 121, "Chocoo" },
+            { 167, "TuffMenu" },
+            { 164, "Hydra / Sicko / SickoMenu" },
+            { 176, "HostGuard / TOH" },
+            { 195, "Polar" },
+            { 204, "Polar" },
+            { 154, "GNC" },
+            { 250, "KillNet" },
+            { 80,  "KillNet" },
+            { 85,  "KillNet" },
+            { 150, "BetterAmongUs / GreaterAmongUs" },
+            { 103, "Askinchik" },
+            { 144, "Gaff Menu" },
+            { 145, "Gaff Menu" },
+            { 188, "GMM" },
+            { 189, "GMM" },
+            { 169, "Malum Menu" },
+            { 133, "Lunar / NjordMenu" },
+            { 210, "Lunar / NjordMenu" },
+            { 202, "CrewCore / ModMenuCrew" },
+            { 89, "NjordMenu (Old)" }
+        };
         private static string GetPlayerName(PlayerControl player)
             => player?.Data?.PlayerName ?? player?.name ?? "Unknown";
 
@@ -377,6 +393,59 @@ namespace BanMod
             return true;
         }
 
+        private static bool TryDetectForeignRpc(
+    PlayerControl player,
+    ClientData client,
+    int clientId,
+    byte callId,
+    string playerName)
+        {
+            if (Enum.IsDefined(typeof(RpcCalls), callId))
+                return false;
+
+            if (Enum.IsDefined(typeof(CustomRPC), callId))
+                return false;
+
+            if (callId == (byte)CustomHatSync.RpcId)
+                return false;
+
+            int action = GetConfiguredAction();
+
+            if (KnownCheatRpcSignatures.TryGetValue(callId, out string probableMenu))
+            {
+                BMLogger.Warn(
+                    $"Foreign custom RPC detected | Player={playerName} | RPC={callId} | Probability={probableMenu}",
+                    LogTag
+                );
+
+                ApplySuspicionAction(
+                    player,
+                    client,
+                    clientId,
+                    $"Custom_RPC_{callId}_{probableMenu}",
+                    $"{playerName} {GetActionLabel(action)} | " +
+                    $"Detected Custom RPC | Probability: {probableMenu} | RPC: {callId}"
+                );
+
+                return true;
+            }
+
+            BMLogger.Warn(
+                $"Unknown foreign custom RPC detected | Player={playerName} | RPC={callId}",
+                LogTag
+            );
+
+            ApplySuspicionAction(
+                player,
+                client,
+                clientId,
+                $"Unknown_Custom_RPC_{callId}",
+                $"{playerName} {GetActionLabel(action)} | " +
+                $"Detected Custom RPC | Unknown | RPC: {callId}"
+            );
+
+            return true;
+        }
 
         private static bool TryHandleAllowedVisualRpc(
             PlayerControl player,
@@ -458,30 +527,6 @@ namespace BanMod
                         player, client, cheaterClientId,
                         "Legacy_Mod_Detected_101",
                         $"{playerName} {GetActionLabel(action)} for legacy mod/HostGuard (RPC 101).");
-                    return true;
-
-                case 150:
-                    BMLogger.Warn($"Suspicious RPC 150 detected from {playerName}.", LogTag);
-                    ApplySuspicionAction(
-                        player, client, cheaterClientId,
-                        "BetterAmongUs_RPC_150",
-                        $"{playerName} {GetActionLabel(action)} for BetterAmongUs (RPC 150).");
-                    return true;
-
-                case 176:
-                    BMLogger.Warn($"Suspicious RPC 176 detected from {playerName}.", LogTag);
-                    ApplySuspicionAction(
-                        player, client, cheaterClientId,
-                        "HostGuard_RPC_176",
-                        $"{playerName} {GetActionLabel(action)} for HostGuard (RPC 176).");
-                    return true;
-
-                case 250:
-                    BMLogger.Warn($"Suspicious RPC 250 detected from {playerName}.", LogTag);
-                    ApplySuspicionAction(
-                        player, client, cheaterClientId,
-                        "KillNetwork_RPC_250",
-                        $"{playerName} {GetActionLabel(action)} for KillNetwork (RPC 250).");
                     return true;
 
                 case 420:
@@ -645,14 +690,11 @@ namespace BanMod
 
                 if (callIdByte == (byte)CustomRPC.FfaSettings)
                 {
-                    if (!IsHostPlayer(__instance))
-                    {
-                        BMLogger.Warn($"FfaSettings RPC blocked: sender is not host | Player={name}", LogTag);
-                        return false;
-                    }
-
-                    reader.Position = originalReaderPosition;
-                    return true;
+                    // FfaSettings non viaggia più tramite Among Us RPC.
+                    // Blocchiamo il legacy 253: il nuovo percorso è /api/sync/ws.
+                    LogToFileOnly(
+                        $"Legacy FfaSettings RPC 253 blocked | Player={GetPlayerLabel(__instance)}");
+                    return false;
                 }
 
                 if (callIdByte == (byte)RpcCalls.LobbyTimeExpiring)
@@ -663,7 +705,22 @@ namespace BanMod
                         ApplySuspicionAction(__instance, client, cheaterClientId,
                             "Timer_Manipulation_Attempt",
                             $"{name} {GetActionLabel(action)} per manipolazione timer.");
-                        return false; 
+                        return false;
+                    }
+                }
+
+                if (!isStandard &&
+                    !isCustom &&
+                    callIdByte != (byte)CustomHatSync.RpcId)
+                {
+                    if (TryDetectForeignRpc(
+                        __instance,
+                        client,
+                        cheaterClientId,
+                        callIdByte,
+                        name))
+                    {
+                        return false;
                     }
                 }
 
@@ -750,9 +807,6 @@ namespace BanMod
                     callIdByte != (byte)CustomRPC.SetSpecialKiller &&
                     callIdByte != (byte)CustomRPC.SetExiler &&
                     callIdByte != (byte)CustomRPC.SetJester &&
-                    callIdByte != (byte)CustomRPC.SetWatcher &&
-                    callIdByte != (byte)CustomRPC.SetJudge &&
-                    callIdByte != (byte)CustomRPC.SetProfiler &&
                     callIdByte != (byte)CustomRPC.ModeratorAction &&
                     callIdByte != (byte)CustomRPC.SyncPlayerVisual &&
                     callIdByte != (byte)CustomRPC.HostTripleBoolUpdate &&
@@ -829,22 +883,6 @@ namespace BanMod
                     return false;
                 }
 
-                if (!isCustom && !isStandard)
-                {
-                    LogToFileOnly(
-                        $"Unknown RPC received | Player={GetPlayerLabel(__instance)} | CallIdInt={callId} | CallIdByte={callIdByte}"
-                    );
-
-                    ApplySuspicionAction(
-                        __instance,
-                        client,
-                        cheaterClientId,
-                        "Unknown_RPC",
-                        $"{name} {GetActionLabel(action)} for unknown RPC ({callIdByte})."
-                    );
-
-                    return false;
-                }
 
                 if (isCustom)
                 {
@@ -1227,44 +1265,6 @@ namespace BanMod
                                 return false;
                             }
 
-                        case CustomRPC.Sicko:
-                            {
-                                ApplySuspicionAction(
-                                    __instance,
-                                    client,
-                                    cheaterClientId,
-                                    "Suspect_Cheater_SickoMenu",
-                                    $"{name} {GetActionLabel(action)} for SickoMenu."
-                                );
-
-                                return false;
-                            }
-
-                        case CustomRPC.CREWMODIMPOSTORFORCE:
-                            {
-                                ApplySuspicionAction(
-                                    __instance,
-                                    client,
-                                    cheaterClientId,
-                                    "Suspect_CREWMODIMPOSTORFORCE",
-                                    $"{name} {GetActionLabel(action)} for CREWMODIMPOSTORFORCE."
-                                );
-
-                                return false;
-                            }
-
-                        case CustomRPC.KillNet:
-                            {
-                                ApplySuspicionAction(
-                                    __instance,
-                                    client,
-                                    cheaterClientId,
-                                    "Suspect_Cheater_KillNet",
-                                    $"{name} {GetActionLabel(action)} for KillNetWork Hack."
-                                );
-
-                                return false;
-                            }
                     }
 
                     return false;
@@ -1283,7 +1283,7 @@ namespace BanMod
                                 ApplySuspicionAction(__instance, client, cheaterClientId,
                                     "Chat_Spam_Hack",
                                     $"{name} {GetActionLabel(action)} per spam in chat.");
-                                return false; 
+                                return false;
                             }
                             RegisterReceivedMessage(__instance, "SendChat", text);
 
@@ -1362,7 +1362,7 @@ namespace BanMod
                                 return false;
                             }
 
-                            break; 
+                            break;
                         }
 
                     default:
@@ -1440,31 +1440,14 @@ namespace BanMod
         {
             try
             {
-                if (AmongUsClient.Instance == null)
+                if (AmongUsClient.Instance == null ||
+                    PlayerControl.LocalPlayer == null)
+                {
                     return;
-
-                if (PlayerControl.LocalPlayer == null)
-                    return;
-
-                if (PlayerControl.LocalPlayer.NetId == 0)
-                    return;
+                }
 
                 RegisterLocalAsModded();
-
-                string modInfo = AmongUsClient.Instance.AmHost
-                    ? $"BANMOD|{CurrentModVersion}|HOST"
-                    : $"BANMOD|{CurrentModVersion}";
-
-                var writer = AmongUsClient.Instance.StartRpcImmediately(
-                    PlayerControl.LocalPlayer.NetId,
-                    (byte)CustomRPC.ModdedHandshake,
-                    SendOption.Reliable,
-                    -1);
-
-                writer.Write(modInfo);
-                writer.Write(true);
-
-                AmongUsClient.Instance.FinishRpcImmediately(writer);
+                BanModSyncApi.SendModdedHandshake();
             }
             catch
             {
